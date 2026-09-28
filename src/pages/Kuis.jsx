@@ -7,8 +7,6 @@ import ProfileDropdown from '../components/ProfileDropdown';
 import CrosswordBoard from '../components/CrosswordBoard';
 import DragDropQuiz from '../components/DragDropQuiz';
 import {
-  Search,
-  Bell,
   ChevronDown,
   Menu,
   X,
@@ -47,13 +45,6 @@ const KuisNavbar = ({ onNavigate }) => {
         <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
           <button className="flex items-center gap-1 text-[#1D315F] hover:text-[#006A63] text-xs font-semibold">
             EN <ChevronDown className="w-3 h-3" />
-          </button>
-          <button className="relative text-[#1D315F] hover:text-[#006A63]">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">10+</span>
-          </button>
-          <button className="text-[#1D315F] hover:text-[#006A63]">
-            <Search className="w-5 h-5" />
           </button>
           <ProfileDropdown onLogout={() => onNavigate('landing')} />
         </div>

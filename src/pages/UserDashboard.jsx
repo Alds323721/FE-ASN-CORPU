@@ -6,8 +6,6 @@ import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  Search,
-  Bell,
   ChevronDown,
   Clock,
   BookOpen,
@@ -68,13 +66,6 @@ const DashboardNavbar = ({ onLogout, onNavigate }) => {
          {/* Right icons */}
          <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
           <LanguageDropdown />
-          <button className="relative text-[#1D315F] hover:text-[#006A63]">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold">3</span>
-          </button>
-          <button className="text-[#1D315F] hover:text-[#006A63]">
-            <Search className="w-5 h-5" />
-          </button>
           <ProfileDropdown onLogout={onLogout} />
         </div>
       </div>
