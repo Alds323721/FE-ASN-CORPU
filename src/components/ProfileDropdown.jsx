@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Camera, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, LogOut, Camera, X, Lock, Eye, EyeOff, ArrowLeftRight, Check, Shield } from 'lucide-react';
 import api from '../api/axios';
 import userImg from '../assets/user.png';
-import { logout } from '../utils/auth';
+import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 
 const ProfileDropdown = ({ onLogout }) => {
@@ -16,6 +16,45 @@ const ProfileDropdown = ({ onLogout }) => {
    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
    const [showNewPassword, setShowNewPassword] = useState(false);
    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+   
+   const user = getUser() || {};
+   const userRoles = getUserRoles();
+   const hasMultipleRoles = canSwitchRole();
+   const currentActiveRole = getActiveRole();
+
+   const roleLabels = {
+     admin_bkpsdm: { label: 'Admin BKPSDM', badge: 'bg-red-50 text-red-700 border-red-200' },
+     admin_komunitas: { label: 'Admin Komunitas', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+     peserta: { label: 'Peserta Pembelajaran', badge: 'bg-blue-50 text-blue-700 border-blue-200' }
+   };
+
+   const handleRoleSwitch = async (targetRole) => {
+     if (targetRole === currentActiveRole) {
+       setIsOpen(false);
+       return;
+     }
+
+     if (!userRoles.includes(targetRole)) {
+       alert('Akses Ditolak: Anda tidak diizinkan masuk ke peran ini.');
+       return;
+     }
+
+     try {
+       await api.post('/switch-role', { target_role: targetRole }).catch(() => {});
+       setActiveRole(targetRole);
+       setIsOpen(false);
+
+       if (targetRole === 'admin_bkpsdm') {
+         window.location.href = '/admin';
+       } else if (targetRole === 'admin_komunitas') {
+         window.location.href = '/admin-komunitas';
+       } else {
+         window.location.href = '/';
+       }
+     } catch (err) {
+       console.error('Gagal beralih peran:', err);
+     }
+   };
    
    // Form state for passwords
    const [passwordStep, setPasswordStep] = useState(1);
@@ -67,22 +106,58 @@ const ProfileDropdown = ({ onLogout }) => {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
             <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-sm font-bold text-[#1D315F]">
-                {JSON.parse(localStorage.getItem('user') || '{}').nama_lengkap || 'Budi Santoso'}
+              <p className="text-sm font-bold text-[#1D315F] truncate">
+                {user.nama_lengkap || JSON.parse(localStorage.getItem('user') || '{}').nama_lengkap || 'Budi Santoso'}
               </p>
               <p className="text-xs text-gray-500">
-                NIP: {JSON.parse(localStorage.getItem('user') || '{}').nip || '-'}
+                NIP: {user.nip || JSON.parse(localStorage.getItem('user') || '{}').nip || '-'}
               </p>
+              <div className="mt-2">
+                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${roleLabels[currentActiveRole]?.badge || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                  <Shield className="w-3 h-3" />
+                  Peran: {roleLabels[currentActiveRole]?.label || currentActiveRole}
+                </span>
+              </div>
             </div>
+
+            {/* OPSI BERALIH PERAN: HANYA TAMPIL JIKA USER DISET LEBIH DARI 1 PERAN OLEH ADMIN-BKPSDM */}
+            {hasMultipleRoles && (
+              <div className="px-3 py-2 border-b border-gray-100 bg-teal-50/50">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-teal-900 mb-1.5 px-1">
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-teal-700" />
+                  <span>Beralih Peran:</span>
+                </div>
+                <div className="space-y-1">
+                  {userRoles.map((role) => {
+                    const isActive = role === currentActiveRole;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => handleRoleSwitch(role)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-teal-700 text-white shadow-xs'
+                            : 'text-gray-700 hover:bg-white hover:text-teal-800'
+                        }`}
+                      >
+                        <span>{roleLabels[role]?.label || role}</span>
+                        {isActive && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             
             <button
               onClick={() => {
                 setShowImageModal(true);
                 setIsOpen(false);
               }}
-              className="w-full px-4 py-2.5 text-left text-sm font-semibold text-[#1D315F] hover:bg-gray-50 transition-colors flex items-center gap-3"
+              className="w-full px-4 py-2.5 text-left text-sm font-semibold text-[#1D315F] hover:bg-gray-50 transition-colors flex items-center gap-3 cursor-pointer"
             >
               <Camera className="w-4 h-4 text-[#006A63]" />
               {t('profile.changePhoto')}

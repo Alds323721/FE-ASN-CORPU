@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import hiasanImg from '../assets/Hiasan.png';
-import sertifikatImg from '../assets/Sertifikat.png';
 import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
 import { useLanguage } from '../context/LanguageContext';
@@ -87,10 +86,10 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
       <div className="relative">
-        <img 
-          src={image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop'} 
-          alt={title} 
-          className="w-full h-48 object-cover" 
+        <img
+          src={image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop'}
+          alt={title}
+          className="w-full h-48 object-cover"
           onError={(e) => {
             e.currentTarget.onerror = null;
             e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop';
@@ -119,7 +118,7 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
         <div className="text-xs text-gray-500 mb-4 font-mono bg-gray-50 px-2 py-1 rounded">
           ID: {certificateId}
         </div>
-        <button 
+        <button
           onClick={() => onDownload?.(id, title)}
           disabled={downloading}
           className="w-full py-2.5 bg-[#006A63] text-white text-sm font-bold rounded-md hover:bg-[#00534D] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -193,17 +192,17 @@ const CertificatesContent = () => {
       {certificates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {certificates.map((cert) => (
-            <CertificateCard 
-               key={cert.sertifikat_id} 
-               id={cert.sertifikat_id}
-               image={cert.thumbnail_url || cert.image}
-               title={cert.judul_pelatihan}
-               institution="BKPSDM Provinsi Buleleng"
-               date={new Date(cert.tanggal_terbit).toLocaleDateString(language === 'EN' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-               certificateId={cert.nomor_sertifikat}
-               isNew={false}
-               onDownload={handleDownloadCertificate}
-               downloading={downloadingId === cert.sertifikat_id}
+            <CertificateCard
+              key={cert.sertifikat_id}
+              id={cert.sertifikat_id}
+              image={cert.thumbnail_url || cert.image}
+              title={cert.judul_pelatihan}
+              institution="BKPSDM Provinsi Buleleng"
+              date={new Date(cert.tanggal_terbit).toLocaleDateString(language === 'EN' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+              certificateId={cert.nomor_sertifikat}
+              isNew={false}
+              onDownload={handleDownloadCertificate}
+              downloading={downloadingId === cert.sertifikat_id}
             />
           ))}
         </div>

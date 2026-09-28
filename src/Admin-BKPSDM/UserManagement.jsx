@@ -146,7 +146,7 @@ const UserManagement = ({ onNavigate }) => {
 
   // Form states
   const [formData, setFormData] = useState({
-    nip: '', nama_lengkap: '', email: '', peran: 'peserta',
+    nip: '', nama_lengkap: '', email: '', roles: ['peserta'],
     jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: ''
   });
 
@@ -188,19 +188,23 @@ const UserManagement = ({ onNavigate }) => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!formData.roles || formData.roles.length === 0) {
+        Toast.fire({ icon: 'error', title: 'Pilih minimal satu peran untuk pengguna.' });
+        return;
+      }
       const payload = { ...formData };
       if (!payload.email || payload.email.trim() === '') {
         payload.email = null;
       }
-      if (payload.peran !== 'admin_komunitas') {
+      if (!payload.roles.includes('admin_komunitas')) {
         delete payload.komunitas_id;
       } else if (!payload.komunitas_id) {
-        Toast.fire({ icon: 'error', title: 'Komunitas harus dipilih untuk Admin Komunitas' });
+        Toast.fire({ icon: 'error', title: 'Komunitas harus dipilih jika memiliki peran Admin Komunitas.' });
         return;
       }
       await api.post('/admin-bkpsdm/pengguna', payload);
       setShowAddModal(false);
-      setFormData({ nip: '', nama_lengkap: '', email: '', peran: 'peserta', jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: '' });
+      setFormData({ nip: '', nama_lengkap: '', email: '', roles: ['peserta'], jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: '' });
       fetchUsers();
       Toast.fire({
         icon: 'success',
@@ -218,17 +222,25 @@ const UserManagement = ({ onNavigate }) => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        peran: selectedUser.peran,
-        status: selectedUser.status
-      };
-      if (selectedUser.peran === 'admin_komunitas') {
-        if (!selectedUser.komunitas_id) {
-          Toast.fire({ icon: 'error', title: 'Komunitas harus dipilih untuk Admin Komunitas' });
-          return;
-        }
-        payload.komunitas_id = selectedUser.komunitas_id;
+      const currentRoles = selectedUser.roles && selectedUser.roles.length > 0
+        ? selectedUser.roles
+        : (selectedUser.peran ? [selectedUser.peran] : ['peserta']);
+
+      if (currentRoles.length === 0) {
+        Toast.fire({ icon: 'error', title: 'Pilih minimal satu peran untuk pengguna.' });
+        return;
       }
+
+      if (currentRoles.includes('admin_komunitas') && !selectedUser.komunitas_id) {
+        Toast.fire({ icon: 'error', title: 'Komunitas harus dipilih jika memiliki peran Admin Komunitas.' });
+        return;
+      }
+
+      const payload = {
+        roles: currentRoles,
+        status: selectedUser.status,
+        komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
+      };
       
       await api.put(`/admin-bkpsdm/pengguna/${selectedUser.pengguna_id}`, payload);
       setShowEditModal(false);
@@ -306,15 +318,22 @@ const UserManagement = ({ onNavigate }) => {
     }
   };
 
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'admin_bkpsdm':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">Admin BKPSDM</span>;
-      case 'admin_komunitas':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Admin Komunitas</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Peserta</span>;
-    }
+  const getRoleBadge = (rolesOrRole) => {
+    const roles = Array.isArray(rolesOrRole) && rolesOrRole.length > 0 ? rolesOrRole : [rolesOrRole || 'peserta'];
+    return (
+      <div className="flex flex-wrap gap-1">
+        {roles.map((role) => {
+          switch (role) {
+            case 'admin_bkpsdm':
+              return <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">Admin BKPSDM</span>;
+            case 'admin_komunitas':
+              return <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">Admin Komunitas</span>;
+            default:
+              return <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">Peserta</span>;
+          }
+        })}
+      </div>
+    );
   };
 
   const getStatusBadge = (status) => {
@@ -439,7 +458,7 @@ const UserManagement = ({ onNavigate }) => {
                         <p className="text-sm text-gray-600 font-medium">{user.email || '-'}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {getRoleBadge(user.peran)}
+                        {getRoleBadge(user.roles || user.peran)}
                       </td>
                       <td className="px-6 py-4">
                         {user.rumpun_jabatan ? (
@@ -465,7 +484,13 @@ const UserManagement = ({ onNavigate }) => {
                           <Key className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => { setSelectedUser({ ...user }); setShowEditModal(true); }}
+                          onClick={() => {
+                            const userRoles = Array.isArray(user.roles) && user.roles.length > 0
+                              ? user.roles
+                              : (user.peran ? [user.peran] : ['peserta']);
+                            setSelectedUser({ ...user, roles: userRoles });
+                            setShowEditModal(true);
+                          }}
                           title="Edit Pengguna"
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
                         >
@@ -517,14 +542,66 @@ const UserManagement = ({ onNavigate }) => {
                     <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="email@instansi.go.id" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Peran</label>
-                    <select value={formData.peran} onChange={e => setFormData({ ...formData, peran: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                      <option value="peserta">Peserta</option>
-                      <option value="admin_komunitas">Admin Komunitas</option>
-                      <option value="admin_bkpsdm">Admin BKPSDM</option>
-                    </select>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Peran Pengguna <span className="text-xs text-gray-500 font-normal">(Bisa dipilih lebih dari satu)</span>
+                    </label>
+                    <div className="space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.roles.includes('peserta')}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...formData.roles, 'peserta']
+                              : formData.roles.filter(r => r !== 'peserta');
+                            setFormData({ ...formData, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Peserta</span>
+                          <span className="text-xs text-gray-500 block">Mengikuti kursus & pelatihan</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.roles.includes('admin_komunitas')}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...formData.roles, 'admin_komunitas']
+                              : formData.roles.filter(r => r !== 'admin_komunitas');
+                            setFormData({ ...formData, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin Komunitas</span>
+                          <span className="text-xs text-gray-500 block">Mengelola konten pelatihan komunitas</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.roles.includes('admin_bkpsdm')}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...formData.roles, 'admin_bkpsdm']
+                              : formData.roles.filter(r => r !== 'admin_bkpsdm');
+                            setFormData({ ...formData, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin BKPSDM</span>
+                          <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
-                  {formData.peran === 'admin_komunitas' && (
+                  {formData.roles.includes('admin_komunitas') && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={formData.komunitas_id} onChange={e => setFormData({ ...formData, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
@@ -564,7 +641,7 @@ const UserManagement = ({ onNavigate }) => {
           {/* Edit User Modal */}
           {showEditModal && selectedUser && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+              <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Edit Akses Pengguna</h2>
                   <button onClick={() => { setShowEditModal(false); setSelectedUser(null); }} className="text-gray-400 hover:text-gray-600">
@@ -577,14 +654,69 @@ const UserManagement = ({ onNavigate }) => {
                 </div>
                 <form onSubmit={handleEditSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Peran</label>
-                    <select value={selectedUser.peran} onChange={e => setSelectedUser({ ...selectedUser, peran: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                      <option value="peserta">Peserta</option>
-                      <option value="admin_komunitas">Admin Komunitas</option>
-                      <option value="admin_bkpsdm">Admin BKPSDM</option>
-                    </select>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Peran Pengguna <span className="text-xs text-gray-500 font-normal">(Bisa dipilih lebih dari satu)</span>
+                    </label>
+                    <div className="space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(selectedUser.roles || [selectedUser.peran]).includes('peserta')}
+                          onChange={(e) => {
+                            const current = selectedUser.roles || [selectedUser.peran];
+                            const newRoles = e.target.checked
+                              ? [...current, 'peserta']
+                              : current.filter(r => r !== 'peserta');
+                            setSelectedUser({ ...selectedUser, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Peserta</span>
+                          <span className="text-xs text-gray-500 block">Mengikuti kursus & pelatihan</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(selectedUser.roles || [selectedUser.peran]).includes('admin_komunitas')}
+                          onChange={(e) => {
+                            const current = selectedUser.roles || [selectedUser.peran];
+                            const newRoles = e.target.checked
+                              ? [...current, 'admin_komunitas']
+                              : current.filter(r => r !== 'admin_komunitas');
+                            setSelectedUser({ ...selectedUser, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin Komunitas</span>
+                          <span className="text-xs text-gray-500 block">Mengelola konten pelatihan komunitas</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(selectedUser.roles || [selectedUser.peran]).includes('admin_bkpsdm')}
+                          onChange={(e) => {
+                            const current = selectedUser.roles || [selectedUser.peran];
+                            const newRoles = e.target.checked
+                              ? [...current, 'admin_bkpsdm']
+                              : current.filter(r => r !== 'admin_bkpsdm');
+                            setSelectedUser({ ...selectedUser, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin BKPSDM</span>
+                          <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
-                  {selectedUser.peran === 'admin_komunitas' && (
+                  {(selectedUser.roles || [selectedUser.peran]).includes('admin_komunitas') && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={selectedUser.komunitas_id || ''} onChange={e => setSelectedUser({ ...selectedUser, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
+import AdminKomunitasProfile from '../components/AdminKomunitasProfile';
 import { 
   Users, BookOpen, Award, TrendingUp, TrendingDown,
   LayoutDashboard, LogOut, Bell, Settings, Search, Menu, X,
@@ -59,15 +60,7 @@ const AdminSidebar = ({ activeMenu = 'katalog-kursus', onNavigate, isOpen, setIs
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden shrink-0">
-              <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.nama_lengkap || 'Admin Komunitas')}&background=0D8ABC&color=fff`} alt="Admin" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-900 text-sm truncate w-36">{currentUser?.nama_lengkap || 'Admin Komunitas'}</h2>
-              <p className="text-xs text-gray-500 truncate w-36">{communityName}</p>
-            </div>
-          </div>
+          <AdminKomunitasProfile currentUser={currentUser} communityName={communityName} onNavigate={onNavigate} />
         </div>
         
         <div className="flex-1 py-2 px-4 space-y-1 overflow-y-auto">

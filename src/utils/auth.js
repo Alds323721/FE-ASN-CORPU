@@ -4,6 +4,7 @@ export const AUTH_KEYS = [
   'access_token',
   'token',
   'user',
+  'active_role',
   'current_route',
   'userCourseId',
   'userModulId',
@@ -36,11 +37,81 @@ export const getUser = () => {
 };
 
 /**
- * Mengambil peran (role) dari user yang sedang login
+ * Mengambil seluruh daftar role sah yang dimiliki pengguna (yang diatur Admin-BKPSDM)
+ * @returns {Array<string>}
+ */
+export const getUserRoles = () => {
+  const user = getUser();
+  if (!user) return [];
+  if (Array.isArray(user.roles) && user.roles.length > 0) {
+    return user.roles;
+  }
+  return user.peran ? [user.peran] : [];
+};
+
+/**
+ * Memeriksa apakah user memiliki lebih dari 1 role sah (sehingga berhak switch role)
+ * @returns {boolean}
+ */
+export const canSwitchRole = () => {
+  const roles = getUserRoles();
+  return roles.length > 1;
+};
+
+/**
+ * Mengambil peran (role) yang sedang aktif digunakan dalam sesi
+ * @returns {string|null}
+ */
+export const getActiveRole = () => {
+  const user = getUser();
+  if (!user) return null;
+
+  const roles = getUserRoles();
+  const savedActiveRole = localStorage.getItem('active_role');
+
+  // Pastikan active_role yang tersimpan benar-benar sah dimiliki pengguna
+  if (savedActiveRole && roles.includes(savedActiveRole)) {
+    return savedActiveRole;
+  }
+
+  // Fallback: gunakan user.active_role, user.peran, atau role pertama di daftar peran
+  const initialRole = (user.active_role && roles.includes(user.active_role))
+    ? user.active_role
+    : (roles[0] || user.peran || 'peserta');
+
+  localStorage.setItem('active_role', initialRole);
+  return initialRole;
+};
+
+/**
+ * Mengganti peran aktif sesi dengan validasi ketat
+ * @param {string} targetRole
+ * @returns {boolean}
+ */
+export const setActiveRole = (targetRole) => {
+  const roles = getUserRoles();
+  if (!roles.includes(targetRole)) {
+    console.error(`Akses ditolak: User tidak memiliki hak untuk peran ${targetRole}`);
+    return false;
+  }
+
+  localStorage.setItem('active_role', targetRole);
+
+  // Sinkronkan juga pada objek user di localStorage
+  const user = getUser();
+  if (user) {
+    user.active_role = targetRole;
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  return true;
+};
+
+/**
+ * Mengambil peran (role) aktif dari user yang sedang login (kompatibilitas backward)
  */
 export const getUserRole = () => {
-  const user = getUser();
-  return user?.peran || null;
+  return getActiveRole();
 };
 
 /**
@@ -55,7 +126,11 @@ export const isAuthenticated = () => {
  */
 export const setAuth = (token, user) => {
   if (token) localStorage.setItem('access_token', token);
-  if (user) localStorage.setItem('user', JSON.stringify(user));
+  if (user) {
+    localStorage.setItem('user', JSON.stringify(user));
+    const initialRole = user.active_role || (Array.isArray(user.roles) && user.roles[0]) || user.peran || 'peserta';
+    localStorage.setItem('active_role', initialRole);
+  }
 };
 
 /**

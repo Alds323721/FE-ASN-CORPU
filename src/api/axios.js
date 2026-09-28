@@ -25,6 +25,11 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        const activeRole = localStorage.getItem('active_role');
+        if (activeRole) {
+            config.headers['X-Active-Role'] = activeRole;
+        }
+
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         }
