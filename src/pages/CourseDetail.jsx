@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
+import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
@@ -68,7 +69,8 @@ const CourseDetailNavbar = ({ onNavigate }) => {
   return (
     <nav className="flex justify-between items-center py-4 px-6 md:px-12 bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="flex items-center gap-2 sm:gap-3">
-        <img src={logoImg} alt="Logo BKPSDM" className="w-6 sm:w-8 object-contain" />
+        <img src={logoImg} alt="Logo BKPSDM" className="w-6 sm:w-8 h-6 sm:h-8 object-contain" />
+        <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-6 sm:w-8 h-6 sm:h-8 object-contain" />
         <span className="font-semibold text-base sm:text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
       </div>
 
@@ -514,8 +516,9 @@ const Footer = ({ onNavigate }) => {
     <footer className="bg-[#EAEFF4] pt-16 pb-8 border-t border-[#BBC9C7]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
         <div className="md:col-span-5 pr-8">
-          <div className="flex items-center gap-3 mb-6">
-            <img src={logoImg} alt="Logo BKPSDM" className="w-8 object-contain" />
+          <div className="flex items-center gap-2.5 sm:gap-3 mb-6">
+            <img src={logoImg} alt="Logo BKPSDM" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
+            <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
             <span className="font-semibold text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
           </div>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-6 font-semibold">

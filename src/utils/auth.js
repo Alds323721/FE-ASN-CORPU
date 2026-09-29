@@ -13,7 +13,8 @@ export const AUTH_KEYS = [
   'adminKomunitasCourseId',
   'filterKomunitasId',
   'reviewCourseId',
-  'reviewCourseData'
+  'reviewCourseData',
+  'login_timestamp'
 ];
 
 /**
@@ -121,6 +122,8 @@ export const isAuthenticated = () => {
   return !!getToken();
 };
 
+export const NEW_TAB_TIMEOUT_MS = 5 * 60 * 1000; // 5 menit
+
 /**
  * Simpan data autentikasi baru saat login berhasil
  */
@@ -131,6 +134,9 @@ export const setAuth = (token, user) => {
     const initialRole = user.active_role || (Array.isArray(user.roles) && user.roles[0]) || user.peran || 'peserta';
     localStorage.setItem('active_role', initialRole);
   }
+  // Catat waktu login untuk faktor keamanan timeout pada tab baru
+  localStorage.setItem('login_timestamp', Date.now().toString());
+  sessionStorage.setItem('tab_session_initialized', 'true');
 };
 
 /**
@@ -138,6 +144,44 @@ export const setAuth = (token, user) => {
  */
 export const clearAuth = () => {
   AUTH_KEYS.forEach(key => localStorage.removeItem(key));
+  sessionStorage.removeItem('tab_session_initialized');
+};
+
+/**
+ * Memeriksa apakah tab baru dibuka lebih dari 5 menit setelah login
+ * @returns {boolean} true jika tab baru dan waktu login sudah lebih dari 5 menit
+ */
+export const checkNewTabTimeout = () => {
+  // Tab yang sudah berjalan / reload di tab yang sama memiliki flag ini
+  const isInitialized = sessionStorage.getItem('tab_session_initialized');
+  if (isInitialized) {
+    return false;
+  }
+
+  // Jika user sedang login dan membuka tab baru
+  if (isAuthenticated()) {
+    const loginTimeStr = localStorage.getItem('login_timestamp');
+
+    // Jika tidak ada data login_timestamp, anggap sesi lama/kedaluwarsa demi keamanan
+    if (!loginTimeStr) {
+      return true;
+    }
+
+    const loginTime = parseInt(loginTimeStr, 10);
+    const now = Date.now();
+
+    if (now - loginTime > NEW_TAB_TIMEOUT_MS) {
+      return true;
+    }
+
+    // Masih dalam batas 5 menit sejak login, tandai tab baru ini sebagai aktif
+    sessionStorage.setItem('tab_session_initialized', 'true');
+    return false;
+  }
+
+  // Jika belum login, tandai tab sudah siap
+  sessionStorage.setItem('tab_session_initialized', 'true');
+  return false;
 };
 
 /**

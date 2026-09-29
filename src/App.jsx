@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
 import './index.css'
 import LandingPage from './pages/LandingPage'
 import UserDashboard from './pages/UserDashboard'
@@ -29,16 +29,52 @@ import KatalogKursus from './Admin-Komunitas/KatalogKursus'
 import DetailKursus from './Admin-Komunitas/DetailKursus'
 import BankSoal from './Admin-Komunitas/BankSoal'
 import PusatBantuan from './Admin-Komunitas/PusatBantuan'
-import { isAuthenticated, getUserRole, getUserRoles, getActiveRole, setActiveRole, logout } from './utils/auth'
+import { isAuthenticated, getUserRole, getUserRoles, getActiveRole, setActiveRole, logout, clearAuth, checkNewTabTimeout } from './utils/auth'
+
+const routePaths = {
+  'admin': '/admin',
+  'user-management': '/admin/user-management',
+  'community-management': '/admin/community-management',
+  'category-management': '/admin/category-management',
+  'course-validation': '/admin/course-validation',
+  'course-review': '/admin/course-validation/review',
+  'monitoring-reports': '/admin/monitoring-reports',
+  'admin-komunitas': '/admin-komunitas',
+  'pelatihan-saya': '/admin-komunitas/pelatihan-saya',
+  'laporan-progress': '/admin-komunitas/laporan-progress',
+  'katalog-kursus': '/admin-komunitas/katalog-kursus',
+  'detail-kursus': '/admin-komunitas/detail-kursus',
+  'bank-soal': '/admin-komunitas/bank-soal',
+  'pusat-bantuan': '/admin-komunitas/pusat-bantuan',
+  'dashboard': '/dashboard',
+  'catalog': '/catalog',
+  'pelatihan': '/catalog',
+  'my-courses': '/my-courses',
+  'certificates': '/certificates',
+  'community': '/community',
+  'course-detail': '/course-detail',
+  'post-test': '/post-test',
+  'kuis': '/kuis',
+  'test-result': '/test-result',
+  'help-center': '/help-center',
+};
 
 function App() {
   const [currentRoute, setCurrentRoute] = useState(() => {
+    // Keamanan: Cek apakah tab baru dibuka lebih dari 5 menit setelah login
+    if (checkNewTabTimeout()) {
+      clearAuth();
+      sessionStorage.setItem('session_timeout_alert', 'true');
+      window.history.replaceState({ route: 'landing' }, '', '/');
+      return 'landing';
+    }
+
     const path = window.location.pathname;
 
     // Jika tidak ada token yang valid, langsung arahkan ke landing
     if (!isAuthenticated()) {
       if (path !== '/') {
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({ route: 'landing' }, '', '/');
       }
       return 'landing';
     }
@@ -46,12 +82,23 @@ function App() {
     const activeRole = getActiveRole();
     const userRoles = getUserRoles();
 
+    // Jika user sudah terautentikasi dan berada di '/', langsung ganti path ke dashboard
+    if (path === '/') {
+      let defaultRoute = 'dashboard';
+      if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) defaultRoute = 'admin';
+      else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) defaultRoute = 'admin-komunitas';
+      const targetPath = routePaths[defaultRoute] || '/dashboard';
+      window.history.replaceState({ route: defaultRoute }, '', targetPath);
+      return defaultRoute;
+    }
+
     // Rute khusus Admin BKPSDM (path /admin/*)
     if (path.startsWith('/admin') && path !== '/admin-komunitas') {
-      // Verifikasi apakah user memang memiliki peran admin_bkpsdm yang sah dari Admin-BKPSDM
       if (!userRoles.includes('admin_bkpsdm')) {
-        window.history.replaceState({}, '', '/');
-        return userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard';
+        const fallbackRoute = userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard';
+        const fallbackPath = routePaths[fallbackRoute] || '/dashboard';
+        window.history.replaceState({ route: fallbackRoute }, '', fallbackPath);
+        return fallbackRoute;
       }
       if (activeRole !== 'admin_bkpsdm') {
         setActiveRole('admin_bkpsdm');
@@ -66,26 +113,44 @@ function App() {
     }
 
     // Rute khusus Admin Komunitas (path /admin-komunitas)
-    if (path === '/admin-komunitas') {
-      // Verifikasi apakah user memang memiliki peran admin_komunitas yang sah dari Admin-BKPSDM
+    if (path === '/admin-komunitas' || path.startsWith('/admin-komunitas/')) {
       if (!userRoles.includes('admin_komunitas')) {
-        window.history.replaceState({}, '', '/');
-        return userRoles.includes('admin_bkpsdm') ? 'admin' : 'dashboard';
+        const fallbackRoute = userRoles.includes('admin_bkpsdm') ? 'admin' : 'dashboard';
+        const fallbackPath = routePaths[fallbackRoute] || '/dashboard';
+        window.history.replaceState({ route: fallbackRoute }, '', fallbackPath);
+        return fallbackRoute;
       }
       if (activeRole !== 'admin_komunitas') {
         setActiveRole('admin_komunitas');
       }
+      if (path === '/admin-komunitas/pelatihan-saya') return 'pelatihan-saya';
+      if (path === '/admin-komunitas/laporan-progress') return 'laporan-progress';
+      if (path === '/admin-komunitas/katalog-kursus') return 'katalog-kursus';
+      if (path === '/admin-komunitas/detail-kursus') return 'detail-kursus';
+      if (path === '/admin-komunitas/bank-soal') return 'bank-soal';
+      if (path === '/admin-komunitas/pusat-bantuan') return 'pusat-bantuan';
       return 'admin-komunitas';
     }
 
-    // Rute Admin Komunitas yang tersimpan di localStorage
+    // Rute peserta berdasarkan path URL
+    if (path === '/dashboard') return 'dashboard';
+    if (path === '/catalog' || path === '/pelatihan') return 'catalog';
+    if (path === '/my-courses') return 'my-courses';
+    if (path === '/certificates') return 'certificates';
+    if (path === '/community') return 'community';
+    if (path === '/course-detail') return 'course-detail';
+    if (path === '/post-test') return 'post-test';
+    if (path === '/kuis') return 'kuis';
+    if (path === '/test-result') return 'test-result';
+    if (path === '/help-center') return 'help-center';
+
+    // Rute yang tersimpan di localStorage
     const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
     const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
 
     const savedRoute = localStorage.getItem('current_route');
 
     if (savedRoute) {
-      // Validasi savedRoute sesuai role aktual
       if (adminBkpsdmRoutes.includes(savedRoute) && userRoles.includes('admin_bkpsdm') && activeRole === 'admin_bkpsdm') return savedRoute;
       if (adminKomunitasRoutes.includes(savedRoute) && userRoles.includes('admin_komunitas') && activeRole === 'admin_komunitas') return savedRoute;
       if (!adminBkpsdmRoutes.includes(savedRoute) && !adminKomunitasRoutes.includes(savedRoute) && savedRoute !== 'landing') return savedRoute;
@@ -98,20 +163,100 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [showLoginSuccess, setShowLoginSuccess] = useState(false)
+  const [sessionTimeoutAlert, setSessionTimeoutAlert] = useState(false)
 
   const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
   const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
 
   useEffect(() => {
+    // Tampilkan notifikasi jika tab baru dibuka setelah batas sesi kedaluwarsa
+    if (sessionStorage.getItem('session_timeout_alert')) {
+      sessionStorage.removeItem('session_timeout_alert');
+      setSessionTimeoutAlert(true);
+      const alertTimer = setTimeout(() => {
+        setSessionTimeoutAlert(false);
+      }, 7000);
+    }
+
     const timer = setTimeout(() => {
       setIsLoading(false)
     }, 100)
-    return () => clearTimeout(timer)
+
+    // Logika Keamanan: Cegah tombol Back browser kembali ke halaman login saat sudah login
+    const handlePopState = (event) => {
+      if (isAuthenticated()) {
+        const path = window.location.pathname;
+        const activeRole = getActiveRole();
+        const userRoles = getUserRoles();
+
+        let defaultRoute = 'dashboard';
+        if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+          defaultRoute = 'admin';
+        } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
+          defaultRoute = 'admin-komunitas';
+        }
+        const defaultPath = routePaths[defaultRoute] || '/dashboard';
+
+        // Jika tombol Back ditekan menuju root '/', halaman login, atau state kosong:
+        // Kunci dan pertahankan di halaman dashboard aktif
+        if (path === '/' || !event.state || event.state?.route === 'landing') {
+          window.history.pushState({ route: defaultRoute }, '', defaultPath);
+          setCurrentRoute(defaultRoute);
+          localStorage.setItem('current_route', defaultRoute);
+        } else if (event.state?.route) {
+          // Navigasi back/forward antar halaman internal yang valid
+          setCurrentRoute(event.state.route);
+          localStorage.setItem('current_route', event.state.route);
+        }
+      }
+    };
+
+    // Sinkronisasi pembersihan sesi antar tab
+    const handleStorageChange = (event) => {
+      if (event.key === 'access_token' && !event.newValue && isAuthenticated()) {
+        handleLogout();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [])
 
   const handleLogout = () => {
     logout();
+    window.history.replaceState({ route: 'landing' }, '', '/');
     setCurrentRoute('landing');
+  };
+
+  const handleLoginSuccess = () => {
+    setShowLoginSuccess(true);
+    setSessionTimeoutAlert(false);
+    sessionStorage.setItem('tab_session_initialized', 'true');
+    setTimeout(() => setShowLoginSuccess(false), 3000);
+
+    const activeRole = getActiveRole();
+    const userRoles = getUserRoles();
+
+    let target = 'dashboard';
+    if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+      target = 'admin';
+    } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
+      target = 'admin-komunitas';
+    }
+
+    const targetPath = routePaths[target] || '/dashboard';
+
+    // Gantikan riwayat '/' (halaman login) agar tombol back browser TIDAK BISA kembali ke login
+    window.history.replaceState({ route: target }, '', targetPath);
+    window.history.pushState({ route: target }, '', targetPath);
+
+    handleNavigate(target);
   };
 
   const handleNavigate = (route) => {
@@ -152,21 +297,10 @@ function App() {
     setIsTransitioning(true)
     setCurrentRoute(targetRoute)
     localStorage.setItem('current_route', targetRoute);
-    if (targetRoute === 'admin') {
-      window.history.pushState({}, '', '/admin');
-    } else if (targetRoute === 'user-management') {
-      window.history.pushState({}, '', '/admin/user-management');
-    } else if (targetRoute === 'community-management') {
-      window.history.pushState({}, '', '/admin/community-management');
-    } else if (targetRoute === 'course-validation') {
-      window.history.pushState({}, '', '/admin/course-validation');
-    } else if (targetRoute === 'course-review') {
-      window.history.pushState({}, '', '/admin/course-validation/review');
-    } else if (targetRoute === 'monitoring-reports') {
-      window.history.pushState({}, '', '/admin/monitoring-reports');
-    } else if (targetRoute === 'admin-komunitas') {
-      window.history.pushState({}, '', '/admin-komunitas');
-    }
+
+    const targetPath = routePaths[targetRoute] || '/dashboard';
+    window.history.pushState({ route: targetRoute }, '', targetPath);
+
     setIsTransitioning(false)
     window.scrollTo(0, 0)
   }
@@ -184,19 +318,22 @@ function App() {
   const renderRoute = () => {
     // Jika tidak terautentikasi dan mencoba render selain landing, arahkan ke LandingPage
     if (!isAuthenticated() && currentRoute !== 'landing') {
-      return <LandingPage onLogin={() => {
-        setShowLoginSuccess(true);
-        setTimeout(() => setShowLoginSuccess(false), 3000);
-        const activeRole = getActiveRole();
-        const userRoles = getUserRoles();
-        if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) handleNavigate('admin');
-        else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) handleNavigate('admin-komunitas');
-        else handleNavigate('dashboard');
-      }} onNavigate={handleNavigate} />;
+      return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
     }
 
     const activeRole = getActiveRole();
     const userRoles = getUserRoles();
+
+    // KEAMANAN: Jika user sudah login, JANGAN PERNAH render LandingPage / form login
+    if (isAuthenticated() && currentRoute === 'landing') {
+      if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+        return <AdminDashboard onNavigate={handleNavigate} />;
+      }
+      if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
+        return <AdminKomunitasDashboard onNavigate={handleNavigate} />;
+      }
+      return <UserDashboard onLogout={handleLogout} onNavigate={handleNavigate} />;
+    }
 
     // Guard: Mencoba render rute BKPSDM tanpa wewenang sah dari Admin-BKPSDM
     if (adminBkpsdmRoutes.includes(currentRoute) && !userRoles.includes('admin_bkpsdm')) {
@@ -267,7 +404,7 @@ function App() {
     if (currentRoute === 'dashboard') {
       return <UserDashboard onLogout={handleLogout} onNavigate={handleNavigate} />
     }
-    
+
     if (currentRoute === 'catalog' || currentRoute === 'pelatihan') {
       return <CourseCatalog onNavigate={handleNavigate} />
     }
@@ -304,23 +441,7 @@ function App() {
       return <HelpCenter onNavigate={handleNavigate} />
     }
 
-    return <LandingPage onLogin={() => {
-      setShowLoginSuccess(true);
-      setTimeout(() => setShowLoginSuccess(false), 3000);
-
-      const activeRole = getActiveRole();
-      const userRoles = getUserRoles();
-
-      // Arahkan ke halaman yang sesuai berdasarkan peran aktif yang sah
-      if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
-        handleNavigate('admin');
-      } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
-        handleNavigate('admin-komunitas');
-      } else {
-        // default: peserta
-        handleNavigate('dashboard');
-      }
-    }} onNavigate={handleNavigate} />
+    return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />
   }
 
   return (
@@ -330,8 +451,26 @@ function App() {
           <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
           <div>
             <h4 className="text-green-800 font-bold text-sm">Login Berhasil</h4>
-            <p className="text-green-600 text-xs mt-1 font-semibold">Selamat datang kembali di platform!</p>
+            <p className="text-green-600 text-xs mt-1 font-semibold">Selamat datang kembali di platform Buleleng ASN CORPU!</p>
           </div>
+        </div>
+      )}
+      {sessionTimeoutAlert && (
+        <div className="fixed top-6 right-6 z-[99999] bg-amber-50 border-l-4 border-amber-500 p-4 rounded-md shadow-xl flex items-start gap-3 animate-in slide-in-from-top-4 fade-in duration-300 max-w-md">
+          <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <h4 className="text-amber-800 font-bold text-sm">Sesi Berakhir Demi Keamanan</h4>
+            <p className="text-amber-700 text-xs mt-1 leading-relaxed">
+              Tab baru dibuka lebih dari 5 menit setelah waktu login Anda. Demi faktor keamanan akun, Anda dipersilakan untuk login ulang.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSessionTimeoutAlert(false)}
+            className="text-amber-500 hover:text-amber-700 text-xs font-bold ml-2 transition-colors"
+          >
+            ✕
+          </button>
         </div>
       )}
       {renderRoute()}

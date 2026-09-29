@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../api/axios';
 import { setAuth } from '../utils/auth';
 import logoImg from '../assets/logo-removebg-preview 1.png';
+import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import heroImg from '../assets/BG_BKPSDM.jpg';
 import {
   Search,
@@ -34,19 +35,20 @@ import {
 const Navbar = ({ onLoginClick }) => (
   <nav className="fixed top-0 left-0 w-full z-50 bg-white border-t-[5px] border-[#0099FF] shadow-sm flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
     <div className="flex items-center gap-2 sm:gap-3">
-      <img src={logoImg} alt="Logo BKPSDM" className="w-8 sm:w-10 object-contain" />
+      <img src={logoImg} alt="Logo BKPSDM" className="w-7 sm:w-9 h-7 sm:h-9 object-contain" />
+      <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-7 sm:w-9 h-7 sm:h-9 object-contain" />
       <span className="font-bold text-lg sm:text-xl text-[#1D315F] tracking-wide">Buleleng ASN Corpu</span>
     </div>
     <button
       onClick={onLoginClick}
       className="border border-gray-400 text-[#4B5563] font-semibold py-1.5 sm:py-2 px-3 sm:px-5 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer text-xs sm:text-sm shadow-sm"
     >
-      Daftar / Login
+      Login
     </button>
   </nav>
 );
 
-const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthClick }) => {
+const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [nip, setNip] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -64,123 +66,6 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
-
-  // Register Form States
-  const [regNip, setRegNip] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regOtp, setRegOtp] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  const [showRegPassword, setShowRegPassword] = useState(false);
-  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(0);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [regLoading, setRegLoading] = useState(false);
-  const [regError, setRegError] = useState('');
-  const [regSuccess, setRegSuccess] = useState('');
-  const [pegawaiData, setPegawaiData] = useState(null);
-
-  useEffect(() => {
-    let timer;
-    if (otpCountdown > 0) {
-      timer = setInterval(() => {
-        setOtpCountdown((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [otpCountdown]);
-
-  const handleSendOtp = async () => {
-    setRegError('');
-    setRegSuccess('');
-
-    if (!regNip.trim()) {
-      setRegError('Silakan masukkan NIP Anda terlebih dahulu.');
-      return;
-    }
-    if (!regEmail.trim()) {
-      setRegError('Silakan masukkan alamat email Gmail Anda.');
-      return;
-    }
-    if (!regEmail.toLowerCase().endsWith('@gmail.com')) {
-      setRegError('Alamat email wajib menggunakan domain @gmail.com.');
-      return;
-    }
-
-    setOtpLoading(true);
-    try {
-      const res = await api.post('/register/request-otp', {
-        nip: regNip.trim(),
-        email: regEmail.trim(),
-      });
-      setOtpSent(true);
-      setOtpCountdown(60);
-      setRegSuccess(res.data.message || 'Kode OTP telah dikirim ke kotak masuk Gmail Anda.');
-      if (res.data.pegawai) {
-        setPegawaiData(res.data.pegawai);
-      }
-    } catch (err) {
-      setRegError(err.response?.data?.message || 'Gagal mengirim kode OTP. Periksa kembali NIP dan Email Anda.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    setRegError('');
-    setRegSuccess('');
-
-    if (!regNip.trim() || !regEmail.trim()) {
-      setRegError('NIP dan Email wajib diisi.');
-      return;
-    }
-    if (!regOtp.trim()) {
-      setRegError('Silakan masukkan 6 digit kode OTP verifikasi.');
-      return;
-    }
-    if (!regPassword) {
-      setRegError('Silakan buat kata sandi baru Anda.');
-      return;
-    }
-    if (regPassword.length < 8) {
-      setRegError('Kata sandi minimal 8 karakter.');
-      return;
-    }
-    if (regPassword !== regConfirmPassword) {
-      setRegError('Konfirmasi kata sandi tidak cocok.');
-      return;
-    }
-    if (!agreeTerms) {
-      setRegError('Anda harus menyetujui Ketentuan Layanan BKPSDM.');
-      return;
-    }
-
-    setRegLoading(true);
-    try {
-      const res = await api.post('/register', {
-        nip: regNip.trim(),
-        email: regEmail.trim(),
-        otp: regOtp.trim(),
-        password: regPassword,
-        password_confirmation: regConfirmPassword,
-      });
-
-      if (res.data.access_token) {
-        setAuth(res.data.access_token, res.data.user);
-        onLogin();
-      } else {
-        setNip(regNip.trim());
-        setAuthMode('login');
-      }
-    } catch (err) {
-      setRegError(err.response?.data?.message || 'Registrasi gagal. Periksa kembali data yang Anda masukkan.');
-    } finally {
-      setRegLoading(false);
-    }
-  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -218,7 +103,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
             </p>
             <div className="inline-block mt-4">
               <button onClick={onAuthClick || (() => setShowAuth(true))} className="bg-[#10B981] text-white font-bold py-3 px-10 text-sm sm:text-base rounded-full hover:bg-[#0d9668] transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-1">
-                Daftar / Login
+                Masuk ke Platform
               </button>
             </div>
           </div>
@@ -261,8 +146,9 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
         {/* Left Panel */}
         <div className="w-full md:w-[42%] bg-[#1D315F] p-6 sm:p-8 md:p-8 lg:p-10 flex flex-col justify-between text-white order-2 md:order-1">
           <div>
-            <div className="flex items-center gap-3 mb-8">
-              <img src={logoImg} alt="Logo BKPSDM" className="w-7 sm:w-8 object-contain" />
+            <div className="flex items-center gap-2.5 mb-8">
+              <img src={logoImg} alt="Logo BKPSDM" className="w-7 sm:w-8 h-7 sm:h-8 object-contain" />
+              <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-7 sm:w-8 h-7 sm:h-8 object-contain" />
               <span className="font-semibold text-sm sm:text-base">Buleleng ASN Corpu</span>
             </div>
 
@@ -300,225 +186,17 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
 
         {/* Right Panel */}
         <div className="w-full md:w-[58%] p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-center order-1 md:order-2">
-          {authMode === 'register' ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1.5 text-[#1D315F]">Aktivasi & Registrasi Akun</h2>
-                <p className="text-xs sm:text-sm leading-relaxed font-medium text-gray-500">
-                  Lengkapi data NIP, Email Gmail, dan buat kata sandi untuk mendaftar akun e-learning ASN.
-                </p>
+          <div className="animate-in fade-in duration-300 w-full">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-2 text-[#1D315F]">Masuk ke Akun Anda</h2>
+            <p className="text-xs sm:text-sm mb-6 leading-relaxed font-semibold text-gray-500">
+              Gunakan Nomor Induk Pegawai (NIP) dan kata sandi yang telah terdaftar di sistem.
+            </p>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5">
+                <p>{error}</p>
               </div>
-
-              {regError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-4">
-                  {regError}
-                </div>
-              )}
-
-              {regSuccess && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-4">
-                  {regSuccess}
-                </div>
-              )}
-
-              {pegawaiData && (
-                <div className="bg-teal-50/70 border border-teal-200 p-2.5 rounded-lg mb-4 text-xs text-teal-800">
-                  <span className="font-bold">ASN Terverifikasi:</span> {pegawaiData.nama_lengkap} ({pegawaiData.unit_kerja})
-                </div>
-              )}
-
-              <form onSubmit={handleRegisterSubmit}>
-                {/* NIP */}
-                <div className="mb-3.5 sm:mb-4">
-                  <label className="block text-[#1D315F] text-[10px] sm:text-xs font-bold mb-1.5 uppercase tracking-wide">NIP (Nomor Induk Pegawai)</label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <input
-                      type="text"
-                      value={regNip}
-                      onChange={(e) => setRegNip(e.target.value)}
-                      required
-                      className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
-                      placeholder="Masukkan 18 digit NIP Anda"
-                    />
-                  </div>
-                </div>
-
-                {/* Email Gmail */}
-                <div className="mb-3.5 sm:mb-4">
-                  <label className="block text-[#1D315F] text-[10px] sm:text-xs font-bold mb-1.5 uppercase tracking-wide">Email (Gmail)</label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <input
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      required
-                      className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
-                      placeholder="contoh: nama@gmail.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Kode OTP */}
-                <div className="mb-3.5 sm:mb-4">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-[#1D315F] text-[10px] sm:text-xs font-bold uppercase tracking-wide">Kode OTP Verifikasi</label>
-                    <span className="text-[10px] text-gray-400 font-medium">Berlaku 10 menit</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </div>
-                      <input
-                        type="text"
-                        value={regOtp}
-                        onChange={(e) => setRegOtp(e.target.value)}
-                        required
-                        maxLength={6}
-                        className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium tracking-widest bg-gray-50/50"
-                        placeholder="6 digit OTP"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={otpLoading || otpCountdown > 0}
-                      className="px-3 sm:px-4 py-2 sm:py-2.5 border border-[#3FCDC1] text-[#006A63] bg-[#E8F8F5] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#3FCDC1] hover:text-white transition-colors whitespace-nowrap disabled:opacity-50 cursor-pointer"
-                    >
-                      {otpLoading ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Mengirim...</span>
-                        </>
-                      ) : otpCountdown > 0 ? (
-                        <span>Kirim Ulang ({otpCountdown}s)</span>
-                      ) : (
-                        <span>{otpSent ? 'Kirim Ulang OTP' : 'Kirim OTP'}</span>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Password Baru */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="block text-[#1D315F] text-[10px] sm:text-xs font-bold mb-1.5 uppercase tracking-wide">Kata Sandi Baru</label>
-                    <div className="relative">
-                      <input
-                        type={showRegPassword ? 'text' : 'password'}
-                        value={regPassword || ''}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        className="w-full pl-3 pr-9 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
-                        placeholder="Min. 8 karakter"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowRegPassword(!showRegPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[#1D315F] text-[10px] sm:text-xs font-bold mb-1.5 uppercase tracking-wide">Ulangi Kata Sandi</label>
-                    <div className="relative">
-                      <input
-                        type={showRegConfirmPassword ? 'text' : 'password'}
-                        value={regConfirmPassword || ''}
-                        onChange={(e) => setRegConfirmPassword(e.target.value)}
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        className="w-full pl-3 pr-9 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
-                        placeholder="Konfirmasi sandi"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showRegConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Terms */}
-                <div className="mb-4 sm:mb-5 flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="terms"
-                    checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
-                    required
-                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#3FCDC1] focus:ring-[#3FCDC1]"
-                  />
-                  <label htmlFor="terms" className="text-xs text-gray-500 font-medium cursor-pointer">
-                    Saya menyetujui Ketentuan Layanan & Kebijakan E-Learning BKPSDM
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={regLoading}
-                  className="w-full bg-[#36B1A0] text-white font-bold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-sm flex items-center justify-center gap-2 shadow-md mb-4 disabled:opacity-60 cursor-pointer"
-                >
-                  {regLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Mendaftarkan Akun...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Daftar Sekarang</span>
-                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </>
-                  )}
-                </button>
-
-                <p className="text-xs sm:text-sm font-medium text-gray-500 text-center">
-                  Sudah memiliki akun aktif?{' '}
-                  <button type="button" onClick={() => setAuthMode('login')} className="text-[#3FCDC1] font-bold hover:underline cursor-pointer">
-                    Masuk di sini
-                  </button>
-                </p>
-              </form>
-            </div>
-          ) : (
-            <div className="animate-in fade-in duration-300 w-full">
-              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-2 text-[#1D315F]">Masuk ke Akun Anda</h2>
-              <p className="text-xs sm:text-sm mb-6 leading-relaxed font-semibold text-gray-500">
-                Gunakan Nomor Induk Pegawai (NIP) dan kata sandi yang telah terdaftar di sistem.
-              </p>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5">
-                  <p>{error}</p>
-                  {error.toLowerCase().includes('registrasi') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRegNip(nip);
-                        setAuthMode('register');
-                      }}
-                      className="mt-2 text-xs font-bold text-[#006A63] bg-teal-100 hover:bg-teal-200 px-3 py-1 rounded transition-colors inline-block cursor-pointer"
-                    >
-                      Daftar Akun Baru Sekarang &rarr;
-                    </button>
-                  )}
-                </div>
-              )}
+            )}
 
               {loading ? (
                 <div className="space-y-4 sm:space-y-5">
@@ -818,9 +496,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                 </form>
               )}
             </div>
-          )}
 
-          {authMode === 'login' && (
             <button
               onClick={() => {
                 setShowAuth(false);
@@ -836,11 +512,10 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                 setNewPassword('');
                 setResetConfirmPassword('');
               }}
-              className="mt-3 sm:mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 text-center transition-colors"
+              className="mt-3 sm:mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 text-center transition-colors cursor-pointer"
             >
               ← Kembali ke beranda
             </button>
-          )}
         </div>
       </div>
     </div>
@@ -1095,8 +770,9 @@ const Footer = ({ onFooterLinkClick }) => (
   <footer className="bg-[#EAEFF4] pt-16 pb-8 border-t border-gray-200">
     <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
       <div className="md:col-span-5 pr-8">
-        <div className="flex items-center gap-3 mb-6">
-          <img src={logoImg} alt="Logo BKPSDM" className="w-8 object-contain" />
+        <div className="flex items-center gap-2.5 sm:gap-3 mb-6">
+          <img src={logoImg} alt="Logo BKPSDM" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
+          <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
           <span className="font-semibold text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
         </div>
         <p className="text-[13px] text-gray-600 leading-relaxed mb-6">
@@ -1139,12 +815,10 @@ const Footer = ({ onFooterLinkClick }) => (
 
 export default function LandingPage({ onLogin, onNavigate }) {
   const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('register');
   const [intendedRoute, setIntendedRoute] = useState('dashboard');
 
   const handleAuthClick = (route = 'dashboard') => {
     setIntendedRoute(route);
-    setAuthMode('register');
     setShowAuth(true);
   };
 
@@ -1152,7 +826,7 @@ export default function LandingPage({ onLogin, onNavigate }) {
     <div className="min-h-screen flex flex-col font-['Inter'] bg-white">
       <Navbar onLoginClick={() => handleAuthClick('dashboard')} />
       <main className="flex-grow pt-12 sm:pt-14">
-        <Hero showAuth={showAuth} setShowAuth={setShowAuth} authMode={authMode} setAuthMode={setAuthMode} onLogin={() => onLogin(intendedRoute)} onAuthClick={() => handleAuthClick('dashboard')} />
+        <Hero showAuth={showAuth} setShowAuth={setShowAuth} onLogin={() => onLogin(intendedRoute)} onAuthClick={() => handleAuthClick('dashboard')} />
         <FeaturesBanner />
         <Categories />
         <PopularCourses />
