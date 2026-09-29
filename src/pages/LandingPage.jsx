@@ -339,6 +339,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                       type="text"
                       value={regNip}
                       onChange={(e) => setRegNip(e.target.value)}
+                      autoComplete="username"
                       required
                       className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
                       placeholder="Masukkan 18 digit NIP Anda"
@@ -357,6 +358,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                       type="email"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
+                      autoComplete="email"
                       required
                       className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium bg-gray-50/50"
                       placeholder="contoh: nama@gmail.com"
@@ -379,6 +381,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                         type="text"
                         value={regOtp}
                         onChange={(e) => setRegOtp(e.target.value)}
+                        autoComplete="one-time-code"
                         required
                         maxLength={6}
                         className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium tracking-widest bg-gray-50/50"
@@ -581,6 +584,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                         type="text"
                         value={resetNip}
                         onChange={(e) => setResetNip(e.target.value)}
+                        autoComplete="username"
                         required
                         className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
                         placeholder="Masukkan 18 digit NIP Anda"
@@ -597,6 +601,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                         type="email"
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
+                        autoComplete="email"
                         required
                         className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
                         placeholder="contoh: user@bkpsdm.go.id"
@@ -666,6 +671,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                         type="text"
                         value={resetOtp}
                         onChange={(e) => setResetOtp(e.target.value)}
+                        autoComplete="one-time-code"
                         required
                         maxLength={6}
                         className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 text-center tracking-widest font-bold"
@@ -750,6 +756,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                     type="text"
                     value={nip}
                     onChange={(e) => setNip(e.target.value)}
+                    autoComplete="username"
                     required
                     className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
                     placeholder="Masukkan 18 digit NIP Anda"
