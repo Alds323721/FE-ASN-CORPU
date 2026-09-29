@@ -257,6 +257,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           </div>
                           <input
                             type="text"
+                            name="reset-nip"
+                            autoComplete="username"
                             value={resetNip}
                             onChange={(e) => setResetNip(e.target.value)}
                             required
@@ -273,6 +275,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           </div>
                           <input
                             type="email"
+                            name="reset-email"
+                            autoComplete="email"
                             value={resetEmail}
                             onChange={(e) => setResetEmail(e.target.value)}
                             required
@@ -342,6 +346,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           </div>
                           <input
                             type="text"
+                            name="reset-otp"
+                            autoComplete="one-time-code"
                             value={resetOtp}
                             onChange={(e) => setResetOtp(e.target.value)}
                             required
@@ -426,6 +432,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       </div>
                       <input
                         type="text"
+                        name="nip"
+                        autoComplete="username"
                         value={nip}
                         onChange={(e) => setNip(e.target.value)}
                         required
@@ -443,6 +451,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       </div>
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        name="password"
                         value={password || ''}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"
