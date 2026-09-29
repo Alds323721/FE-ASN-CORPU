@@ -214,7 +214,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
           <div className="w-full md:w-1/2 text-white mb-10 md:mb-0">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-['Inter'] font-semibold text-white mb-4 md:mb-6 tracking-tight">BKPSDM</h1>
             <p className="text-sm md:text-base lg:text-lg text-white/90 leading-relaxed max-w-xl mb-6">
-              BKPSDM.
+              Badan Kepegawaian dan Pengembangan Sumber Daya Manusia Kabupaten Buleleng bertugas membantu Bupati melaksanakan fungsi penunjang urusan pemerintahan di bidang kepegawaian serta pendidikan dan pelatihan.
             </p>
             <div className="inline-block mt-4">
               <button onClick={onAuthClick || (() => setShowAuth(true))} className="bg-[#10B981] text-white font-bold py-3 px-10 text-sm sm:text-base rounded-full hover:bg-[#0d9668] transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-1">
