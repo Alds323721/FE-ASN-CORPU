@@ -337,6 +337,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                     </div>
                     <input
                       type="text"
+                      name="nip"
+                      autoComplete="username"
                       value={regNip}
                       onChange={(e) => setRegNip(e.target.value)}
                       required
@@ -355,6 +357,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                     </div>
                     <input
                       type="email"
+                      name="email"
+                      autoComplete="email"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       required
@@ -377,6 +381,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                       </div>
                       <input
                         type="text"
+                        name="otp"
+                        autoComplete="one-time-code"
                         value={regOtp}
                         onChange={(e) => setRegOtp(e.target.value)}
                         required
@@ -579,6 +585,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                           </div>
                           <input
                             type="text"
+                            name="reset-nip"
+                            autoComplete="username"
                             value={resetNip}
                             onChange={(e) => setResetNip(e.target.value)}
                             required
@@ -595,6 +603,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                           </div>
                           <input
                             type="email"
+                            name="reset-email"
+                            autoComplete="email"
                             value={resetEmail}
                             onChange={(e) => setResetEmail(e.target.value)}
                             required
@@ -664,6 +674,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                           </div>
                           <input
                             type="text"
+                            name="reset-otp"
+                            autoComplete="one-time-code"
                             value={resetOtp}
                             onChange={(e) => setResetOtp(e.target.value)}
                             required
@@ -748,6 +760,8 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                       </div>
                       <input
                         type="text"
+                        name="nip"
+                        autoComplete="username"
                         value={nip}
                         onChange={(e) => setNip(e.target.value)}
                         required
@@ -765,6 +779,7 @@ const Hero = ({ showAuth, setShowAuth, authMode, setAuthMode, onLogin, onAuthCli
                       </div>
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        name="password"
                         value={password || ''}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"
