@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { setAuth } from '../utils/auth';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import heroImg from '../assets/BG_BKPSDM.jpg';
 import { PasswordRequirementsList, validatePasswordStrict } from '../components/PasswordRequirements';
+import ReCaptcha from '../components/ReCaptcha';
 import {
   Search,
   Users,
@@ -75,6 +76,10 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [lockoutCountdown, setLockoutCountdown] = useState(0);
   const [otpLockoutCountdown, setOtpLockoutCountdown] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(null);
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const loginRecaptchaRef = useRef(null);
+  const [resetCaptchaToken, setResetCaptchaToken] = useState('');
+  const resetRecaptchaRef = useRef(null);
 
   useEffect(() => {
     const savedLockoutUntil = sessionStorage.getItem('bkpsdm_login_lockout_until');
@@ -149,16 +154,26 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (lockoutCountdown > 0) return;
+    if (!loginCaptchaToken) {
+      setError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+      return;
+    }
     setError('');
     setResetSuccess('');
     setLoading(true);
     try {
-      const response = await api.post('/login', { nip, password });
+      const response = await api.post('/login', {
+        nip,
+        password,
+        recaptcha_token: loginCaptchaToken,
+      });
       sessionStorage.removeItem('bkpsdm_login_lockout_until');
       setRemainingAttempts(null);
       setAuth(response.data.access_token, response.data.user);
       onLogin();
     } catch (err) {
+      loginRecaptchaRef.current?.reset();
+      setLoginCaptchaToken('');
       const resData = err.response?.data;
       const status = err.response?.status;
 
@@ -345,6 +360,10 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       setResetStep('email');
                       setError('');
                       setResetSuccess('');
+                      setLoginCaptchaToken('');
+                      setResetCaptchaToken('');
+                      loginRecaptchaRef.current?.reset();
+                      resetRecaptchaRef.current?.reset();
                     }}
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-[#1D315F] hover:underline bg-white px-2.5 py-1.5 rounded border border-red-200 shadow-sm cursor-pointer"
                   >
@@ -410,10 +429,18 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
                       return;
                     }
+                    if (!resetCaptchaToken) {
+                      setResetError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+                      return;
+                    }
                     setResetError('');
                     setResetLoading(true);
                     try {
-                      const response = await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
+                      const response = await api.post('/forgot-password', {
+                        nip: resetNip,
+                        email: resetEmail,
+                        recaptcha_token: resetCaptchaToken,
+                      });
                       if (response.data?.unique_id) {
                         setResetUniqueId(response.data.unique_id);
                         setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
@@ -423,6 +450,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         setResetError(response.data?.message || 'Data NIP tidak ditemukan dalam sistem kepegawaian.');
                       }
                     } catch (err) {
+                      resetRecaptchaRef.current?.reset();
+                      setResetCaptchaToken('');
                       if (err.response?.status === 429) {
                         const retryAfter = Number(err.response?.data?.retry_after) || 1800;
                         setOtpLockoutCountdown(retryAfter);
@@ -488,6 +517,15 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         />
                       </div>
                     </div>
+                    {/* reCAPTCHA v2 Checkbox */}
+                    <div className="mb-4 flex flex-col items-center justify-center">
+                      <ReCaptcha
+                        ref={resetRecaptchaRef}
+                        onChange={setResetCaptchaToken}
+                        onExpired={() => setResetCaptchaToken('')}
+                      />
+                    </div>
+
                     <button
                       type="submit"
                       disabled={resetLoading || otpLockoutCountdown > 0}
@@ -502,6 +540,10 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         setResetError('');
                         setResetNip('');
                         setResetEmail('');
+                        setResetCaptchaToken('');
+                        setLoginCaptchaToken('');
+                        resetRecaptchaRef.current?.reset();
+                        loginRecaptchaRef.current?.reset();
                       }}
                       className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
                     >
@@ -821,6 +863,10 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       setResetStep('email');
                       setError('');
                       setResetSuccess('');
+                      setLoginCaptchaToken('');
+                      setResetCaptchaToken('');
+                      loginRecaptchaRef.current?.reset();
+                      resetRecaptchaRef.current?.reset();
                     }}
                     className="text-xs sm:text-sm text-[#1D315F] font-semibold hover:underline cursor-pointer"
                   >
@@ -855,6 +901,15 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                   </div>
                 ) : null}
 
+                {/* Google reCAPTCHA v2 Checkbox */}
+                <div className="mb-4 flex flex-col items-center justify-center">
+                  <ReCaptcha
+                    ref={loginRecaptchaRef}
+                    onChange={setLoginCaptchaToken}
+                    onExpired={() => setLoginCaptchaToken('')}
+                  />
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading || lockoutCountdown > 0}
@@ -874,7 +929,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
 
                 {/* Info Box untuk Pengguna Baru */}
                 <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 leading-relaxed text-left">
-                  Pertama kali masuk? Klik <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); }} className="font-bold underline text-teal-900 hover:text-teal-700">Lupa Kata Sandi</button> untuk membuat kata sandi Anda dengan kode OTP yang dikirim ke email terdaftar.
+                  Pertama kali masuk? Klik <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); setLoginCaptchaToken(''); setResetCaptchaToken(''); loginRecaptchaRef.current?.reset(); resetRecaptchaRef.current?.reset(); }} className="font-bold underline text-teal-900 hover:text-teal-700">Lupa Kata Sandi</button> untuk membuat kata sandi Anda dengan kode OTP yang dikirim ke email terdaftar.
                 </div>
 
                 <p className="text-[10px] sm:text-xs font-semibold text-gray-400 mt-4 sm:mt-5 text-center flex items-center justify-center gap-1.5">
