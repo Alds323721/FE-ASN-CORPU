@@ -472,7 +472,12 @@ export default function Kuis({ onNavigate, onBack }) {
     } catch (e) {}
   }, [activeSection, sectionStorageKey]);
 
+  const hasFetchedKuisRef = useRef(false);
+
   useEffect(() => {
+    if (hasFetchedKuisRef.current) return;
+    hasFetchedKuisRef.current = true;
+
     const fetchKuis = async () => {
       try {
         const res = await api.get(`/user/courses/${courseId}/modul/${modulId}/kuis/${kuisId}`);
@@ -491,7 +496,7 @@ export default function Kuis({ onNavigate, onBack }) {
           }
         }
       } catch (error) {
-        Swal.fire({
+        await Swal.fire({
           icon: 'error',
           title: 'Gagal Memuat Kuis',
           text: error.response?.data?.message || 'Gagal mengambil soal kuis.',
@@ -511,8 +516,9 @@ export default function Kuis({ onNavigate, onBack }) {
         title: 'ID Tidak Ditemukan',
         text: 'Data sesi pelatihan tidak ditemukan.',
         confirmButtonColor: '#006A63'
+      }).then(() => {
+        onNavigate('my-courses');
       });
-      onNavigate('my-courses');
     }
   }, [courseId]);
 

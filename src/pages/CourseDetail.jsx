@@ -294,17 +294,25 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
           <SyllabusItem
             index="Akhir"
             title={courseData.post_test.judul}
-            subtitle="Syarat Kelulusan"
+            subtitle={courseData.status_pendaftaran === 'lulus' ? 'Evaluasi Selesai (Lulus)' : 'Syarat Kelulusan'}
             duration={courseData.post_test.durasi}
-            status={parseFloat(courseData.progress) >= 100 ? 'active' : 'locked'}
+            status={courseData.status_pendaftaran === 'lulus' ? 'completed' : (parseFloat(courseData.progress) >= 100 ? 'active' : 'locked')}
+            badge={courseData.status_pendaftaran === 'lulus' ? 'Lulus' : null}
             onClick={() => {
-               if (parseFloat(courseData.progress) >= 100) onNavigate('post-test');
-               else Swal.fire({
-                 icon: 'info',
-                 title: 'Post Test Masih Terkunci',
-                 text: 'Selesaikan seluruh materi dan kuis modul terlebih dahulu sebelum mengikuti Post Test.',
-                 confirmButtonColor: '#006A63'
-               });
+               if (courseData.status_pendaftaran === 'lulus') {
+                 onNavigate('test-result');
+                 return;
+               }
+               if (parseFloat(courseData.progress) >= 100) {
+                 onNavigate('post-test');
+               } else {
+                 Swal.fire({
+                   icon: 'info',
+                   title: 'Post Test Masih Terkunci',
+                   text: 'Selesaikan seluruh materi dan kuis modul terlebih dahulu sebelum mengikuti Post Test.',
+                   confirmButtonColor: '#006A63'
+                 });
+               }
             }}
           />
         </div>
