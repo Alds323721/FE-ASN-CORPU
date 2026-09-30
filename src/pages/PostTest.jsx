@@ -465,8 +465,12 @@ export default function PostTest({ onNavigate, onBack }) {
   const [testData, setTestData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const fetchPostTest = async () => {
       try {
         const res = await api.get(`/user/courses/${courseId}/post-test`);
@@ -474,18 +478,32 @@ export default function PostTest({ onNavigate, onBack }) {
           setTestData(res.data.data);
         }
       } catch (error) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Gagal Memuat Soal',
-          text: error.response?.data?.message || 'Gagal mengambil soal post test.',
-          confirmButtonColor: '#006A63'
+        const errorMsg = error.response?.data?.message || 'Gagal mengambil soal post test.';
+        const isAlreadyPassed = errorMsg.toLowerCase().includes('sudah lulus');
+
+        await Swal.fire({
+          icon: isAlreadyPassed ? 'info' : 'error',
+          title: isAlreadyPassed ? 'Pelatihan Telah Diselesaikan' : 'Gagal Memuat Soal',
+          text: isAlreadyPassed 
+            ? 'Anda telah berhasil menyelesaikan program pelatihan ini dan lulus Post Test.' 
+            : errorMsg,
+          confirmButtonColor: '#006A63',
+          confirmButtonText: isAlreadyPassed ? 'Lihat Hasil & Sertifikat' : 'Kembali',
+          allowOutsideClick: false
         });
-        if (onBack) onBack();
-        else onNavigate('my-courses');
+
+        if (isAlreadyPassed) {
+          onNavigate('test-result');
+        } else if (onBack) {
+          onBack();
+        } else {
+          onNavigate('my-courses');
+        }
       } finally {
         setLoading(false);
       }
     };
+
     if (courseId) {
       fetchPostTest();
     } else {
@@ -494,8 +512,9 @@ export default function PostTest({ onNavigate, onBack }) {
         title: 'ID Tidak Ditemukan',
         text: 'Data sesi pelatihan tidak ditemukan.',
         confirmButtonColor: '#006A63'
+      }).then(() => {
+        onNavigate('my-courses');
       });
-      onNavigate('my-courses');
     }
   }, [courseId]);
 

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { setAuth } from '../utils/auth';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import heroImg from '../assets/BG_BKPSDM.jpg';
 import { PasswordRequirementsList, validatePasswordStrict } from '../components/PasswordRequirements';
+import ReCaptcha from '../components/ReCaptcha';
 import {
   Search,
   Users,
@@ -58,6 +59,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [remember, setRemember] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetStep, setResetStep] = useState('email');
+  const [resetUniqueId, setResetUniqueId] = useState('');
   const [resetNip, setResetNip] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [resetOtp, setResetOtp] = useState('');
@@ -70,8 +72,14 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [resetSuccess, setResetSuccess] = useState('');
   const [serverMessage, setServerMessage] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
   const [lockoutCountdown, setLockoutCountdown] = useState(0);
+  const [otpLockoutCountdown, setOtpLockoutCountdown] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(null);
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const loginRecaptchaRef = useRef(null);
+  const [resetCaptchaToken, setResetCaptchaToken] = useState('');
+  const resetRecaptchaRef = useRef(null);
 
   useEffect(() => {
     const savedLockoutUntil = sessionStorage.getItem('bkpsdm_login_lockout_until');
@@ -81,6 +89,16 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
         setLockoutCountdown(remaining);
       } else {
         sessionStorage.removeItem('bkpsdm_login_lockout_until');
+      }
+    }
+
+    const savedOtpLockoutUntil = sessionStorage.getItem('bkpsdm_otp_lockout_until');
+    if (savedOtpLockoutUntil) {
+      const remaining = Math.ceil((parseInt(savedOtpLockoutUntil, 10) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setOtpLockoutCountdown(remaining);
+      } else {
+        sessionStorage.removeItem('bkpsdm_otp_lockout_until');
       }
     }
   }, []);
@@ -103,6 +121,22 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
     return () => clearTimeout(timer);
   }, [lockoutCountdown]);
 
+  useEffect(() => {
+    let timer;
+    if (otpLockoutCountdown > 0) {
+      timer = setTimeout(() => {
+        setOtpLockoutCountdown((prev) => {
+          if (prev <= 1) {
+            sessionStorage.removeItem('bkpsdm_otp_lockout_until');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [otpLockoutCountdown]);
+
   const formatCountdown = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
@@ -120,16 +154,26 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (lockoutCountdown > 0) return;
+    if (!loginCaptchaToken) {
+      setError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+      return;
+    }
     setError('');
     setResetSuccess('');
     setLoading(true);
     try {
-      const response = await api.post('/login', { nip, password });
+      const response = await api.post('/login', {
+        nip,
+        password,
+        recaptcha_token: loginCaptchaToken,
+      });
       sessionStorage.removeItem('bkpsdm_login_lockout_until');
       setRemainingAttempts(null);
       setAuth(response.data.access_token, response.data.user);
       onLogin();
     } catch (err) {
+      loginRecaptchaRef.current?.reset();
+      setLoginCaptchaToken('');
       const resData = err.response?.data;
       const status = err.response?.status;
 
@@ -151,18 +195,36 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   };
 
   const handleResendOtp = async () => {
-    if (resendCountdown > 0 || resetLoading) return;
+    if (resendCountdown > 0 || resetLoading || resendCount >= 3 || otpLockoutCountdown > 0) return;
     setResetError('');
     setResetLoading(true);
     try {
-      const response = await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
-      setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
+      const response = await api.post('/forgot-password/resend', {
+        unique_id: resetUniqueId,
+        nip: resetNip,
+      });
+      if (response.data?.unique_id) {
+        setResetUniqueId(response.data.unique_id);
+      }
+      if (typeof response.data?.resent === 'number') {
+        setResendCount(response.data.resent);
+      } else {
+        setResendCount((prev) => prev + 1);
+      }
+      setServerMessage(response.data?.message || 'Kode OTP baru telah dikirim ke email Anda.');
       setResendCountdown(60);
     } catch (err) {
+      const resData = err.response?.data;
+      if (typeof resData?.resent === 'number') {
+        setResendCount(resData.resent);
+      }
       if (err.response?.status === 429) {
-        setResetError('Terlalu banyak percobaan. Coba lagi beberapa saat.');
+        const retryAfter = Number(resData?.retry_after) || 1800;
+        setOtpLockoutCountdown(retryAfter);
+        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+        setResetError(resData?.message || 'Batas pengiriman ulang OTP telah tercapai (3 kali). Akses dibatasi selama 30 menit.');
       } else {
-        setResetError(err.response?.data?.message || 'Gagal mengirim ulang kode OTP.');
+        setResetError(resData?.message || 'Gagal mengirim ulang kode OTP.');
       }
     } finally {
       setResetLoading(false);
@@ -289,6 +351,25 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5">
                 <p>{error}</p>
+                {error.includes('Lupa Kata Sandi') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (nip) setResetNip(nip);
+                      setShowForgotPassword(true);
+                      setResetStep('email');
+                      setError('');
+                      setResetSuccess('');
+                      setLoginCaptchaToken('');
+                      setResetCaptchaToken('');
+                      loginRecaptchaRef.current?.reset();
+                      resetRecaptchaRef.current?.reset();
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-[#1D315F] hover:underline bg-white px-2.5 py-1.5 rounded border border-red-200 shadow-sm cursor-pointer"
+                  >
+                    Buka Menu Lupa Kata Sandi &rarr;
+                  </button>
+                )}
               </div>
             )}
 
@@ -314,34 +395,68 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
               </div>
             ) : showForgotPassword ? (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <div className="mb-6">
-                  <h3 className="text-[#1D315F] font-bold text-lg mb-1">Buat / Atur Ulang Kata Sandi</h3>
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'email' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>1. Data Akun</span>
+                    <span className="text-gray-300 text-xs">&rarr;</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'otp' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>2. Verifikasi OTP</span>
+                    <span className="text-gray-300 text-xs">&rarr;</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'password' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>3. Sandi Baru</span>
+                  </div>
+                  <h3 className="text-[#1D315F] font-bold text-lg mb-1">
+                    {resetStep === 'email' && 'Buat / Atur Ulang Kata Sandi'}
+                    {resetStep === 'otp' && 'Verifikasi Kode OTP'}
+                    {resetStep === 'password' && 'Buat Kata Sandi Baru'}
+                  </h3>
                   <p className="text-gray-500 text-xs font-semibold">
-                    {resetStep === 'email'
-                      ? 'Masukkan NIP dan email yang terdaftar di data kepegawaian untuk menerima kode OTP.'
-                      : 'Masukkan kode OTP yang dikirimkan ke email Anda dan kata sandi baru.'}
+                    {resetStep === 'email' && 'Masukkan NIP dan email yang terdaftar di data kepegawaian untuk menerima kode OTP verifikasi.'}
+                    {resetStep === 'otp' && 'Masukkan 6 digit kode OTP yang telah dikirimkan ke email Anda. Kode berlaku 5 menit.'}
+                    {resetStep === 'password' && 'Buat kata sandi baru yang kuat untuk akun LMS Anda.'}
                   </p>
                 </div>
 
                 {resetError && (
-                  <div className="bg-red-100 text-red-600 p-2 rounded text-sm mb-4 text-center">
+                  <div className="bg-red-100 text-red-600 p-2.5 rounded text-xs sm:text-sm mb-4 text-center font-medium">
                     {resetError}
                   </div>
                 )}
 
-                {resetStep === 'email' ? (
+                {/* STEP 1: Input NIP & Email */}
+                {resetStep === 'email' && (
                   <form onSubmit={async (e) => {
                     e.preventDefault();
+                    if (otpLockoutCountdown > 0) {
+                      setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                      return;
+                    }
+                    if (!resetCaptchaToken) {
+                      setResetError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+                      return;
+                    }
                     setResetError('');
                     setResetLoading(true);
                     try {
-                      const response = await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
-                      setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
-                      setResetStep('otp');
-                      setResendCountdown(60);
+                      const response = await api.post('/forgot-password', {
+                        nip: resetNip,
+                        email: resetEmail,
+                        recaptcha_token: resetCaptchaToken,
+                      });
+                      if (response.data?.unique_id) {
+                        setResetUniqueId(response.data.unique_id);
+                        setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
+                        setResetStep('otp');
+                        setResendCountdown(60);
+                      } else {
+                        setResetError(response.data?.message || 'Data NIP tidak ditemukan dalam sistem kepegawaian.');
+                      }
                     } catch (err) {
+                      resetRecaptchaRef.current?.reset();
+                      setResetCaptchaToken('');
                       if (err.response?.status === 429) {
-                        setResetError('Terlalu banyak percobaan. Coba lagi beberapa saat.');
+                        const retryAfter = Number(err.response?.data?.retry_after) || 1800;
+                        setOtpLockoutCountdown(retryAfter);
+                        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+                        setResetError(err.response?.data?.message || 'Akses OTP sedang dibatasi selama 30 menit.');
                       } else {
                         setResetError(err.response?.data?.message || 'Terjadi kesalahan saat meminta OTP');
                       }
@@ -349,6 +464,21 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       setResetLoading(false);
                     }
                   }}>
+                    {otpLockoutCountdown > 0 && (
+                      <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
+                          <Clock className="w-4 h-4 text-red-600 animate-pulse" />
+                          <span>Akses OTP Dibatasi (30 Menit)</span>
+                        </div>
+                        <p className="text-[11px] text-red-600">
+                          Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
+                        </p>
+                        <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
+                          {formatCountdown(otpLockoutCountdown)}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="mb-4">
                       <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
                       <div className="relative">
@@ -362,7 +492,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           value={resetNip}
                           onChange={(e) => setResetNip(e.target.value)}
                           required
-                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          disabled={resetLoading || otpLockoutCountdown > 0}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
                           placeholder="Masukkan 18 digit NIP Anda"
                         />
                       </div>
@@ -380,15 +511,25 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           value={resetEmail}
                           onChange={(e) => setResetEmail(e.target.value)}
                           required
-                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          disabled={resetLoading || otpLockoutCountdown > 0}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
                           placeholder="contoh: user@bkpsdm.go.id"
                         />
                       </div>
                     </div>
+                    {/* reCAPTCHA v2 Checkbox */}
+                    <div className="mb-4 flex flex-col items-center justify-center">
+                      <ReCaptcha
+                        ref={resetRecaptchaRef}
+                        onChange={setResetCaptchaToken}
+                        onExpired={() => setResetCaptchaToken('')}
+                      />
+                    </div>
+
                     <button
                       type="submit"
-                      disabled={resetLoading}
-                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
+                      disabled={resetLoading || otpLockoutCountdown > 0}
+                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -399,13 +540,141 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         setResetError('');
                         setResetNip('');
                         setResetEmail('');
+                        setResetCaptchaToken('');
+                        setLoginCaptchaToken('');
+                        resetRecaptchaRef.current?.reset();
+                        loginRecaptchaRef.current?.reset();
                       }}
-                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
                     >
                       Kembali ke Login
                     </button>
                   </form>
-                ) : (
+                )}
+
+                {/* STEP 2: Input & Verify OTP */}
+                {resetStep === 'otp' && (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (otpLockoutCountdown > 0) {
+                      setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                      return;
+                    }
+                    setResetError('');
+                    setResetLoading(true);
+                    try {
+                      const response = await api.post('/forgot-password/verify', {
+                        unique_id: resetUniqueId,
+                        nip: resetNip,
+                        otp: resetOtp,
+                      });
+                      if (response.data?.unique_id) {
+                        setResetUniqueId(response.data.unique_id);
+                      }
+                      setResetStep('password');
+                    } catch (err) {
+                      if (err.response?.status === 429) {
+                        const retryAfter = Number(err.response?.data?.retry_after) || 1800;
+                        setOtpLockoutCountdown(retryAfter);
+                        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+                        setResetError(err.response?.data?.message || 'Anda telah 3 kali salah memasukkan kode OTP. Akses dibatasi selama 30 menit.');
+                      } else {
+                        setResetError(err.response?.data?.message || 'Kode OTP tidak valid atau kedaluwarsa.');
+                      }
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}>
+                    {otpLockoutCountdown > 0 && (
+                      <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
+                          <Clock className="w-4 h-4 text-red-600 animate-pulse" />
+                          <span>Akses OTP Dibatasi (30 Menit)</span>
+                        </div>
+                        <p className="text-[11px] text-red-600">
+                          Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
+                        </p>
+                        <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
+                          {formatCountdown(otpLockoutCountdown)}
+                        </span>
+                      </div>
+                    )}
+
+                    {serverMessage && !otpLockoutCountdown && (
+                      <div className="bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-xs mb-4">
+                        <p className="font-semibold">{serverMessage}</p>
+                        <p className="mt-1 text-[11px] text-teal-700">
+                          Periksa kotak masuk (inbox) atau folder spam email Anda.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mb-5">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2 text-center">MASUKKAN KODE OTP (6 DIGIT)</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </div>
+                        <input
+                          type="text"
+                          name="reset-otp"
+                          autoComplete="one-time-code"
+                          value={resetOtp}
+                          onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          required
+                          maxLength={6}
+                          autoFocus
+                          disabled={resetLoading || otpLockoutCountdown > 0}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-lg text-gray-800 placeholder-gray-400 text-center tracking-[8px] font-mono font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                          placeholder="------"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-3 text-xs">
+                        <span className="text-gray-500">Tidak menerima kode?</span>
+                        {otpLockoutCountdown > 0 ? (
+                          <span className="text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 font-semibold text-[11px]">
+                            Dibatasi ({formatCountdown(otpLockoutCountdown)})
+                          </span>
+                        ) : resendCount >= 3 ? (
+                          <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">
+                            Batas kirim ulang habis (3x)
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={resendCountdown > 0 || resetLoading || resendCount >= 3 || otpLockoutCountdown > 0}
+                            className="text-teal-700 font-semibold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            {resendCountdown > 0 ? `Kirim ulang (${resendCountdown}s)` : `Kirim ulang kode (${resendCount}/3)`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={resetLoading || resetOtp.length !== 6 || otpLockoutCountdown > 0}
+                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {resetLoading ? 'Memverifikasi...' : 'Verifikasi OTP'} <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStep('email');
+                        setResendCount(0);
+                        setResetError('');
+                      }}
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
+                    >
+                      Kembali ke Input Email/NIP
+                    </button>
+                  </form>
+                )}
+
+                {/* STEP 3: Input Password Baru */}
+                {resetStep === 'password' && (
                   <form onSubmit={async (e) => {
                     e.preventDefault();
                     setResetError('');
@@ -424,6 +693,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                     setResetLoading(true);
                     try {
                       const response = await api.post('/reset-password', {
+                        unique_id: resetUniqueId,
                         nip: resetNip,
                         otp: resetOtp,
                         password_baru: newPassword,
@@ -431,9 +701,12 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       });
 
                       const savedNip = resetNip;
+                      sessionStorage.removeItem('bkpsdm_otp_lockout_until');
+                      setOtpLockoutCountdown(0);
                       setResetSuccess(response.data?.message || 'Kata sandi berhasil dibuat. Silakan masuk dengan kata sandi baru Anda.');
                       setShowForgotPassword(false);
                       setResetStep('email');
+                      setResetUniqueId('');
                       setResetEmail('');
                       setResetOtp('');
                       setNewPassword('');
@@ -453,45 +726,6 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       setResetLoading(false);
                     }
                   }}>
-                    {serverMessage && (
-                      <div className="bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-xs mb-4">
-                        <p className="font-semibold">{serverMessage}</p>
-                        <p className="mt-1 text-[11px] text-teal-700">
-                          Tidak menerima email? Pastikan NIP dan email sesuai data kepegawaian, atau hubungi admin BKPSDM.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="mb-4">
-                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KODE OTP</label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </div>
-                        <input
-                          type="text"
-                          name="reset-otp"
-                          autoComplete="one-time-code"
-                          value={resetOtp}
-                          onChange={(e) => setResetOtp(e.target.value)}
-                          required
-                          maxLength={6}
-                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 text-center tracking-widest font-bold"
-                          placeholder="123456"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between mt-2 text-xs">
-                        <span className="text-gray-500">Tidak menerima kode?</span>
-                        <button
-                          type="button"
-                          onClick={handleResendOtp}
-                          disabled={resendCountdown > 0 || resetLoading}
-                          className="text-teal-700 font-semibold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer disabled:cursor-not-allowed"
-                        >
-                          {resendCountdown > 0 ? `Kirim ulang (${resendCountdown}s)` : 'Kirim ulang kode'}
-                        </button>
-                      </div>
-                    </div>
                     <div className="mb-4">
                       <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KATA SANDI BARU</label>
                       <div className="relative">
@@ -510,7 +744,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                           {showNewPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </button>
@@ -539,7 +773,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                           {showConfirmPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </button>
@@ -548,16 +782,16 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
+                      className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer"
                     >
                       {resetLoading ? 'Menyimpan...' : 'Simpan Kata Sandi'} <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => setResetStep('email')}
-                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
+                      onClick={() => setResetStep('otp')}
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
                     >
-                      Kembali
+                      Kembali ke Input OTP
                     </button>
                   </form>
                 )}
@@ -621,7 +855,21 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                     </div>
                     <span className="text-xs sm:text-sm font-semibold text-gray-600">Ingat sesi saya</span>
                   </label>
-                  <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); }} className="text-xs sm:text-sm text-[#1D315F] font-semibold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (nip) setResetNip(nip);
+                      setShowForgotPassword(true);
+                      setResetStep('email');
+                      setError('');
+                      setResetSuccess('');
+                      setLoginCaptchaToken('');
+                      setResetCaptchaToken('');
+                      loginRecaptchaRef.current?.reset();
+                      resetRecaptchaRef.current?.reset();
+                    }}
+                    className="text-xs sm:text-sm text-[#1D315F] font-semibold hover:underline cursor-pointer"
+                  >
                     Lupa Kata Sandi?
                   </button>
                 </div>
@@ -653,6 +901,15 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                   </div>
                 ) : null}
 
+                {/* Google reCAPTCHA v2 Checkbox */}
+                <div className="mb-4 flex flex-col items-center justify-center">
+                  <ReCaptcha
+                    ref={loginRecaptchaRef}
+                    onChange={setLoginCaptchaToken}
+                    onExpired={() => setLoginCaptchaToken('')}
+                  />
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading || lockoutCountdown > 0}
@@ -672,7 +929,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
 
                 {/* Info Box untuk Pengguna Baru */}
                 <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 leading-relaxed text-left">
-                  Pertama kali masuk? Klik <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); }} className="font-bold underline text-teal-900 hover:text-teal-700">Lupa Kata Sandi</button> untuk membuat kata sandi Anda dengan kode OTP yang dikirim ke email terdaftar.
+                  Pertama kali masuk? Klik <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); setLoginCaptchaToken(''); setResetCaptchaToken(''); loginRecaptchaRef.current?.reset(); resetRecaptchaRef.current?.reset(); }} className="font-bold underline text-teal-900 hover:text-teal-700">Lupa Kata Sandi</button> untuk membuat kata sandi Anda dengan kode OTP yang dikirim ke email terdaftar.
                 </div>
 
                 <p className="text-[10px] sm:text-xs font-semibold text-gray-400 mt-4 sm:mt-5 text-center flex items-center justify-center gap-1.5">
