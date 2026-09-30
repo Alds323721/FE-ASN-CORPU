@@ -4,6 +4,7 @@ import api from '../api/axios';
 import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
+import { PasswordRequirementsList, validatePasswordStrict } from './PasswordRequirements';
 
 const ProfileDropdown = ({ onLogout }) => {
    const { t } = useLanguage();

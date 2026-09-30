@@ -4,6 +4,7 @@ import { setAuth } from '../utils/auth';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import heroImg from '../assets/BG_BKPSDM.jpg';
+import { PasswordRequirementsList, validatePasswordStrict } from '../components/PasswordRequirements';
 import {
   Search,
   Users,
@@ -69,6 +70,44 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [resetSuccess, setResetSuccess] = useState('');
   const [serverMessage, setServerMessage] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+  const [remainingAttempts, setRemainingAttempts] = useState(null);
+
+  useEffect(() => {
+    const savedLockoutUntil = sessionStorage.getItem('bkpsdm_login_lockout_until');
+    if (savedLockoutUntil) {
+      const remaining = Math.ceil((parseInt(savedLockoutUntil, 10) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setLockoutCountdown(remaining);
+      } else {
+        sessionStorage.removeItem('bkpsdm_login_lockout_until');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let timer;
+    if (lockoutCountdown > 0) {
+      timer = setTimeout(() => {
+        setLockoutCountdown((prev) => {
+          if (prev <= 1) {
+            sessionStorage.removeItem('bkpsdm_login_lockout_until');
+            setRemainingAttempts(null);
+            setError('');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [lockoutCountdown]);
+
+  const formatCountdown = (totalSeconds) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     let timer;
@@ -80,15 +119,32 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    if (lockoutCountdown > 0) return;
     setError('');
     setResetSuccess('');
     setLoading(true);
     try {
       const response = await api.post('/login', { nip, password });
+      sessionStorage.removeItem('bkpsdm_login_lockout_until');
+      setRemainingAttempts(null);
       setAuth(response.data.access_token, response.data.user);
       onLogin();
     } catch (err) {
-      setError(err.response?.data?.message || 'Login gagal, periksa kredensial Anda');
+      const resData = err.response?.data;
+      const status = err.response?.status;
+
+      if (status === 429) {
+        const retryAfter = Number(resData?.retry_after) || 180;
+        setLockoutCountdown(retryAfter);
+        sessionStorage.setItem('bkpsdm_login_lockout_until', String(Date.now() + retryAfter * 1000));
+        setRemainingAttempts(0);
+        setError(resData?.message || 'Terlalu banyak percobaan gagal (3 kali). Silakan tunggu sebelum mencoba kembali.');
+      } else {
+        if (typeof resData?.remaining_attempts === 'number') {
+          setRemainingAttempts(resData.remaining_attempts);
+        }
+        setError(resData?.message || 'Login gagal, periksa kredensial Anda');
+      }
     } finally {
       setLoading(false);
     }
@@ -354,18 +410,14 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                     e.preventDefault();
                     setResetError('');
 
-                    if (newPassword.length < 10) {
-                      setResetError('Kata sandi minimal 10 karakter.');
+                    const check = validatePasswordStrict(newPassword, resetNip);
+                    if (!check.isValid) {
+                      setResetError(check.getFirstError() || 'Kata sandi belum memenuhi kombinasi ketat.');
                       return;
                     }
 
                     if (newPassword !== resetConfirmPassword) {
                       setResetError('Konfirmasi kata sandi tidak cocok.');
-                      return;
-                    }
-
-                    if (resetNip && (newPassword.includes(resetNip) || (resetNip.length >= 8 && newPassword.includes(resetNip.slice(-8))))) {
-                      setResetError('Kata sandi tidak boleh mengandung NIP Anda.');
                       return;
                     }
 
@@ -463,9 +515,11 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                           {showNewPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </button>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-1">
-                        Minimal 10 karakter, mengandung huruf besar, huruf kecil, dan angka, serta tidak mengandung NIP.
-                      </p>
+                      <PasswordRequirementsList
+                        password={newPassword}
+                        nip={resetNip}
+                        className="mt-2"
+                      />
                     </div>
                     <div className="mb-5">
                       <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KONFIRMASI KATA SANDI</label>
@@ -523,7 +577,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       value={nip}
                       onChange={(e) => setNip(e.target.value)}
                       required
-                      className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                      disabled={lockoutCountdown > 0}
+                      className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="Masukkan 18 digit NIP Anda"
                     />
                   </div>
@@ -542,7 +597,8 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
                       required
-                      className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                      disabled={lockoutCountdown > 0}
+                      className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       placeholder="Masukkan kata sandi akun"
                     />
                     <button
@@ -570,18 +626,48 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                   </button>
                 </div>
 
-                {error && (
+                {lockoutCountdown > 0 ? (
+                  <div className="bg-red-50 border border-red-300 text-red-800 p-3 rounded-lg text-xs mb-4 text-left shadow-sm">
+                    <div className="flex items-center gap-1.5 font-bold text-red-700 mb-1">
+                      <Clock className="w-4 h-4 text-red-600 animate-pulse" />
+                      <span>Akun Dikunci Sementara (3x Gagal)</span>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">
+                      Kesempatan 3 kali memasukkan kata sandi telah habis. Silakan tunggu{' '}
+                      <span className="font-mono font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-200">
+                        {formatCountdown(lockoutCountdown)}
+                      </span>{' '}
+                      sebelum dapat mencoba memasukkan kata sandi kembali.
+                    </p>
+                  </div>
+                ) : remainingAttempts !== null && remainingAttempts > 0 ? (
+                  <div className="bg-amber-50 border border-amber-300 text-amber-900 p-2.5 rounded-lg text-xs mb-4 flex items-center justify-between text-left">
+                    <span className="font-medium">NIP atau kata sandi salah.</span>
+                    <span className="font-bold bg-amber-200/80 px-2 py-0.5 rounded text-amber-950 shrink-0">
+                      Sisa: {remainingAttempts}x kesempatan
+                    </span>
+                  </div>
+                ) : error ? (
                   <div className="bg-red-50 text-red-600 p-2 rounded text-xs mb-4 text-center">
                     {error}
                   </div>
-                )}
+                ) : null}
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                  disabled={loading || lockoutCountdown > 0}
+                  className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Masuk ke Platform<ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {lockoutCountdown > 0 ? (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      Tunggu ({formatCountdown(lockoutCountdown)})
+                    </>
+                  ) : loading ? (
+                    'Memproses...'
+                  ) : (
+                    <>Masuk ke Platform<ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" /></>
+                  )}
                 </button>
 
                 {/* Info Box untuk Pengguna Baru */}
