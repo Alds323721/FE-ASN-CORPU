@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { setAuth } from '../utils/auth';
 import logoImg from '../assets/logo-removebg-preview 1.png';
@@ -66,10 +66,22 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [serverMessage, setServerMessage] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCountdown > 0) {
+      timer = setTimeout(() => setResendCountdown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setResetSuccess('');
     setLoading(true);
     try {
       const response = await api.post('/login', { nip, password });
@@ -79,6 +91,25 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
       setError(err.response?.data?.message || 'Login gagal, periksa kredensial Anda');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0 || resetLoading) return;
+    setResetError('');
+    setResetLoading(true);
+    try {
+      const response = await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
+      setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
+      setResendCountdown(60);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        setResetError('Terlalu banyak percobaan. Coba lagi beberapa saat.');
+      } else {
+        setResetError(err.response?.data?.message || 'Gagal mengirim ulang kode OTP.');
+      }
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -103,7 +134,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
             </p>
             <div className="inline-block mt-4">
               <button onClick={onAuthClick || (() => setShowAuth(true))} className="bg-[#10B981] text-white font-bold py-3 px-10 text-sm sm:text-base rounded-full hover:bg-[#0d9668] transition-all shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.23)] hover:-translate-y-1">
-                Masuk ke Platform
+                Masuk Menggunakan NIP
               </button>
             </div>
           </div>
@@ -155,7 +186,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
             <div className="mb-6">
               <h3 className="text-[10px] sm:text-xs font-semibold tracking-widest text-white/60 uppercase mb-2">Visi Platform</h3>
               <p className="text-xs sm:text-sm leading-relaxed text-white/90 font-semibold">
-                "Mewujudkan ASN Buleleng yang kompetitif, inovatif, dan berdaya saing tinggi melalui pendidikan digital yang terintegrasi dengan sistem kepegawaian."
+                Mewujudkan ASN Buleleng yang kompetitif, inovatif, dan berdaya saing tinggi melalui pendidikan digital yang terintegrasi dengan sistem kepegawaian.
               </p>
             </div>
 
@@ -189,8 +220,15 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
           <div className="animate-in fade-in duration-300 w-full">
             <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-2 text-[#1D315F]">Masuk ke Akun Anda</h2>
             <p className="text-xs sm:text-sm mb-6 leading-relaxed font-semibold text-gray-500">
-              Gunakan Nomor Induk Pegawai (NIP) dan kata sandi yang telah terdaftar di sistem.
+              Gunakan NIP dan kata sandi akun LMS Anda.
             </p>
+
+            {resetSuccess && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5 flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{resetSuccess}</span>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5">
@@ -198,333 +236,387 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
               </div>
             )}
 
-              {loading ? (
-                <div className="space-y-4 sm:space-y-5">
-                  <div>
-                    <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
-                    <div className="h-10 sm:h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
-                  </div>
-                  <div>
-                    <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
-                    <div className="h-10 sm:h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                  <div className="h-11 sm:h-12 w-full bg-[#3FCDC1]/30 rounded-lg animate-pulse flex items-center justify-center gap-2 mt-2">
-                    <Loader2 className="w-4 h-4 text-[#006A63] animate-spin" />
-                    <span className="text-sm font-semibold text-[#006A63]">Memproses...</span>
-                  </div>
-                  <div className="h-3 w-44 sm:w-56 bg-gray-100 rounded animate-pulse mt-2"></div>
+            {loading ? (
+              <div className="space-y-4 sm:space-y-5">
+                <div>
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-10 sm:h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
                 </div>
-              ) : showForgotPassword ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="mb-6">
-                    <h3 className="text-[#1D315F] font-bold text-lg mb-1">Lupa Kata Sandi?</h3>
-                    <p className="text-gray-500 text-xs font-semibold">
-                      {resetStep === 'email'
-                        ? 'Masukkan email yang terdaftar untuk menerima kode OTP.'
-                        : 'Masukkan kode OTP yang dikirimkan ke email Anda dan kata sandi baru.'}
-                    </p>
+                <div>
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-10 sm:h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-11 sm:h-12 w-full bg-[#3FCDC1]/30 rounded-lg animate-pulse flex items-center justify-center gap-2 mt-2">
+                  <Loader2 className="w-4 h-4 text-[#006A63] animate-spin" />
+                  <span className="text-sm font-semibold text-[#006A63]">Memproses...</span>
+                </div>
+                <div className="h-3 w-44 sm:w-56 bg-gray-100 rounded animate-pulse mt-2"></div>
+              </div>
+            ) : showForgotPassword ? (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="mb-6">
+                  <h3 className="text-[#1D315F] font-bold text-lg mb-1">Buat / Atur Ulang Kata Sandi</h3>
+                  <p className="text-gray-500 text-xs font-semibold">
+                    {resetStep === 'email'
+                      ? 'Masukkan NIP dan email yang terdaftar di data kepegawaian untuk menerima kode OTP.'
+                      : 'Masukkan kode OTP yang dikirimkan ke email Anda dan kata sandi baru.'}
+                  </p>
+                </div>
+
+                {resetError && (
+                  <div className="bg-red-100 text-red-600 p-2 rounded text-sm mb-4 text-center">
+                    {resetError}
                   </div>
+                )}
 
-                  {resetError && (
-                    <div className="bg-red-100 text-red-600 p-2 rounded text-sm mb-4 text-center">
-                      {resetError}
-                    </div>
-                  )}
-
-                  {resetStep === 'email' ? (
-                    <form onSubmit={async (e) => {
-                      e.preventDefault();
-                      setResetError('');
-                      setResetLoading(true);
-                      try {
-                        await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
-                        setResetStep('otp');
-                      } catch (err) {
+                {resetStep === 'email' ? (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    setResetError('');
+                    setResetLoading(true);
+                    try {
+                      const response = await api.post('/forgot-password', { nip: resetNip, email: resetEmail });
+                      setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
+                      setResetStep('otp');
+                      setResendCountdown(60);
+                    } catch (err) {
+                      if (err.response?.status === 429) {
+                        setResetError('Terlalu banyak percobaan. Coba lagi beberapa saat.');
+                      } else {
                         setResetError(err.response?.data?.message || 'Terjadi kesalahan saat meminta OTP');
-                      } finally {
-                        setResetLoading(false);
                       }
-                    }}>
-                      <div className="mb-4">
-                        <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </div>
-                          <input
-                            type="text"
-                            name="reset-nip"
-                            autoComplete="username"
-                            value={resetNip}
-                            onChange={(e) => setResetNip(e.target.value)}
-                            required
-                            className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                            placeholder="Masukkan 18 digit NIP Anda"
-                          />
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}>
+                    <div className="mb-4">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <User className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <input
+                          type="text"
+                          name="reset-nip"
+                          autoComplete="username"
+                          value={resetNip}
+                          onChange={(e) => setResetNip(e.target.value)}
+                          required
+                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          placeholder="Masukkan 18 digit NIP Anda"
+                        />
                       </div>
-                      <div className="mb-5">
-                        <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">ALAMAT EMAIL</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </div>
-                          <input
-                            type="email"
-                            name="reset-email"
-                            autoComplete="email"
-                            value={resetEmail}
-                            onChange={(e) => setResetEmail(e.target.value)}
-                            required
-                            className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                            placeholder="contoh: user@bkpsdm.go.id"
-                          />
+                    </div>
+                    <div className="mb-5">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">ALAMAT EMAIL</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <input
+                          type="email"
+                          name="reset-email"
+                          autoComplete="email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          required
+                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          placeholder="contoh: user@bkpsdm.go.id"
+                        />
                       </div>
-                      <button
-                        type="submit"
-                        disabled={resetLoading}
-                        className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
-                      >
-                        {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowForgotPassword(false);
-                          setResetError('');
-                          setResetNip('');
-                          setResetEmail('');
-                        }}
-                        className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
-                      >
-                        Kembali ke Login
-                      </button>
-                    </form>
-                  ) : (
-                    <form onSubmit={async (e) => {
-                      e.preventDefault();
-                      setResetError('');
-
-                      if (newPassword !== resetConfirmPassword) {
-                        setResetError('Konfirmasi password tidak cocok');
-                        return;
-                      }
-
-                      setResetLoading(true);
-                      try {
-                        await api.post('/reset-password', {
-                          nip: resetNip,
-                          otp: resetOtp,
-                          password_baru: newPassword,
-                          password_baru_confirmation: resetConfirmPassword
-                        });
-
-                        alert('Password berhasil direset! Silakan login dengan password baru Anda.');
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
+                    >
+                      {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setShowForgotPassword(false);
-                        setResetStep('email');
-                        setResetEmail('');
+                        setResetError('');
                         setResetNip('');
-                        setResetOtp('');
-                        setNewPassword('');
-                        setResetConfirmPassword('');
-                      } catch (err) {
-                        setResetError(err.response?.data?.message || 'Terjadi kesalahan saat mereset password');
-                      } finally {
-                        setResetLoading(false);
+                        setResetEmail('');
+                      }}
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
+                    >
+                      Kembali ke Login
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    setResetError('');
+
+                    if (newPassword.length < 10) {
+                      setResetError('Kata sandi minimal 10 karakter.');
+                      return;
+                    }
+
+                    if (newPassword !== resetConfirmPassword) {
+                      setResetError('Konfirmasi kata sandi tidak cocok.');
+                      return;
+                    }
+
+                    if (resetNip && (newPassword.includes(resetNip) || (resetNip.length >= 8 && newPassword.includes(resetNip.slice(-8))))) {
+                      setResetError('Kata sandi tidak boleh mengandung NIP Anda.');
+                      return;
+                    }
+
+                    setResetLoading(true);
+                    try {
+                      const response = await api.post('/reset-password', {
+                        nip: resetNip,
+                        otp: resetOtp,
+                        password_baru: newPassword,
+                        password_baru_confirmation: resetConfirmPassword
+                      });
+
+                      const savedNip = resetNip;
+                      setResetSuccess(response.data?.message || 'Kata sandi berhasil dibuat. Silakan masuk dengan kata sandi baru Anda.');
+                      setShowForgotPassword(false);
+                      setResetStep('email');
+                      setResetEmail('');
+                      setResetOtp('');
+                      setNewPassword('');
+                      setResetConfirmPassword('');
+                      setNip(savedNip);
+                      setPassword('');
+                    } catch (err) {
+                      if (err.response?.status === 429) {
+                        setResetError('Terlalu banyak percobaan. Coba lagi beberapa saat.');
+                      } else if (err.response?.data?.errors) {
+                        const firstErr = Object.values(err.response.data.errors).flat()[0];
+                        setResetError(firstErr || 'Validasi kata sandi gagal.');
+                      } else {
+                        setResetError(err.response?.data?.message || 'Terjadi kesalahan saat mereset kata sandi.');
                       }
-                    }}>
-                      <div className="mb-4">
-                        <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KODE OTP</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </div>
-                          <input
-                            type="text"
-                            name="reset-otp"
-                            autoComplete="one-time-code"
-                            value={resetOtp}
-                            onChange={(e) => setResetOtp(e.target.value)}
-                            required
-                            maxLength={6}
-                            className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 text-center tracking-widest font-bold"
-                            placeholder="123456"
-                          />
-                        </div>
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}>
+                    {serverMessage && (
+                      <div className="bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-xs mb-4">
+                        <p className="font-semibold">{serverMessage}</p>
+                        <p className="mt-1 text-[11px] text-teal-700">
+                          Tidak menerima email? Pastikan NIP dan email sesuai data kepegawaian, atau hubungi admin BKPSDM.
+                        </p>
                       </div>
-                      <div className="mb-5">
-                        <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KATA SANDI BARU</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </div>
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            value={newPassword || ''}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            autoComplete="new-password"
-                            required
-                            className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                            placeholder="Masukkan kata sandi baru"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showNewPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-                          </button>
+                    )}
+
+                    <div className="mb-4">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KODE OTP</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <input
+                          type="text"
+                          name="reset-otp"
+                          autoComplete="one-time-code"
+                          value={resetOtp}
+                          onChange={(e) => setResetOtp(e.target.value)}
+                          required
+                          maxLength={6}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 text-center tracking-widest font-bold"
+                          placeholder="123456"
+                        />
                       </div>
-                      <div className="mb-5">
-                        <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KONFIRMASI KATA SANDI</label>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </div>
-                          <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            value={resetConfirmPassword || ''}
-                            onChange={(e) => setResetConfirmPassword(e.target.value)}
-                            autoComplete="new-password"
-                            required
-                            className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                            placeholder="Konfirmasi kata sandi baru"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showConfirmPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-                          </button>
+                      <div className="flex items-center justify-between mt-2 text-xs">
+                        <span className="text-gray-500">Tidak menerima kode?</span>
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={resendCountdown > 0 || resetLoading}
+                          className="text-teal-700 font-semibold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          {resendCountdown > 0 ? `Kirim ulang (${resendCountdown}s)` : 'Kirim ulang kode'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KATA SANDI BARU</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword || ''}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          autoComplete="new-password"
+                          required
+                          className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          placeholder="Masukkan kata sandi baru"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
                       </div>
-                      <button
-                        type="submit"
-                        disabled={resetLoading}
-                        className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
-                      >
-                        {resetLoading ? 'Menyimpan...' : 'Reset Kata Sandi'} <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setResetStep('email')}
-                        className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
-                      >
-                        Kembali
-                      </button>
-                    </form>
-                  )}
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Minimal 10 karakter, mengandung huruf besar, huruf kecil, dan angka, serta tidak mengandung NIP.
+                      </p>
+                    </div>
+                    <div className="mb-5">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KONFIRMASI KATA SANDI</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </div>
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={resetConfirmPassword || ''}
+                          onChange={(e) => setResetConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
+                          required
+                          className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                          placeholder="Konfirmasi kata sandi baru"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50"
+                    >
+                      {resetLoading ? 'Menyimpan...' : 'Simpan Kata Sandi'} <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetStep('email')}
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
+                    >
+                      Kembali
+                    </button>
+                  </form>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleLoginSubmit}>
+                <div className="mb-4 sm:mb-5">
+                  <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      name="nip"
+                      autoComplete="username"
+                      value={nip}
+                      onChange={(e) => setNip(e.target.value)}
+                      required
+                      className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                      placeholder="Masukkan 18 digit NIP Anda"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <form onSubmit={handleLoginSubmit}>
-                  <div className="mb-4 sm:mb-5">
-                    <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP / USERNAME</label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </div>
-                      <input
-                        type="text"
-                        name="nip"
-                        autoComplete="username"
-                        value={nip}
-                        onChange={(e) => setNip(e.target.value)}
-                        required
-                        className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                        placeholder="Masukkan 18 digit NIP Anda"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="mb-4 sm:mb-5">
-                    <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KATA SANDI</label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </div>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        name="password"
-                        value={password || ''}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="current-password"
-                        required
-                        className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
-                        placeholder="Masukkan kata sandi akun"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-                      </button>
+                <div className="mb-4 sm:mb-5">
+                  <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">KATA SANDI</label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <div
-                        onClick={() => setRemember(!remember)}
-                        className={`w-4 h-4 sm:w-5 sm:h-5 rounded border flex items-center justify-center cursor-pointer transition-colors ${remember ? 'bg-[#1D315F] border-[#1D315F]' : 'border-gray-300 bg-white'}`}
-                      >
-                        {remember && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" strokeWidth={3} />}
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold text-gray-600">Ingat sesi saya</span>
-                    </label>
-                    <button type="button" onClick={() => setShowForgotPassword(true)} className="text-xs sm:text-sm text-[#1D315F] font-semibold hover:underline">
-                      Lupa Kata Sandi?
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={password || ''}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400"
+                      placeholder="Masukkan kata sandi akun"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                   </div>
+                </div>
 
-                  {error && (
-                    <div className="bg-red-50 text-red-600 p-2 rounded text-xs mb-4 text-center">
-                      {error}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <div
+                      onClick={() => setRemember(!remember)}
+                      className={`w-4 h-4 sm:w-5 sm:h-5 rounded border flex items-center justify-center cursor-pointer transition-colors ${remember ? 'bg-[#1D315F] border-[#1D315F]' : 'border-gray-300 bg-white'}`}
+                    >
+                      {remember && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" strokeWidth={3} />}
                     </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
-                  >
-                    Masuk ke Platform <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs sm:text-sm font-semibold text-gray-600">Ingat sesi saya</span>
+                  </label>
+                  <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); }} className="text-xs sm:text-sm text-[#1D315F] font-semibold hover:underline">
+                    Lupa Kata Sandi?
                   </button>
+                </div>
 
-                  <p className="text-[10px] sm:text-xs font-semibold text-gray-400 mt-4 sm:mt-5 text-center flex items-center justify-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    Khusus Pegawai ASN & Tim Pembelajaran Terdaftar
-                  </p>
-                </form>
-              )}
-            </div>
+                {error && (
+                  <div className="bg-red-50 text-red-600 p-2 rounded text-xs mb-4 text-center">
+                    {error}
+                  </div>
+                )}
 
-            <button
-              onClick={() => {
-                setShowAuth(false);
-                setError('');
-                setNip('');
-                setPassword('');
-                setShowForgotPassword(false);
-                setResetStep('email');
-                setResetError('');
-                setResetNip('');
-                setResetEmail('');
-                setResetOtp('');
-                setNewPassword('');
-                setResetConfirmPassword('');
-              }}
-              className="mt-3 sm:mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 text-center transition-colors cursor-pointer"
-            >
-              ← Kembali ke beranda
-            </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                >
+                  Masuk ke Platform<ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+
+                {/* Info Box untuk Pengguna Baru */}
+                <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 leading-relaxed text-left">
+                  Pertama kali masuk? Klik <button type="button" onClick={() => { setShowForgotPassword(true); setError(''); setResetSuccess(''); }} className="font-bold underline text-teal-900 hover:text-teal-700">Lupa Kata Sandi</button> untuk membuat kata sandi Anda dengan kode OTP yang dikirim ke email terdaftar.
+                </div>
+
+                <p className="text-[10px] sm:text-xs font-semibold text-gray-400 mt-4 sm:mt-5 text-center flex items-center justify-center gap-1.5">
+                  <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  Khusus Pegawai ASN & Tim Pembelajaran Terdaftar
+                </p>
+              </form>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setShowAuth(false);
+              setError('');
+              setResetSuccess('');
+              setNip('');
+              setPassword('');
+              setShowForgotPassword(false);
+              setResetStep('email');
+              setResetError('');
+              setResetNip('');
+              setResetEmail('');
+              setResetOtp('');
+              setNewPassword('');
+              setResetConfirmPassword('');
+            }}
+            className="mt-3 sm:mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 text-center transition-colors cursor-pointer"
+          >
+            ← Kembali ke beranda
+          </button>
         </div>
       </div>
     </div>
@@ -743,7 +835,7 @@ const NewsSection = () => {
 
 const HowItWorks = () => {
   const steps = [
-    { num: 1, title: 'Login dengan NIP', desc: 'Gunakan NIP dan kata sandi sistem kepegawaian Anda untuk masuk secara aman.' },
+    { num: 1, title: 'Login dengan NIP', desc: 'Masuk dengan NIP. Pertama kali? Buat kata sandi melalui Lupa Kata Sandi.' },
     { num: 2, title: 'Pilih Pelatihan', desc: 'Eksplorasi katalog dan pilih kursus yang sesuai dengan kebutuhan pengembangan Anda.' },
     { num: 3, title: 'Belajar Mandiri', desc: 'Ikuti materi, kerjakan kuis, dan selesaikan modul sesuai dengan waktu yang Anda miliki.' },
     { num: 4, title: 'Dapatkan Sertifikat', desc: 'Unduh sertifikat digital yang otomatis terintegrasi dengan riwayat kompetensi kepegawaian.' },

@@ -138,6 +138,7 @@ const UserManagement = ({ onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [komunitasList, setKomunitasList] = useState([]);
+  const [filterBelumAktivasi, setFilterBelumAktivasi] = useState(false);
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -192,29 +193,33 @@ const UserManagement = ({ onNavigate }) => {
         Toast.fire({ icon: 'error', title: 'Pilih minimal satu peran untuk pengguna.' });
         return;
       }
-      const payload = { ...formData };
-      if (!payload.email || payload.email.trim() === '') {
-        payload.email = null;
+      if (!formData.email || !formData.email.trim()) {
+        Toast.fire({ icon: 'error', title: 'Email wajib diisi untuk aktivasi dan pengiriman kode OTP.' });
+        return;
       }
+      const payload = { ...formData };
+      payload.email = payload.email.trim();
+
       if (!payload.roles.includes('admin_komunitas')) {
         delete payload.komunitas_id;
       } else if (!payload.komunitas_id) {
         Toast.fire({ icon: 'error', title: 'Komunitas harus dipilih jika memiliki peran Admin Komunitas.' });
         return;
       }
+
       await api.post('/admin-bkpsdm/pengguna', payload);
       setShowAddModal(false);
       setFormData({ nip: '', nama_lengkap: '', email: '', roles: ['peserta'], jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: '' });
       fetchUsers();
       Toast.fire({
         icon: 'success',
-        title: 'Pengguna berhasil ditambahkan'
+        title: 'Pengguna berhasil ditambahkan. Minta pengguna membuat kata sandi via Lupa Kata Sandi.'
       });
     } catch (error) {
       console.error('Failed to add user:', error);
       Toast.fire({
         icon: 'error',
-        title: 'Gagal menambahkan pengguna. Periksa kembali NIP/Email.'
+        title: error.response?.data?.message || 'Gagal menambahkan pengguna. Periksa kembali NIP/Email.'
       });
     }
   };
@@ -239,6 +244,7 @@ const UserManagement = ({ onNavigate }) => {
       const payload = {
         roles: currentRoles,
         status: selectedUser.status,
+        email: selectedUser.email ? selectedUser.email.trim() : null,
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
       
@@ -254,7 +260,7 @@ const UserManagement = ({ onNavigate }) => {
       console.error('Failed to update user:', error);
       Toast.fire({
         icon: 'error',
-        title: 'Gagal memperbarui pengguna.'
+        title: error.response?.data?.message || 'Gagal memperbarui pengguna.'
       });
     }
   };
@@ -283,7 +289,7 @@ const UserManagement = ({ onNavigate }) => {
         console.error('Failed to delete user:', error);
         Toast.fire({
           icon: 'error',
-          title: 'Gagal menghapus pengguna'
+          title: error.response?.data?.message || 'Gagal menghapus pengguna'
         });
       }
     }
@@ -292,12 +298,12 @@ const UserManagement = ({ onNavigate }) => {
   const handleResetPassword = async (id) => {
     const result = await Swal.fire({
       title: 'Apakah Anda yakin?',
-      text: "Reset password pengguna ini ke default (8 digit terakhir NIP)?",
+      text: "Kata sandi lama pengguna akan dinonaktifkan dan semua sesi loginnya dihapus. Pengguna harus memakai Lupa Kata Sandi untuk membuat kata sandi baru. Lanjutkan?",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#0f766e',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya, Reset!',
+      confirmButtonText: 'Ya, Lanjutkan!',
       cancelButtonText: 'Batal'
     });
 
@@ -306,13 +312,14 @@ const UserManagement = ({ onNavigate }) => {
         await api.post(`/admin-bkpsdm/pengguna/${id}/reset-password`);
         Toast.fire({
           icon: 'success',
-          title: 'Password berhasil direset!'
+          title: 'Kata sandi dinonaktifkan. Minta pengguna memakai Lupa Kata Sandi.'
         });
+        fetchUsers();
       } catch (error) {
         console.error('Failed to reset password:', error);
         Toast.fire({
           icon: 'error',
-          title: 'Gagal mereset password'
+          title: error.response?.data?.message || 'Gagal mereset kata sandi'
         });
       }
     }
@@ -336,31 +343,39 @@ const UserManagement = ({ onNavigate }) => {
     );
   };
 
-  const getStatusBadge = (status) => {
-    if (status === 'aktif') {
-      return (
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <span className="text-sm text-gray-700 font-medium capitalize">{status}</span>
-        </div>
-      );
-    }
+  const getStatusBadge = (user) => {
+    const status = typeof user === 'object' ? user.status : user;
+    const sudahAktivasi = typeof user === 'object' ? user.sudah_aktivasi : true;
+
     return (
-      <div className="flex items-center gap-1.5">
-        <div className="w-2 h-2 rounded-full bg-red-500"></div>
-        <span className="text-sm text-gray-700 font-medium capitalize">{status || 'nonaktif'}</span>
+      <div className="flex flex-col gap-1 items-start">
+        <div className="flex items-center gap-1.5">
+          <div className={`w-2 h-2 rounded-full ${status === 'aktif' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-gray-700 font-medium capitalize">{status || 'nonaktif'}</span>
+        </div>
+        {sudahAktivasi === false && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+            Belum aktivasi
+          </span>
+        )}
       </div>
     );
   };
 
   const userList = Array.isArray(users) ? users : [];
 
-  const filteredUsers = userList.filter(u => 
-    (u.nama_lengkap && u.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase())) || 
-    (u.nip && u.nip.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (u.rumpun_jabatan && u.rumpun_jabatan.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredUsers = userList.filter(u => {
+    const matchesSearch = 
+      (u.nama_lengkap && u.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase())) || 
+      (u.nip && u.nip.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.rumpun_jabatan && u.rumpun_jabatan.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (filterBelumAktivasi) {
+      return matchesSearch && u.sudah_aktivasi === false;
+    }
+    return matchesSearch;
+  });
 
   if (loading) return <AdminLoadingSkeleton />;
 
@@ -424,6 +439,17 @@ const UserManagement = ({ onNavigate }) => {
                   placeholder="Cari pengguna / rumpun..."
                   className="border border-gray-200 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 w-full sm:w-64"
                 />
+                <button
+                  type="button"
+                  onClick={() => setFilterBelumAktivasi(!filterBelumAktivasi)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors border ${
+                    filterBelumAktivasi
+                      ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {filterBelumAktivasi ? '✓ Filter: Belum Aktivasi' : 'Filter: Belum Aktivasi'}
+                </button>
               </div>
             </div>
 
@@ -455,7 +481,13 @@ const UserManagement = ({ onNavigate }) => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 font-medium">{user.email || '-'}</p>
+                        {user.email ? (
+                          <p className="text-sm text-gray-600 font-medium">{user.email}</p>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                            Email belum ada
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {getRoleBadge(user.roles || user.peran)}
@@ -473,12 +505,12 @@ const UserManagement = ({ onNavigate }) => {
                         <p className="text-sm text-gray-600 font-medium">{user.unit_kerja || '-'}</p>
                       </td>
                       <td className="px-6 py-4">
-                        {getStatusBadge(user.status)}
+                        {getStatusBadge(user)}
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end gap-2">
                         <button
                           onClick={() => handleResetPassword(user.pengguna_id)}
-                          title="Reset Password"
+                          title="Reset Kata Sandi"
                           className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
                         >
                           <Key className="w-4 h-4" />
@@ -488,7 +520,7 @@ const UserManagement = ({ onNavigate }) => {
                             const userRoles = Array.isArray(user.roles) && user.roles.length > 0
                               ? user.roles
                               : (user.peran ? [user.peran] : ['peserta']);
-                            setSelectedUser({ ...user, roles: userRoles });
+                            setSelectedUser({ ...user, roles: userRoles, email: user.email || '' });
                             setShowEditModal(true);
                           }}
                           title="Edit Pengguna"
@@ -508,7 +540,7 @@ const UserManagement = ({ onNavigate }) => {
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                         {searchTerm ? 'Tidak ada pengguna yang sesuai dengan pencarian.' : 'Belum ada pengguna terdaftar.'}
                       </td>
                     </tr>
@@ -538,8 +570,9 @@ const UserManagement = ({ onNavigate }) => {
                     <input required type="text" value={formData.nama_lengkap} onChange={e => setFormData({ ...formData, nama_lengkap: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Gelar, Nama Lengkap, Gelar" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(Opsional)</span></label>
-                    <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="email@instansi.go.id" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="email@instansi.go.id" />
+                    <p className="text-xs text-gray-500 mt-1">Email dipakai untuk kode OTP. Kata sandi awal dibuat acak oleh sistem; pengguna membuat kata sandi sendiri lewat Lupa Kata Sandi.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -643,7 +676,7 @@ const UserManagement = ({ onNavigate }) => {
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-800">Edit Akses Pengguna</h2>
+                  <h2 className="text-xl font-bold text-gray-800">Edit Pengguna</h2>
                   <button onClick={() => { setShowEditModal(false); setSelectedUser(null); }} className="text-gray-400 hover:text-gray-600">
                     <X className="w-5 h-5" />
                   </button>
@@ -653,6 +686,11 @@ const UserManagement = ({ onNavigate }) => {
                   <p className="text-sm text-gray-500">{selectedUser.nip}</p>
                 </div>
                 <form onSubmit={handleEditSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <input type="email" value={selectedUser.email || ''} onChange={e => setSelectedUser({ ...selectedUser, email: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="email@instansi.go.id" />
+                    <p className="text-xs text-gray-500 mt-1">Pastikan email benar dan aktif agar pengguna dapat menerima kode OTP aktivasi/reset kata sandi.</p>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Peran Pengguna <span className="text-xs text-gray-500 font-normal">(Bisa dipilih lebih dari satu)</span>
