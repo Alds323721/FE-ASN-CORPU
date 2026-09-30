@@ -116,7 +116,7 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, m
           return remaining;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return (durationMinutes || 15) * 60;
   });
 
@@ -140,14 +140,14 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, m
           return;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (!targetEndTime) {
       targetEndTime = Date.now() + (durationMinutes * 60) * 1000;
       if (storageKey) {
         try {
           localStorage.setItem(storageKey, targetEndTime.toString());
-        } catch (e) {}
+        } catch (e) { }
       }
       setTime(durationMinutes * 60);
     }
@@ -160,7 +160,7 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, m
         if (storageKey) {
           try {
             localStorage.removeItem(storageKey);
-          } catch (e) {}
+          } catch (e) { }
         }
         if (onTimeUp) onTimeUp();
       }
@@ -175,7 +175,7 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, m
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6">
       <h3 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Waktu Tersisa</h3>
-      
+
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6 mb-6">
         <div className="text-4xl md:text-5xl font-semibold text-red-500 text-center">
           {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
@@ -276,29 +276,26 @@ const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag
             <div
               key={key}
               onClick={() => handleSelectAnswer(key)}
-              className={`flex items-start sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group ${
-                isSelected
-                  ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
-                  : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
-              }`}
+              className={`flex items-start sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group ${isSelected
+                ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
+                : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
+                }`}
             >
               <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
                 {/* Badge Huruf Opsi (A, B, C, D) */}
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
-                    isSelected
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
-                  }`}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${isSelected
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
+                    }`}
                 >
                   {key}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <span
-                    className={`font-semibold text-sm md:text-base leading-relaxed ${
-                      isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
-                    }`}
+                    className={`font-semibold text-sm md:text-base leading-relaxed ${isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
+                      }`}
                   >
                     {text}
                   </span>
@@ -403,8 +400,8 @@ export default function Kuis({ onNavigate, onBack }) {
   const modulId = localStorage.getItem('userModulId');
   const kuisId = localStorage.getItem('userKuisId');
 
-  const quizSessionKey = (courseId && modulId && kuisId) 
-    ? `${courseId}_${modulId}_${kuisId}` 
+  const quizSessionKey = (courseId && modulId && kuisId)
+    ? `${courseId}_${modulId}_${kuisId}`
     : (kuisId || 'default');
 
   const timerStorageKey = `quiz_timer_end_${quizSessionKey}`;
@@ -417,7 +414,7 @@ export default function Kuis({ onNavigate, onBack }) {
     try {
       const saved = localStorage.getItem(questionStorageKey);
       if (saved) return parseInt(saved, 10) || 1;
-    } catch (e) {}
+    } catch (e) { }
     return 1;
   });
 
@@ -425,7 +422,7 @@ export default function Kuis({ onNavigate, onBack }) {
     try {
       const saved = localStorage.getItem(flaggedStorageKey);
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return [];
   });
 
@@ -433,7 +430,7 @@ export default function Kuis({ onNavigate, onBack }) {
     try {
       const saved = localStorage.getItem(answersStorageKey);
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return {};
   });
 
@@ -444,32 +441,32 @@ export default function Kuis({ onNavigate, onBack }) {
     try {
       const saved = localStorage.getItem(sectionStorageKey);
       if (saved) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return 'pg';
   });
 
   useEffect(() => {
     try {
       localStorage.setItem(answersStorageKey, JSON.stringify(answers));
-    } catch (e) {}
+    } catch (e) { }
   }, [answers, answersStorageKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(flaggedStorageKey, JSON.stringify(flaggedQuestions));
-    } catch (e) {}
+    } catch (e) { }
   }, [flaggedQuestions, flaggedStorageKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(questionStorageKey, currentQuestion.toString());
-    } catch (e) {}
+    } catch (e) { }
   }, [currentQuestion, questionStorageKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(sectionStorageKey, activeSection);
-    } catch (e) {}
+    } catch (e) { }
   }, [activeSection, sectionStorageKey]);
 
   useEffect(() => {
@@ -654,7 +651,7 @@ export default function Kuis({ onNavigate, onBack }) {
 
     try {
       setSubmitting(true);
-      
+
       const formattedAnswers = (testData?.soal || []).map(s => {
         const val = answers[s.soal_kuis_id];
         if (s.tipe_soal === 'drag_drop') {
@@ -681,7 +678,7 @@ export default function Kuis({ onNavigate, onBack }) {
 
       if (isPreTest) {
         await Swal.fire({
-          title: '🎉 Pre-Test Selesai!',
+          title: 'Pre-Test Selesai!',
           html: `
             <div class="text-center space-y-4 pt-2">
               <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 text-teal-700 text-3xl font-bold mx-auto">
@@ -708,7 +705,7 @@ export default function Kuis({ onNavigate, onBack }) {
       } else {
         // Pop-up keterangan kelulusan kuis evaluasi modul
         await Swal.fire({
-          title: isPassed ? '🎉 Selamat, Anda Lulus Kuis!' : 'Belum Memenuhi Kelulusan',
+          title: isPassed ? 'Selamat, Anda Lulus Kuis!' : 'Belum Memenuhi Kelulusan',
           html: `
             <div class="text-center space-y-4 pt-2">
               <div class="inline-flex items-center justify-center w-16 h-16 rounded-full ${isPassed ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600'} text-3xl font-bold mx-auto">
@@ -723,9 +720,9 @@ export default function Kuis({ onNavigate, onBack }) {
                 </div>
               </div>
               <div class="p-3.5 rounded-lg text-xs md:text-sm text-left leading-relaxed ${isPassed ? 'bg-teal-50 text-teal-900 border border-teal-200' : 'bg-amber-50 text-amber-900 border border-amber-200'}">
-                ${isPassed 
-                  ? '<b>Hebat!</b> Anda telah memahami materi modul ini dengan baik dan berhak melanjutkan ke modul berikutnya.' 
-                  : 'Nilai Anda belum mencapai batas minimal kelulusan. Silakan pelajari kembali materi pada modul ini dan ulangi kuis evaluasi.'}
+                ${isPassed
+              ? '<b>Hebat!</b> Anda telah memahami materi modul ini dengan baik dan berhak melanjutkan ke modul berikutnya.'
+              : 'Nilai Anda belum mencapai batas minimal kelulusan. Silakan pelajari kembali materi pada modul ini dan ulangi kuis evaluasi.'}
               </div>
             </div>
           `,
@@ -735,7 +732,7 @@ export default function Kuis({ onNavigate, onBack }) {
           allowOutsideClick: false
         });
       }
-      
+
       // Hapus data timer dan draft kuis yang tersimpan
       try {
         localStorage.removeItem(timerStorageKey);
@@ -743,7 +740,7 @@ export default function Kuis({ onNavigate, onBack }) {
         localStorage.removeItem(flaggedStorageKey);
         localStorage.removeItem(questionStorageKey);
         localStorage.removeItem(sectionStorageKey);
-      } catch (e) {}
+      } catch (e) { }
 
       onNavigate('course-detail');
     } catch (error) {
@@ -784,9 +781,9 @@ export default function Kuis({ onNavigate, onBack }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 md:py-8">
           {/* Timer Card - Top untuk semua tampilan */}
           <div className="mb-6">
-            <TimerCard 
-              answeredCount={answeredCount} 
-              totalQuestions={totalSoal} 
+            <TimerCard
+              answeredCount={answeredCount}
+              totalQuestions={totalSoal}
               durationMinutes={testData.durasi_menit || 15}
               maxAttempts={testData.maks_percobaan || 3}
               isPreTest={testData.tipe_kuis === 'pre_test'}
@@ -801,60 +798,57 @@ export default function Kuis({ onNavigate, onBack }) {
             ttsQuestions.length > 0 ? 'tts' : null,
             dragDropQuestions.length > 0 ? 'drag_drop' : null
           ].filter(Boolean).length > 1 && (
-            <div className="flex bg-white p-1.5 rounded-xl border border-gray-200 mb-6 shadow-xs max-w-2xl overflow-x-auto">
-              {pgQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('pg')}
-                  className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'pg'
+              <div className="flex bg-white p-1.5 rounded-xl border border-gray-200 mb-6 shadow-xs max-w-2xl overflow-x-auto">
+                {pgQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('pg')}
+                    className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${activeSection === 'pg'
                       ? 'bg-[#006A63] text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Pilihan Ganda</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'pg' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {pgQuestions.filter(s => answers[s.soal_kuis_id]).length}/{pgQuestions.length}
-                  </span>
-                </button>
-              )}
-              {ttsQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('tts')}
-                  className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'tts'
+                      }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span>Pilihan Ganda</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'pg' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
+                      {pgQuestions.filter(s => answers[s.soal_kuis_id]).length}/{pgQuestions.length}
+                    </span>
+                  </button>
+                )}
+                {ttsQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('tts')}
+                    className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${activeSection === 'tts'
                       ? 'bg-[#006A63] text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Grid className="w-4 h-4" />
-                  <span>TTS</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'tts' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {ttsQuestions.filter(s => answers[s.soal_kuis_id] && answers[s.soal_kuis_id].trim().length === (s.panjang_kata || 0)).length}/{ttsQuestions.length}
-                  </span>
-                </button>
-              )}
-              {dragDropQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('drag_drop')}
-                  className={`flex-1 min-w-[150px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'drag_drop'
+                      }`}
+                  >
+                    <Grid className="w-4 h-4" />
+                    <span>TTS</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'tts' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
+                      {ttsQuestions.filter(s => answers[s.soal_kuis_id] && answers[s.soal_kuis_id].trim().length === (s.panjang_kata || 0)).length}/{ttsQuestions.length}
+                    </span>
+                  </button>
+                )}
+                {dragDropQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('drag_drop')}
+                    className={`flex-1 min-w-[150px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${activeSection === 'drag_drop'
                       ? 'bg-[#006A63] text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Drag & Drop</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'drag_drop' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {dragDropQuestions.filter(s => Array.isArray(answers[s.soal_kuis_id]) && answers[s.soal_kuis_id].filter(Boolean).length === (s.jumlah_blank || 1)).length}/{dragDropQuestions.length}
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
+                      }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Drag & Drop</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'drag_drop' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
+                      {dragDropQuestions.filter(s => Array.isArray(answers[s.soal_kuis_id]) && answers[s.soal_kuis_id].filter(Boolean).length === (s.jumlah_blank || 1)).length}/{dragDropQuestions.length}
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
 
           {/* TAMPILAN 1: PILIHAN GANDA */}
           {activeSection === 'pg' && pgQuestions.length > 0 && (

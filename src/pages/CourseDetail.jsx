@@ -110,16 +110,16 @@ const CourseDetailNavbar = ({ onNavigate }) => {
 
 const CourseHeader = ({ onBack, courseData }) => {
   const currentModule = courseData?.modul?.[0]?.judul || 'Modul';
-  
+
   return (
     <div className="bg-[#1D315F] py-6 md:py-8 px-6 md:px-12 relative overflow-hidden" style={{ backgroundImage: `url(${hiasanImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="absolute inset-0 bg-[#1D315F] opacity-55"></div>
       <div className="max-w-7xl mx-auto relative z-10">
         <h1 className="text-white text-2xl md:text-3xl font-bold mb-4">{courseData?.judul || 'Detail Pelatihan'}</h1>
-        
+
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-white text-xs sm:text-sm">
-            <button 
+            <button
               onClick={onBack}
               className="flex items-center gap-1 hover:text-[#3FCDC1] transition-colors"
             >
@@ -129,7 +129,7 @@ const CourseHeader = ({ onBack, courseData }) => {
             <span className="hidden sm:inline">•</span>
             <span className="text-xs sm:text-sm">{courseData?.kategori || ''}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <span className="text-white">{courseData?.progress}% Selesai</span>
             <span>•</span>
@@ -169,7 +169,7 @@ const SyllabusItem = ({ index, title, subtitle, duration, status, onClick, isAct
   };
 
   return (
-    <div 
+    <div
       className={`flex items-start gap-2 md:gap-3 py-2 md:py-3 cursor-pointer hover:bg-gray-50 transition-colors px-2 rounded ${isActive ? 'bg-[#F4F8FB] border-l-4 border-[#3FCDC1]' : 'border-l-4 border-transparent'}`}
       onClick={onClick}
     >
@@ -180,11 +180,10 @@ const SyllabusItem = ({ index, title, subtitle, duration, status, onClick, isAct
         <div className="flex items-center gap-1.5 flex-wrap">
           <h4 className="font-semibold text-[#1D315F] text-xs md:text-sm mb-0.5">{index}. {title}</h4>
           {badge && (
-            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-              badge === 'Pre-Test Selesai' 
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${badge === 'Pre-Test Selesai'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : 'bg-amber-50 text-amber-700 border border-amber-200'
-            }`}>
+              }`}>
               {badge}
             </span>
           )}
@@ -205,7 +204,7 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
   return (
     <aside className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 overflow-y-auto max-h-[600px] custom-scrollbar">
       <h2 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Silabus Pelatihan</h2>
-      
+
       {courseData?.modul?.map((modul, idx) => (
         <div key={modul.modul_id} className="mb-6">
           <p className="text-xs md:text-sm text-[#006A63] font-bold mb-2">Modul {modul.urutan}: {modul.judul}</p>
@@ -287,7 +286,7 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
           </div>
         </div>
       ))}
-      
+
       {courseData?.post_test && (
         <div className="mt-6 border-t pt-4">
           <p className="text-xs md:text-sm text-red-600 font-bold mb-2">Post Test</p>
@@ -298,13 +297,13 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
             duration={courseData.post_test.durasi}
             status={parseFloat(courseData.progress) >= 100 ? 'active' : 'locked'}
             onClick={() => {
-               if (parseFloat(courseData.progress) >= 100) onNavigate('post-test');
-               else Swal.fire({
-                 icon: 'info',
-                 title: 'Post Test Masih Terkunci',
-                 text: 'Selesaikan seluruh materi dan kuis modul terlebih dahulu sebelum mengikuti Post Test.',
-                 confirmButtonColor: '#006A63'
-               });
+              if (parseFloat(courseData.progress) >= 100) onNavigate('post-test');
+              else Swal.fire({
+                icon: 'info',
+                title: 'Post Test Masih Terkunci',
+                text: 'Selesaikan seluruh materi dan kuis modul terlebih dahulu sebelum mengikuti Post Test.',
+                confirmButtonColor: '#006A63'
+              });
             }}
           />
         </div>
@@ -351,9 +350,9 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
           </p>
 
           <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 bg-gray-50 px-5 py-2.5 rounded-xl border border-gray-200 mb-6">
-            <span>⏱️ Durasi: <strong>{activeMateri.pre_test.durasi || 15} Menit</strong></span>
+            <span> Durasi: <strong>{activeMateri.pre_test.durasi || 15} Menit</strong></span>
             <span>•</span>
-            <span>📝 Status: <strong className="text-amber-600">Belum Dikerjakan</strong></span>
+            <span> Status: <strong className="text-amber-600">Belum Dikerjakan</strong></span>
           </div>
 
           <button
@@ -405,7 +404,7 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
             </span>
           )}
         </div>
-        
+
         {isH5P ? (
           <div className="w-full bg-slate-950 aspect-video relative overflow-hidden flex items-center justify-center">
             {activeMateri.tautan ? (
@@ -478,33 +477,32 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
       </div>
 
       <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 flex justify-between items-center flex-wrap gap-4">
-         <div>
-            <h3 className="text-base md:text-lg font-semibold text-[#1D315F] mb-1">Status Penyelesaian</h3>
-            <p className="text-xs text-gray-500">
-              {isH5P
-                ? 'Selesaikan seluruh kuis interaktif di dalam video atau klik tombol jika sudah selesai.'
-                : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
-            </p>
-         </div>
-         <button 
-           onClick={onMarkAsRead}
-           disabled={activeMateri.is_read}
-           className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors ${
-             activeMateri.is_read 
-               ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
-               : isH5P
-                 ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                 : 'bg-[#1D315F] text-white hover:bg-[#162847]'
-           }`}
-         >
-           {activeMateri.is_read ? (
-             <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
-           ) : isH5P ? (
-             <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
-           ) : (
-             'Tandai Telah Dibaca'
-           )}
-         </button>
+        <div>
+          <h3 className="text-base md:text-lg font-semibold text-[#1D315F] mb-1">Status Penyelesaian</h3>
+          <p className="text-xs text-gray-500">
+            {isH5P
+              ? 'Selesaikan seluruh kuis interaktif di dalam video atau klik tombol jika sudah selesai.'
+              : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
+          </p>
+        </div>
+        <button
+          onClick={onMarkAsRead}
+          disabled={activeMateri.is_read}
+          className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors ${activeMateri.is_read
+              ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
+              : isH5P
+                ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
+                : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+            }`}
+        >
+          {activeMateri.is_read ? (
+            <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
+          ) : isH5P ? (
+            <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
+          ) : (
+            'Tandai Telah Dibaca'
+          )}
+        </button>
       </div>
     </div>
   );
@@ -549,7 +547,7 @@ const Footer = ({ onNavigate }) => {
             </li>
             <li className="flex items-start gap-3">
               <MapPin className="w-4 h-4 text-[#006A63] mt-0.5 flex-shrink-0" />
-              <span className="font-semibold leading-relaxed">Gedung Kepegawaian Lt. 3, Jl. Protokol<br/>No. 1, Jakarta</span>
+              <span className="font-semibold leading-relaxed">Gedung Kepegawaian Lt. 3, Jl. Protokol<br />No. 1, Jakarta</span>
             </li>
           </ul>
         </div>
@@ -562,7 +560,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeMateri, setActiveMateri] = useState(null);
-  
+
   const courseId = localStorage.getItem('userCourseId');
 
   const fetchCourse = async () => {
@@ -624,7 +622,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         if (!data) return;
 
         const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
-        const isCompleted = 
+        const isCompleted =
           (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed') || verb.includes('answered'))) ||
           data?.event === 'h5p-completed' ||
           data?.action === 'completed';
@@ -653,7 +651,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
       <CourseDetailNavbar onNavigate={onNavigate} />
       <CourseHeader onBack={onBack} courseData={courseData} />
-      
+
       <main className="flex-grow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 md:py-8">
           {courseData?.is_locked_review && (
@@ -675,16 +673,16 @@ export default function CourseDetail({ onNavigate, onBack }) {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
             <div className="lg:col-span-8 order-2 lg:order-1">
-              <MainContent 
-                activeMateri={activeMateri} 
-                onMarkAsRead={handleMarkAsRead} 
+              <MainContent
+                activeMateri={activeMateri}
+                onMarkAsRead={handleMarkAsRead}
                 onNavigate={onNavigate}
               />
             </div>
-            
+
             <div className="lg:col-span-4 order-1 lg:order-2">
-              <Sidebar 
-                courseData={courseData} 
+              <Sidebar
+                courseData={courseData}
                 activeMateri={activeMateri}
                 onSelectMateri={setActiveMateri}
                 onNavigate={onNavigate}
@@ -693,7 +691,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
           </div>
         </div>
       </main>
-      
+
       <Footer onNavigate={onNavigate} />
     </div>
   );
