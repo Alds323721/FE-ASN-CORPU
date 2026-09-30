@@ -680,6 +680,10 @@ export default function Kuis({ onNavigate, onBack }) {
       const isPreTest = testData?.tipe_kuis === 'pre_test';
 
       if (isPreTest) {
+        if (testData?.materi_id) {
+          localStorage.setItem('userActiveMateriId', testData.materi_id);
+          localStorage.setItem('userModulId', modulId);
+        }
         await Swal.fire({
           title: '🎉 Pre-Test Selesai!',
           html: `
@@ -706,6 +710,9 @@ export default function Kuis({ onNavigate, onBack }) {
           allowOutsideClick: false
         });
       } else {
+        if (isPassed) {
+          localStorage.setItem('userCompletedKuisModulId', modulId);
+        }
         // Pop-up keterangan kelulusan kuis evaluasi modul
         await Swal.fire({
           title: isPassed ? '🎉 Selamat, Anda Lulus Kuis!' : 'Belum Memenuhi Kelulusan',

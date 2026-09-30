@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
@@ -14,7 +15,8 @@ import {
   Share2,
   ChevronLeft,
   Star,
-  Info
+  Info,
+  CheckCircle2
 } from 'lucide-react';
 
 const TestResultNavbar = ({ onNavigate }) => {
@@ -68,7 +70,12 @@ const CertificatePreview = ({ sertifikat }) => {
   const handleDownload = async () => {
     const courseId = localStorage.getItem('userCourseId');
     if (!courseId) {
-      alert('ID Pelatihan tidak ditemukan.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'ID Pelatihan Tidak Ditemukan',
+        text: 'Data sesi pelatihan tidak ditemukan. Silakan buka kembali dari daftar Pelatihan Saya.',
+        confirmButtonColor: '#006A63'
+      });
       return;
     }
 
@@ -90,7 +97,12 @@ const CertificatePreview = ({ sertifikat }) => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download error:', error);
-      alert('Gagal mengunduh sertifikat. Pastikan Anda telah menyelesaikan tes dan berhak mendapatkan sertifikat.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengunduh Sertifikat',
+        text: 'Pastikan Anda telah lulus Post Test dan berhak mendapatkan sertifikat resmi pelatihan ini.',
+        confirmButtonColor: '#006A63'
+      });
     } finally {
       setDownloading(false);
     }
@@ -99,7 +111,13 @@ const CertificatePreview = ({ sertifikat }) => {
   const handleShare = () => {
     const title = sertifikat?.judul_pembelajaran || 'Pelatihan';
     navigator.clipboard.writeText(`Saya telah menyelesaikan pelatihan "${title}" di Buleleng ASN Corpu!`);
-    alert('Pesan achievement telah disalin ke clipboard!');
+    Swal.fire({
+      icon: 'success',
+      title: 'Tersalin ke Clipboard!',
+      text: 'Pesan achievement berhasil disalin ke papan klip.',
+      timer: 2000,
+      showConfirmButton: false
+    });
   };
 
   return (
@@ -182,14 +200,20 @@ const ScoreSummary = ({ resultData }) => (
 );
 
 const FeedbackSection = () => {
-  const [rating, setRating] = useState(4);
+  const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const courseId = localStorage.getItem('userCourseId');
 
   const handleSubmit = async () => {
     if (!feedback.trim()) {
-      alert('Mohon isi pesan ulasan Anda terlebih dahulu.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Perhatian',
+        text: 'Mohon isi pesan ulasan Anda terlebih dahulu sebelum mengirimkan tanggapan.',
+        confirmButtonColor: '#006A63'
+      });
       return;
     }
     try {
@@ -198,10 +222,21 @@ const FeedbackSection = () => {
         rating: rating,
         ulasan: feedback
       });
-      alert('Ulasan berhasil dikirim! Terima kasih atas tanggapan Anda.');
+      setIsSubmitted(true);
+      Swal.fire({
+        icon: 'success',
+        title: 'Ulasan Berhasil Dikirim!',
+        text: 'Terima kasih atas tanggapan dan masukan Anda. Penilaian Anda sangat membantu kami dalam meningkatkan kualitas pelatihan.',
+        confirmButtonColor: '#006A63'
+      });
       setFeedback('');
     } catch (error) {
-      alert(error.response?.data?.message || 'Gagal mengirim ulasan');
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengirim Ulasan',
+        text: error.response?.data?.message || 'Terjadi kesalahan saat mengirim ulasan. Silakan coba beberapa saat lagi.',
+        confirmButtonColor: '#006A63'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -219,8 +254,9 @@ const FeedbackSection = () => {
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
-            onClick={() => setRating(star)}
-            className="focus:outline-none transition-transform hover:scale-110"
+            onClick={() => !isSubmitted && setRating(star)}
+            disabled={isSubmitted}
+            className="focus:outline-none transition-transform hover:scale-110 disabled:cursor-default"
           >
             <Star
               className={`w-8 h-8 ${
@@ -236,17 +272,25 @@ const FeedbackSection = () => {
       <textarea
         value={feedback}
         onChange={(e) => setFeedback(e.target.value)}
+        disabled={isSubmitted || submitting}
         placeholder="Tuliskan pengalaman Anda mengikuti pelatihan ini..."
-        className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#006A63] focus:border-transparent resize-none font-semibold"
+        className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#006A63] focus:border-transparent resize-none font-semibold disabled:bg-gray-50 disabled:text-gray-500"
       />
       
-      <button 
-        onClick={handleSubmit}
-        disabled={submitting}
-        className="mt-4 w-full px-6 py-2.5 bg-gray-100 text-[#1D315F] font-semibold rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
-      >
-        {submitting ? 'Mengirim...' : 'Kirim Ulasan'}
-      </button>
+      {isSubmitted ? (
+        <div className="mt-4 p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-md text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+          <span>Ulasan dan rating Anda telah berhasil tersimpan. Terima kasih!</span>
+        </div>
+      ) : (
+        <button 
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="mt-4 w-full px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {submitting ? 'Mengirim...' : 'Kirim Ulasan'}
+        </button>
+      )}
     </div>
   );
 };

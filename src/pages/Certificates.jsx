@@ -210,9 +210,11 @@ const CertificatesContent = () => {
         </div>
       ) : (
         <div className="text-center py-16">
-          <img src={sertifikatImg} alt="No certificates" className="w-48 h-48 mx-auto mb-6 opacity-30" />
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006A63] shadow-sm">
+            <Award className="w-12 h-12 text-[#006A63]" />
+          </div>
           <h3 className="text-lg font-semibold text-[#1D315F] mb-2">{t('certificates.empty')}</h3>
-          <p className="text-gray-500 text-sm font-semibold">
+          <p className="text-gray-500 text-sm font-semibold max-w-md mx-auto">
             {t('certificates.emptySub')}
           </p>
         </div>

@@ -313,7 +313,7 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
   );
 };
 
-const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
+const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nextStepInfo }) => {
   if (!activeMateri) {
     return (
       <div className="bg-white border border-[#BBC9C7] rounded-lg p-10 text-center text-gray-500">
@@ -361,6 +361,7 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
               if (activeMateri.currentModulId) {
                 localStorage.setItem('userModulId', activeMateri.currentModulId);
               }
+              localStorage.setItem('userActiveMateriId', activeMateri.materi_id);
               localStorage.setItem('userKuisId', activeMateri.pre_test.kuis_id);
               onNavigate('kuis');
             }}
@@ -486,25 +487,61 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate }) => {
                 : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
             </p>
          </div>
-         <button 
-           onClick={onMarkAsRead}
-           disabled={activeMateri.is_read}
-           className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors ${
-             activeMateri.is_read 
-               ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
-               : isH5P
-                 ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                 : 'bg-[#1D315F] text-white hover:bg-[#162847]'
-           }`}
-         >
-           {activeMateri.is_read ? (
-             <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
-           ) : isH5P ? (
-             <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
-           ) : (
-             'Tandai Telah Dibaca'
+         <div className="flex items-center gap-3 flex-wrap">
+           <button 
+             onClick={onMarkAsRead}
+             disabled={activeMateri.is_read}
+             className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors ${
+               activeMateri.is_read 
+                 ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
+                 : isH5P
+                   ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
+                   : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+             }`}
+           >
+             {activeMateri.is_read ? (
+               <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
+             ) : isH5P ? (
+               <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
+             ) : (
+               'Tandai Telah Dibaca'
+             )}
+           </button>
+
+           {activeMateri.is_read && nextStepInfo?.type === 'same_modul_materi' && (
+             <button
+               onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
+               className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+             >
+               <span>Materi Selanjutnya</span>
+               <ChevronRight className="w-4 h-4" />
+             </button>
            )}
-         </button>
+
+           {activeMateri.is_read && nextStepInfo?.type === 'modul_kuis' && (
+             <button
+               onClick={() => {
+                 localStorage.setItem('userModulId', nextStepInfo.modulId);
+                 localStorage.setItem('userKuisId', nextStepInfo.kuis.kuis_id);
+                 onNavigate('kuis');
+               }}
+               className="px-5 py-2.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+             >
+               <span>Kerjakan Kuis Modul</span>
+               <ChevronRight className="w-4 h-4" />
+             </button>
+           )}
+
+           {activeMateri.is_read && nextStepInfo?.type === 'next_modul_materi' && (
+             <button
+               onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
+               className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+             >
+               <span>Lanjut Modul Berikutnya</span>
+               <ChevronRight className="w-4 h-4" />
+             </button>
+           )}
+         </div>
       </div>
     </div>
   );
@@ -558,6 +595,53 @@ const Footer = ({ onNavigate }) => {
   );
 };
 
+const findNextMateriInfo = (allModuls, currentModulId, currentMateriId) => {
+  if (!allModuls || allModuls.length === 0) return null;
+
+  const currentModul = allModuls.find(m => String(m.modul_id) === String(currentModulId));
+  if (!currentModul || !Array.isArray(currentModul.materi)) return null;
+
+  const currIdx = currentModul.materi.findIndex(m => String(m.materi_id) === String(currentMateriId));
+
+  // 1. Cek apakah ada materi berikutnya di modul yang sama
+  if (currIdx !== -1 && currIdx + 1 < currentModul.materi.length) {
+    return {
+      type: 'same_modul_materi',
+      materi: currentModul.materi[currIdx + 1],
+      modul: currentModul,
+      modulId: currentModul.modul_id
+    };
+  }
+
+  // 2. Jika materi terakhir di modul, cek kuis evaluasi modul
+  if (currentModul.kuis && !currentModul.kuis.is_completed) {
+    return {
+      type: 'modul_kuis',
+      kuis: currentModul.kuis,
+      modul: currentModul,
+      modulId: currentModul.modul_id
+    };
+  }
+
+  // 3. Cek apakah ada modul berikutnya
+  const curModulIdx = allModuls.findIndex(m => String(m.modul_id) === String(currentModulId));
+  if (curModulIdx !== -1 && curModulIdx + 1 < allModuls.length) {
+    const nextMod = allModuls[curModulIdx + 1];
+    if (nextMod.materi && nextMod.materi.length > 0) {
+      return {
+        type: 'next_modul_materi',
+        materi: nextMod.materi[0],
+        modul: nextMod,
+        modulId: nextMod.modul_id
+      };
+    }
+  }
+
+  return {
+    type: 'all_completed'
+  };
+};
+
 export default function CourseDetail({ onNavigate, onBack }) {
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -565,9 +649,82 @@ export default function CourseDetail({ onNavigate, onBack }) {
   
   const courseId = localStorage.getItem('userCourseId');
 
+  const resolveActiveMateri = (data, currentActive) => {
+    if (!data?.modul || data.modul.length === 0) return null;
+
+    // A. Cek apakah user baru saja lulus kuis modul
+    const passedKuisModulId = localStorage.getItem('userCompletedKuisModulId');
+    if (passedKuisModulId) {
+      localStorage.removeItem('userCompletedKuisModulId');
+      const passedIdx = data.modul.findIndex(m => String(m.modul_id) === String(passedKuisModulId));
+      if (passedIdx !== -1) {
+        const curMod = data.modul[passedIdx];
+        // Cek jika masih ada materi yang belum selesai di modul yang sama
+        const unreadInSameMod = curMod.materi?.find(mat => !mat.is_read && !mat.is_locked);
+        if (unreadInSameMod) {
+          localStorage.setItem('userActiveMateriId', unreadInSameMod.materi_id);
+          localStorage.setItem('userModulId', curMod.modul_id);
+          return { ...unreadInSameMod, currentModulId: curMod.modul_id };
+        }
+
+        // Lanjut ke materi pertama di modul berikutnya
+        if (passedIdx + 1 < data.modul.length) {
+          const nextMod = data.modul[passedIdx + 1];
+          if (nextMod.materi && nextMod.materi.length > 0) {
+            const nextMat = nextMod.materi[0];
+            localStorage.setItem('userActiveMateriId', nextMat.materi_id);
+            localStorage.setItem('userModulId', nextMod.modul_id);
+            return { ...nextMat, currentModulId: nextMod.modul_id };
+          }
+        }
+      }
+    }
+
+    // B. Cek materi yang tersimpan di localStorage (misal dari pre-test atau materi yang terakhir dibuka)
+    const savedMateriId = localStorage.getItem('userActiveMateriId');
+    if (savedMateriId) {
+      for (const m of data.modul) {
+        const found = m.materi?.find(mat => String(mat.materi_id) === String(savedMateriId));
+        if (found) {
+          return { ...found, currentModulId: m.modul_id };
+        }
+      }
+    }
+
+    // C. Jika currentActive sudah ada di state, refresh status terbarunya dari data API
+    if (currentActive) {
+      for (const m of data.modul) {
+        const found = m.materi?.find(mat => String(mat.materi_id) === String(currentActive.materi_id));
+        if (found) {
+          return { ...found, currentModulId: m.modul_id };
+        }
+      }
+    }
+
+    // D. Cari materi pertama yang belum dibaca dan tidak terkunci
+    for (const m of data.modul) {
+      const firstUnread = m.materi?.find(mat => !mat.is_read && !mat.is_locked);
+      if (firstUnread) {
+        return { ...firstUnread, currentModulId: m.modul_id };
+      }
+    }
+
+    // E. Default: materi pertama di modul pertama
+    if (data.modul[0]?.materi?.[0]) {
+      return { ...data.modul[0].materi[0], currentModulId: data.modul[0].modul_id };
+    }
+
+    return null;
+  };
+
   const fetchCourse = async () => {
     if (!courseId) {
-      alert('Tidak ada course ID');
+      Swal.fire({
+        icon: 'warning',
+        title: 'ID Pelatihan Tidak Ditemukan',
+        text: 'Data sesi pelatihan tidak ditemukan. Silakan kembali ke katalog pelatihan.',
+        confirmButtonColor: '#006A63'
+      });
       onBack();
       return;
     }
@@ -575,14 +732,21 @@ export default function CourseDetail({ onNavigate, onBack }) {
       setLoading(true);
       const res = await api.get(`/user/courses/${courseId}`);
       if (res.data?.data) {
-        setCourseData(res.data.data);
-        if (!activeMateri && res.data.data.modul?.[0]?.materi?.[0]) {
-          setActiveMateri({ ...res.data.data.modul[0].materi[0], currentModulId: res.data.data.modul[0].modul_id });
+        const fetchedData = res.data.data;
+        setCourseData(fetchedData);
+        const resolved = resolveActiveMateri(fetchedData, activeMateri);
+        if (resolved) {
+          setActiveMateri(resolved);
         }
       }
     } catch (error) {
       console.error(error);
-      alert('Gagal mengambil data pelatihan');
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memuat Pelatihan',
+        text: error.response?.data?.message || 'Terjadi gangguan saat mengambil data pelatihan.',
+        confirmButtonColor: '#006A63'
+      });
       onBack();
     } finally {
       setLoading(false);
@@ -593,19 +757,135 @@ export default function CourseDetail({ onNavigate, onBack }) {
     fetchCourse();
   }, []);
 
+  const handleSelectMateri = (materiWithModul) => {
+    setActiveMateri(materiWithModul);
+    if (materiWithModul?.materi_id) {
+      localStorage.setItem('userActiveMateriId', materiWithModul.materi_id);
+    }
+    if (materiWithModul?.currentModulId) {
+      localStorage.setItem('userModulId', materiWithModul.currentModulId);
+    }
+  };
+
+  const handleGoNext = (nextMateri, nextModulId) => {
+    if (!nextMateri) return;
+    if (nextMateri.is_locked) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Materi Masih Terkunci',
+        text: 'Materi selanjutnya belum dapat diakses. Selesaikan syarat materi/kuis terlebih dahulu.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
+    const newActive = { ...nextMateri, currentModulId: nextModulId };
+    setActiveMateri(newActive);
+    localStorage.setItem('userActiveMateriId', nextMateri.materi_id);
+    localStorage.setItem('userModulId', nextModulId);
+  };
+
   const handleMarkAsRead = async () => {
+    if (!activeMateri) return;
     try {
       await api.post(`/user/courses/${courseId}/materi/${activeMateri.materi_id}/read`);
-      // Update local state to reflect UI change instantly without full reload
-      setActiveMateri(prev => ({ ...prev, is_read: true }));
-      fetchCourse(); // refresh stats
-      Swal.fire({
-        icon: 'success',
-        title: 'Materi Selesai!',
-        text: 'Progres belajar Anda telah tersimpan.',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      
+      // Ambil data kursus terbaru untuk sinkronisasi locking & progress
+      const res = await api.get(`/user/courses/${courseId}`);
+      const updatedCourse = res.data?.data;
+      if (updatedCourse) {
+        setCourseData(updatedCourse);
+      }
+
+      const allModuls = updatedCourse?.modul || courseData?.modul || [];
+      const currentModulId = activeMateri.currentModulId;
+
+      // Cari materi atau langkah selanjutnya
+      const nextStep = findNextMateriInfo(allModuls, currentModulId, activeMateri.materi_id);
+
+      if (nextStep?.type === 'same_modul_materi') {
+        // Lanjut ke materi berikutnya yang ada di modul yang sama!
+        const nextMat = nextStep.materi;
+        const newActive = { ...nextMat, currentModulId: nextStep.modulId };
+        setActiveMateri(newActive);
+        localStorage.setItem('userActiveMateriId', nextMat.materi_id);
+        localStorage.setItem('userModulId', nextStep.modulId);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Materi Selesai!',
+          text: `Melanjutkan ke materi berikutnya: "${nextMat.judul}"`,
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } else if (nextStep?.type === 'modul_kuis') {
+        // Materi terakhir di modul ini, arahkan ke kuis evaluasi modul
+        const result = await Swal.fire({
+          icon: 'success',
+          title: 'Materi Modul Selesai!',
+          html: `
+            <div class="text-left text-sm text-gray-600 space-y-2 pt-1">
+              <p>Selamat! Anda telah menyelesaikan seluruh materi pada <b>${nextStep.modul.judul}</b>.</p>
+              <p class="text-xs text-teal-800 bg-teal-50 p-2.5 rounded border border-teal-200">
+                Langkah berikutnya: Selesaikan <b>Kuis Evaluasi Modul</b> untuk mengukur pemahaman Anda dan membuka modul berikutnya.
+              </p>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonColor: '#006A63',
+          cancelButtonColor: '#6B7280',
+          confirmButtonText: 'Mulai Kerjakan Kuis',
+          cancelButtonText: 'Tetap di Halaman Ini'
+        });
+
+        if (result.isConfirmed) {
+          localStorage.setItem('userModulId', nextStep.modulId);
+          localStorage.setItem('userKuisId', nextStep.kuis.kuis_id);
+          onNavigate('kuis');
+        } else {
+          setActiveMateri(prev => ({ ...prev, is_read: true }));
+        }
+      } else if (nextStep?.type === 'next_modul_materi') {
+        // Kuis modul sudah selesai atau tidak ada kuis, lanjut ke modul berikutnya
+        const nextMat = nextStep.materi;
+        const newActive = { ...nextMat, currentModulId: nextStep.modulId };
+        setActiveMateri(newActive);
+        localStorage.setItem('userActiveMateriId', nextMat.materi_id);
+        localStorage.setItem('userModulId', nextStep.modulId);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Modul Selesai!',
+          text: `Melanjutkan ke ${nextStep.modul.judul}: "${nextMat.judul}"`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        // Seluruh materi & modul selesai
+        setActiveMateri(prev => ({ ...prev, is_read: true }));
+        if (updatedCourse?.post_test) {
+          const result = await Swal.fire({
+            icon: 'success',
+            title: '🎉 Selamat! Seluruh Silabus Selesai',
+            text: 'Anda telah menyelesaikan seluruh materi dan evaluasi modul. Lanjutkan ke Post Test Akhir Pelatihan?',
+            showCancelButton: true,
+            confirmButtonColor: '#006A63',
+            cancelButtonColor: '#6B7280',
+            confirmButtonText: 'Mulai Post Test',
+            cancelButtonText: 'Nanti'
+          });
+          if (result.isConfirmed) {
+            onNavigate('post-test');
+          }
+        } else {
+          Swal.fire({
+            icon: 'success',
+            title: 'Materi Selesai!',
+            text: 'Progres belajar Anda telah tersimpan.',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      }
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -649,6 +929,8 @@ export default function CourseDetail({ onNavigate, onBack }) {
     );
   }
 
+  const nextStepInfo = activeMateri ? findNextMateriInfo(courseData?.modul, activeMateri.currentModulId, activeMateri.materi_id) : null;
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
       <CourseDetailNavbar onNavigate={onNavigate} />
@@ -679,6 +961,8 @@ export default function CourseDetail({ onNavigate, onBack }) {
                 activeMateri={activeMateri} 
                 onMarkAsRead={handleMarkAsRead} 
                 onNavigate={onNavigate}
+                onNextMateri={handleGoNext}
+                nextStepInfo={nextStepInfo}
               />
             </div>
             
@@ -686,7 +970,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
               <Sidebar 
                 courseData={courseData} 
                 activeMateri={activeMateri}
-                onSelectMateri={setActiveMateri}
+                onSelectMateri={handleSelectMateri}
                 onNavigate={onNavigate}
               />
             </div>
