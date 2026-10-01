@@ -154,8 +154,21 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (lockoutCountdown > 0) return;
+    if (!nip.trim()) {
+      setError('Silakan isi NIP Anda terlebih dahulu.');
+      loginRecaptchaRef.current?.reset();
+      setLoginCaptchaToken('');
+      return;
+    }
+    if (!password) {
+      setError('Silakan isi kata sandi Anda terlebih dahulu.');
+      loginRecaptchaRef.current?.reset();
+      setLoginCaptchaToken('');
+      return;
+    }
     if (!loginCaptchaToken) {
       setError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+      loginRecaptchaRef.current?.reset();
       return;
     }
     setError('');
@@ -172,6 +185,7 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
       setAuth(response.data.access_token, response.data.user);
       onLogin();
     } catch (err) {
+      // Selalu segarkan captcha otomatis saat login gagal
       loginRecaptchaRef.current?.reset();
       setLoginCaptchaToken('');
       const resData = err.response?.data;
@@ -427,10 +441,19 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                     e.preventDefault();
                     if (otpLockoutCountdown > 0) {
                       setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                      resetRecaptchaRef.current?.reset();
+                      setResetCaptchaToken('');
+                      return;
+                    }
+                    if (!resetNip.trim() || !resetEmail.trim()) {
+                      setResetError('Silakan isi NIP dan email Anda terlebih dahulu.');
+                      resetRecaptchaRef.current?.reset();
+                      setResetCaptchaToken('');
                       return;
                     }
                     if (!resetCaptchaToken) {
                       setResetError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+                      resetRecaptchaRef.current?.reset();
                       return;
                     }
                     setResetError('');
@@ -446,10 +469,15 @@ const Hero = ({ showAuth, setShowAuth, onLogin, onAuthClick }) => {
                         setServerMessage(response.data?.message || 'Jika NIP dan email sesuai dengan data kami, kode OTP telah dikirim ke email tersebut.');
                         setResetStep('otp');
                         setResendCountdown(60);
+                        resetRecaptchaRef.current?.reset();
+                        setResetCaptchaToken('');
                       } else {
                         setResetError(response.data?.message || 'Data NIP tidak ditemukan dalam sistem kepegawaian.');
+                        resetRecaptchaRef.current?.reset();
+                        setResetCaptchaToken('');
                       }
                     } catch (err) {
+                      // Selalu segarkan captcha otomatis saat gagal meminta OTP
                       resetRecaptchaRef.current?.reset();
                       setResetCaptchaToken('');
                       if (err.response?.status === 429) {
