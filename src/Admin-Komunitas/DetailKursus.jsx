@@ -31,7 +31,8 @@ const AdminSidebar = ({ activeMenu = 'katalog-kursus', onNavigate, isOpen, setIs
       }
       api.get('/admin-komunitas/komunitas-saya').then(res => {
         if (res.data?.data?.length > 0) {
-          setCommunityName(res.data.data[0].nama_komunitas);
+          const own = res.data.data.find(k => !k.is_umum) || res.data.data[0];
+          setCommunityName(own.nama_komunitas);
         }
       }).catch(() => { });
     } catch (e) { }
@@ -1469,6 +1470,7 @@ const DetailKursus = ({ onNavigate }) => {
   if (loading) return <AdminKomunitasSkeleton />;
   if (!course) return null;
 
+  const isReadOnly = course.dapat_dikelola === false;
   const totalJp = modules.reduce((acc, m) => acc + (parseFloat(m.jp_modul) || 0), 0);
 
   return (
@@ -1516,15 +1518,28 @@ const DetailKursus = ({ onNavigate }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleDeleteCourse}
-                  className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-xs font-bold transition-colors shadow-xs"
-                >
-                  <Trash2 className="w-4 h-4" /> Hapus Pelatihan
-                </button>
-              </div>
+              {!isReadOnly && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDeleteCourse}
+                    className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-xs font-bold transition-colors shadow-xs"
+                  >
+                    <Trash2 className="w-4 h-4" /> Hapus Pelatihan
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Read-Only Alert Banner */}
+            {isReadOnly && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 shadow-xs">
+                <Eye className="w-5 h-5 text-blue-600 shrink-0" />
+                <div>
+                  <h4 className="text-sm font-bold text-blue-900">Mode Hanya Baca (Read-Only)</h4>
+                  <p className="text-xs text-blue-700">Pembelajaran di Komunitas Umum ini dirancang oleh admin komunitas lain. Anda dapat meninjau seluruh modul dan materi dalam mode baca.</p>
+                </div>
+              </div>
+            )}
 
             {/* Published Alert Banner */}
             {course.status === 'dipublikasikan' && (
@@ -1700,16 +1715,18 @@ const DetailKursus = ({ onNavigate }) => {
                 </div>
 
                 {/* Tombol Simpan Cepat untuk Informasi Dasar & Thumbnail */}
-                <div className="pt-4 border-t border-gray-100 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleUpdateBasicInfo}
-                    disabled={savingBasicInfo}
-                    className="px-5 py-2.5 bg-[#0F766E] hover:bg-teal-800 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
-                  >
-                    {savingBasicInfo ? 'Menyimpan...' : 'Simpan Informasi Dasar & Thumbnail'}
-                  </button>
-                </div>
+                {!isReadOnly && (
+                  <div className="pt-4 border-t border-gray-100 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleUpdateBasicInfo}
+                      disabled={savingBasicInfo}
+                      className="px-5 py-2.5 bg-[#0F766E] hover:bg-teal-800 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+                    >
+                      {savingBasicInfo ? 'Menyimpan...' : 'Simpan Informasi Dasar & Thumbnail'}
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1725,12 +1742,14 @@ const DetailKursus = ({ onNavigate }) => {
                   </div>
                   <p className="text-xs text-gray-500">Kelola bab, dokumen bacaan PDF, dan video pendukung.</p>
                 </div>
-                <button
-                  onClick={handleOpenAddModuleModal}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 border border-[#0F766E]/30 text-[#0F766E] text-sm font-semibold rounded-lg hover:bg-teal-100 transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> Tambah Modul
-                </button>
+                {!isReadOnly && (
+                  <button
+                    onClick={handleOpenAddModuleModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 border border-[#0F766E]/30 text-[#0F766E] text-sm font-semibold rounded-lg hover:bg-teal-100 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Tambah Modul
+                  </button>
+                )}
               </div>
 
               <div className="p-6 space-y-4">
@@ -1739,12 +1758,14 @@ const DetailKursus = ({ onNavigate }) => {
                     <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm font-semibold text-gray-700">Belum ada modul pada kursus ini</p>
                     <p className="text-xs text-gray-400 mt-1 mb-4">Mulai dengan menambahkan modul pembelajaran pertama.</p>
-                    <button
-                      onClick={handleOpenAddModuleModal}
-                      className="px-4 py-2 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800"
-                    >
-                      Tambah Modul Sekarang
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={handleOpenAddModuleModal}
+                        className="px-4 py-2 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800"
+                      >
+                        Tambah Modul Sekarang
+                      </button>
+                    )}
                   </div>
                 ) : (
                   modules.map((modul, idx) => {
@@ -1782,27 +1803,31 @@ const DetailKursus = ({ onNavigate }) => {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={() => handleOpenAddMaterialModal(modul.modul_id)}
-                              title="Tambah Materi"
-                              className="px-2.5 py-1 bg-white border border-gray-200 text-teal-700 hover:bg-teal-50 rounded text-xs font-semibold flex items-center gap-1"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Materi</span>
-                            </button>
-                            <button
-                              onClick={() => handleOpenEditModuleModal(modul)}
-                              title="Edit Modul"
-                              className="p-1 text-gray-400 hover:text-teal-600 rounded hover:bg-teal-50 transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteModule(modul.modul_id, modul.judul_modul)}
-                              title="Hapus Modul"
-                              className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isReadOnly && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenAddMaterialModal(modul.modul_id)}
+                                  title="Tambah Materi"
+                                  className="px-2.5 py-1 bg-white border border-gray-200 text-teal-700 hover:bg-teal-50 rounded text-xs font-semibold flex items-center gap-1"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Materi</span>
+                                </button>
+                                <button
+                                  onClick={() => handleOpenEditModuleModal(modul)}
+                                  title="Edit Modul"
+                                  className="p-1 text-gray-400 hover:text-teal-600 rounded hover:bg-teal-50 transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteModule(modul.modul_id, modul.judul_modul)}
+                                  title="Hapus Modul"
+                                  className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => toggleModuleOpen(modul.modul_id)}
                               className="p-1 text-gray-400 hover:text-gray-600"
@@ -1883,25 +1908,29 @@ const DetailKursus = ({ onNavigate }) => {
                                       </div>
 
                                       <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                        <button
-                                          onClick={() => handleOpenQuizModal(modul, 'pre_test', mat)}
-                                          className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                                            mat.pre_test
-                                              ? 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'
-                                              : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                                          }`}
-                                          title={mat.pre_test ? 'Edit Pre-test Materi' : 'Buat Pre-test untuk Materi ini'}
-                                        >
-                                          {mat.pre_test ? <><Edit2 className="w-3.5 h-3.5" /> Edit Pre-test</> : <><Plus className="w-3.5 h-3.5" /> + Pre-test</>}
-                                        </button>
+                                        {!isReadOnly && (
+                                          <>
+                                            <button
+                                              onClick={() => handleOpenQuizModal(modul, 'pre_test', mat)}
+                                              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                                                mat.pre_test
+                                                  ? 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'
+                                                  : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                              }`}
+                                              title={mat.pre_test ? 'Edit Pre-test Materi' : 'Buat Pre-test untuk Materi ini'}
+                                            >
+                                              {mat.pre_test ? <><Edit2 className="w-3.5 h-3.5" /> Edit Pre-test</> : <><Plus className="w-3.5 h-3.5" /> + Pre-test</>}
+                                            </button>
 
-                                        <button
-                                          onClick={() => handleOpenEditMaterialModal(mat, modul.modul_id)}
-                                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
-                                          title="Edit Materi Pembelajaran"
-                                        >
-                                          <Edit className="w-3.5 h-3.5" /> Edit Materi
-                                        </button>
+                                            <button
+                                              onClick={() => handleOpenEditMaterialModal(mat, modul.modul_id)}
+                                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
+                                              title="Edit Materi Pembelajaran"
+                                            >
+                                              <Edit className="w-3.5 h-3.5" /> Edit Materi
+                                            </button>
+                                          </>
+                                        )}
 
                                         <a
                                           href={mat.tautan_atau_berkas.startsWith('http') ? mat.tautan_atau_berkas : `http://localhost:8000${mat.tautan_atau_berkas}`}
@@ -1911,13 +1940,15 @@ const DetailKursus = ({ onNavigate }) => {
                                         >
                                           <Eye className="w-3.5 h-3.5" /> Buka
                                         </a>
-                                        <button
-                                          onClick={() => handleDeleteMaterial(mat.materi_id, mat.judul_materi)}
-                                          className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
-                                          title="Hapus Materi"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {!isReadOnly && (
+                                          <button
+                                            onClick={() => handleDeleteMaterial(mat.materi_id, mat.judul_materi)}
+                                            className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                                            title="Hapus Materi"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   ))}
@@ -2001,12 +2032,14 @@ const DetailKursus = ({ onNavigate }) => {
                       <h3 className="text-sm font-bold text-gray-900">Konfigurasi Post Test Akhir</h3>
                       <p className="text-xs text-gray-500">Evaluasi kelulusan komprehensif setelah seluruh modul diselesaikan.</p>
                     </div>
-                    <button
-                      onClick={handleSavePostTestConfig}
-                      className="px-3 py-1.5 bg-white border border-gray-200 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-semibold transition-colors"
-                    >
-                      Simpan Konfigurasi
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={handleSavePostTestConfig}
+                        className="px-3 py-1.5 bg-white border border-gray-200 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        Simpan Konfigurasi
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2365,20 +2398,36 @@ const DetailKursus = ({ onNavigate }) => {
 
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white border-t border-gray-200 p-4 px-6 z-20 flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button
-          onClick={handleDeleteCourse}
-          className="w-full sm:w-auto px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-        >
-          <Trash2 className="w-4 h-4" /> Hapus Pelatihan
-        </button>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <button onClick={handleUpdateBasicInfo} disabled={savingBasicInfo} className="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
-            {savingBasicInfo ? 'Menyimpan...' : 'Simpan Perubahan'}
-          </button>
-          <button onClick={handleAjukanApproval} className="w-full sm:w-auto px-6 py-2.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-            Ajukan Approval Publikasi ke BKPSDM
-          </button>
-        </div>
+        {isReadOnly ? (
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-gray-400" /> Mode Hanya Baca — Kursus Komunitas Umum milik admin lain
+            </span>
+            <button
+              onClick={() => onNavigate && onNavigate('katalog-kursus')}
+              className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Kembali ke Katalog
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={handleDeleteCourse}
+              className="w-full sm:w-auto px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" /> Hapus Pelatihan
+            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <button onClick={handleUpdateBasicInfo} disabled={savingBasicInfo} className="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+                {savingBasicInfo ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+              <button onClick={handleAjukanApproval} className="w-full sm:w-auto px-6 py-2.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                Ajukan Approval Publikasi ke BKPSDM
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* MODAL: Tambah & Edit Modul */}

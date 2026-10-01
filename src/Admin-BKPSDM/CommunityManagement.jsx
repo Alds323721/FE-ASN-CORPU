@@ -231,9 +231,11 @@ const CommunityManagement = ({ onNavigate }) => {
       });
     } catch (error) {
       console.error('Failed to add community:', error);
-      Toast.fire({
+      Swal.fire({
         icon: 'error',
-        title: error.response?.data?.message || 'Gagal menambahkan komunitas.'
+        title: 'Gagal Menambahkan',
+        text: error.response?.data?.message || 'Gagal menambahkan komunitas.',
+        confirmButtonColor: '#0f766e'
       });
     }
   };
@@ -264,9 +266,11 @@ const CommunityManagement = ({ onNavigate }) => {
       });
     } catch (error) {
       console.error('Failed to update community:', error);
-      Toast.fire({
+      Swal.fire({
         icon: 'error',
-        title: error.response?.data?.message || 'Gagal memperbarui komunitas.'
+        title: 'Gagal Memperbarui',
+        text: error.response?.data?.message || 'Gagal memperbarui komunitas.',
+        confirmButtonColor: '#0f766e'
       });
     }
   };
@@ -293,9 +297,11 @@ const CommunityManagement = ({ onNavigate }) => {
         });
       } catch (error) {
         console.error('Failed to delete community:', error);
-        Toast.fire({
+        Swal.fire({
           icon: 'error',
-          title: 'Gagal menghapus komunitas'
+          title: 'Gagal Menghapus',
+          text: error.response?.data?.message || 'Gagal menghapus komunitas',
+          confirmButtonColor: '#0f766e'
         });
       }
     }
@@ -412,7 +418,15 @@ const CommunityManagement = ({ onNavigate }) => {
                         <p className="text-sm text-gray-600">{community.deskripsi}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full">{community.rumpun_jabatan}</span>
+                        {community.rumpun_jabatan === 'UMUM' ? (
+                          <span className="text-xs font-bold text-teal-800 bg-teal-100 px-2.5 py-1 rounded-full border border-teal-300">
+                            UMUM (Semua Rumpun)
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                            {community.rumpun_jabatan}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {getStatusBadge(community.status)}
@@ -421,15 +435,28 @@ const CommunityManagement = ({ onNavigate }) => {
                         <button 
                           onClick={() => handleOpenEditModal(community)}
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
+                          title="Edit Komunitas"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button 
-                          onClick={() => handleDelete(community.komunitas_id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {community.rumpun_jabatan === 'UMUM' ? (
+                          <button 
+                            type="button"
+                            disabled
+                            className="p-1.5 text-gray-300 cursor-not-allowed rounded-md"
+                            title="Komunitas Umum tidak dapat dihapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleDelete(community.komunitas_id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Hapus Komunitas"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -509,6 +536,7 @@ const CommunityManagement = ({ onNavigate }) => {
                       <option value="JA">JA</option>
                       <option value="JF">JF</option>
                       <option value="JP">JP (Pelaksana)</option>
+                      <option value="UMUM">Umum (Semua Rumpun)</option>
                     </select>
                   </div>
                   <div className="pt-4 flex justify-end gap-2">
@@ -584,19 +612,36 @@ const CommunityManagement = ({ onNavigate }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
-                    <select value={selectedCommunity.rumpun_jabatan} onChange={e => setSelectedCommunity({...selectedCommunity, rumpun_jabatan: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                    <select 
+                      disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
+                      value={selectedCommunity.rumpun_jabatan} 
+                      onChange={e => setSelectedCommunity({...selectedCommunity, rumpun_jabatan: e.target.value})} 
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    >
                       <option value="JPT">JPT</option>
                       <option value="JA">JA</option>
                       <option value="JF">JF</option>
                       <option value="JP">JP (Pelaksana)</option>
+                      <option value="UMUM">Umum (Semua Rumpun)</option>
                     </select>
+                    {selectedCommunity.rumpun_jabatan === 'UMUM' && (
+                      <p className="text-[11px] text-amber-600 mt-1">Rumpun jabatan Komunitas Umum tidak dapat diubah.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
-                    <select value={selectedCommunity.status} onChange={e => setSelectedCommunity({...selectedCommunity, status: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                    <select 
+                      disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
+                      value={selectedCommunity.status} 
+                      onChange={e => setSelectedCommunity({...selectedCommunity, status: e.target.value})} 
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    >
                       <option value="aktif">Aktif</option>
                       <option value="nonaktif">Nonaktif</option>
                     </select>
+                    {selectedCommunity.rumpun_jabatan === 'UMUM' && (
+                      <p className="text-[11px] text-amber-600 mt-1">Status Komunitas Umum harus selalu aktif.</p>
+                    )}
                   </div>
                   <div className="pt-4 flex justify-end gap-2">
                     <button type="button" onClick={() => {setShowEditModal(false); setSelectedCommunity(null);}} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Batal</button>

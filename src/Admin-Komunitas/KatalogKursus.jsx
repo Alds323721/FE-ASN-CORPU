@@ -25,7 +25,8 @@ const AdminSidebar = ({ activeMenu = 'katalog-kursus', onNavigate, isOpen, setIs
       }
       api.get('/admin-komunitas/komunitas-saya').then(res => {
         if (res.data?.data?.length > 0) {
-          setCommunityName(res.data.data[0].nama_komunitas);
+          const own = res.data.data.find(k => !k.is_umum) || res.data.data[0];
+          setCommunityName(own.nama_komunitas);
         }
       }).catch(() => {});
     } catch (e) {}
@@ -160,11 +161,21 @@ const CourseCard = ({ course, onNavigate }) => {
       </div>
       
       <div className="p-5 flex flex-col flex-1">
-        {/* Category */}
-        <div className="mb-3">
+        {/* Category & Community */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
             {category}
           </span>
+          {course.komunitas?.nama_komunitas && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+              {course.komunitas.nama_komunitas}
+            </span>
+          )}
+          {(course.komunitas?.rumpun_jabatan === 'UMUM' || course.komunitas?.is_umum) && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 uppercase">
+              Umum
+            </span>
+          )}
         </div>
 
         {/* Title */}
@@ -188,17 +199,17 @@ const CourseCard = ({ course, onNavigate }) => {
           </div>
         </div>
 
-        {/* Action Button: Edit Kursus */}
+        {/* Action Button: Edit / Lihat Kursus */}
         <button 
           onClick={() => {
             localStorage.setItem('adminKomunitasCourseId', courseId);
             onNavigate('detail-kursus');
           }}
           className="w-full py-2.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer mt-auto"
-          title="Buka detail kursus dan edit isi kursus"
+          title={course.dapat_dikelola === false ? 'Buka detail kursus (mode baca)' : 'Buka detail kursus dan edit isi kursus'}
         >
-          <Edit className="w-4 h-4" />
-          <span>Edit Kursus</span>
+          {course.dapat_dikelola === false ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+          <span>{course.dapat_dikelola === false ? 'Lihat Kursus' : 'Edit Kursus'}</span>
         </button>
       </div>
     </div>

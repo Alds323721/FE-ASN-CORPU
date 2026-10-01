@@ -639,10 +639,11 @@ const UserManagement = ({ onNavigate }) => {
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={formData.komunitas_id} onChange={e => setFormData({ ...formData, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.map(k => (
+                        {komunitasList.filter(k => k.rumpun_jabatan !== 'UMUM').map(k => (
                           <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-gray-500 mt-1">Admin Komunitas otomatis dapat mengelola Komunitas Umum.</p>
                     </div>
                   )}
                   <div>
@@ -759,10 +760,11 @@ const UserManagement = ({ onNavigate }) => {
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={selectedUser.komunitas_id || ''} onChange={e => setSelectedUser({ ...selectedUser, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.map(k => (
+                        {komunitasList.filter(k => k.rumpun_jabatan !== 'UMUM').map(k => (
                           <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-gray-500 mt-1">Admin Komunitas otomatis dapat mengelola Komunitas Umum.</p>
                     </div>
                   )}
                   <div>

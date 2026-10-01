@@ -90,6 +90,7 @@ const translations = {
 
     // Community
     'community.title': 'Komunitas Belajar',
+    'community.general': 'Umum',
     'community.members': 'Anggota',
     'community.courses': 'Pelatihan',
     'community.viewCommunity': 'Lihat Komunitas',
@@ -234,6 +235,7 @@ const translations = {
 
     // Community
     'community.title': 'Learning Community',
+    'community.general': 'General',
     'community.members': 'Members',
     'community.courses': 'Courses',
     'community.viewCommunity': 'View Community',

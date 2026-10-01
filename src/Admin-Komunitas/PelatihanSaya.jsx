@@ -25,7 +25,8 @@ const AdminSidebar = ({ activeMenu = 'pelatihan-saya', onNavigate, isOpen, setIs
       }
       api.get('/admin-komunitas/komunitas-saya').then(res => {
         if (res.data?.data?.length > 0) {
-          setCommunityName(res.data.data[0].nama_komunitas);
+          const own = res.data.data.find(k => !k.is_umum) || res.data.data[0];
+          setCommunityName(own.nama_komunitas);
         }
       }).catch(() => {});
     } catch (e) {}
@@ -385,13 +386,15 @@ const PelatihanSaya = ({ onNavigate }) => {
                         className="w-full h-full object-cover" 
                       />
                       <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                        <button 
-                          onClick={() => handleDeleteCourse(course.pembelajaran_id, course.judul_pembelajaran)}
-                          title="Hapus Pelatihan"
-                          className="bg-white/90 hover:bg-white text-gray-500 hover:text-red-600 p-1.5 rounded-lg shadow-sm transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {course.dapat_dikelola !== false && (
+                          <button 
+                            onClick={() => handleDeleteCourse(course.pembelajaran_id, course.judul_pembelajaran)}
+                            title="Hapus Pelatihan"
+                            className="bg-white/90 hover:bg-white text-gray-500 hover:text-red-600 p-1.5 rounded-lg shadow-sm transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                       <div className="absolute bottom-3 left-3">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 text-blue-700 shadow-xs backdrop-blur-xs">
@@ -402,7 +405,12 @@ const PelatihanSaya = ({ onNavigate }) => {
 
                     <div className="p-5 flex-1 flex flex-col">
                       {/* Status Badges */}
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        {course.komunitas?.rumpun_jabatan === 'UMUM' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 uppercase">
+                            Umum
+                          </span>
+                        )}
                         {course.status === 'dipublikasikan' && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">
                             Aktif
@@ -475,7 +483,7 @@ const PelatihanSaya = ({ onNavigate }) => {
                           className="flex-1 px-3 py-2 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-xs font-semibold transition-colors text-center flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <Edit className="w-3.5 h-3.5" />
-                          <span>{course.status === 'dipublikasikan' ? 'Kelola / Edit' : course.status === 'draft' || course.status === 'ditolak' ? 'Edit Konten' : 'Lihat Detail'}</span>
+                          <span>{course.dapat_dikelola === false ? 'Lihat Detail (Hanya Baca)' : course.status === 'dipublikasikan' ? 'Kelola / Edit' : course.status === 'draft' || course.status === 'ditolak' ? 'Edit Konten' : 'Lihat Detail'}</span>
                         </button>
                       </div>
                     </div>
@@ -517,7 +525,9 @@ const PelatihanSaya = ({ onNavigate }) => {
                 >
                   <option value="" disabled>Pilih Komunitas</option>
                   {komunitasList.map(k => (
-                    <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
+                    <option key={k.komunitas_id} value={k.komunitas_id}>
+                      {k.nama_komunitas}{k.is_umum ? ' (Umum – semua rumpun)' : ''}
+                    </option>
                   ))}
                 </select>
               </div>

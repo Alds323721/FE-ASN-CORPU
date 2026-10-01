@@ -75,9 +75,9 @@ const PageHeader = () => {
 };
 
 /* ── Community Card ───────────────────────────── */
-const CommunityCard = ({ id, image, thumbnail_url, category, title, description, members, courses, isJoined, canJoin = true, onJoin, onNavigate }) => {
+const CommunityCard = ({ id, image, thumbnail_url, category, title, description, members, courses, isJoined, canJoin = true, is_umum = false, onJoin, onNavigate }) => {
   const { t, language } = useLanguage();
-  const isRestricted = !isJoined && !canJoin;
+  const isRestricted = !is_umum && (!isJoined && !canJoin);
 
   return (
     <div className={`bg-white border rounded-lg overflow-hidden flex flex-col transition-all duration-200 ${isRestricted
@@ -90,9 +90,15 @@ const CommunityCard = ({ id, image, thumbnail_url, category, title, description,
           alt={title}
           className={`w-full h-full object-cover transition-transform duration-300 ${isRestricted ? 'opacity-80 grayscale-[25%]' : 'hover:scale-105'}`}
         />
-        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-[#1D315F] text-[11px] font-bold px-3 py-1 rounded shadow-sm">
-          {category}
-        </div>
+        {is_umum ? (
+          <div className="absolute top-3 left-3 bg-teal-600/95 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1 rounded shadow-sm">
+            {t('community.general')}
+          </div>
+        ) : (
+          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-[#1D315F] text-[11px] font-bold px-3 py-1 rounded shadow-sm">
+            {category}
+          </div>
+        )}
         {isRestricted && (
           <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-gray-200 text-[10px] font-semibold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5 text-amber-400" />
@@ -166,7 +172,8 @@ const CommunityContent = ({ onNavigate }) => {
     { value: 'JPT', label: 'JPT' },
     { value: 'JA', label: 'JA' },
     { value: 'JF', label: 'JF' },
-    { value: 'JP', label: 'JP' }
+    { value: 'JP', label: 'JP' },
+    { value: 'UMUM', label: t('community.general') }
   ];
 
   useEffect(() => {
@@ -201,7 +208,7 @@ const CommunityContent = ({ onNavigate }) => {
     try {
       const res = await api.post(`/user/komunitas/${id}/join`);
       setCommunities(prev => prev.map(c =>
-        c.id === id ? { ...c, is_joined: true, members: c.members + 1 } : c
+        c.id === id ? { ...c, is_joined: true, members: c.is_umum ? c.members : c.members + 1 } : c
       ));
       Swal.fire({
         icon: 'success',
@@ -267,7 +274,7 @@ const CommunityContent = ({ onNavigate }) => {
                   Rumpun Jabatan Anda: <span className="text-[#006A63] bg-white border border-teal-300 px-2 py-0.5 rounded text-[12px] font-extrabold ml-1">{userRumpun}</span>
                 </div>
                 <p className="text-[12px] text-gray-600 mt-0.5 leading-snug">
-                  Anda dapat melihat seluruh komunitas yang tersedia. Pemilihan/bergabung ke komunitas hanya dibuka untuk komunitas yang sesuai dengan rumpun jabatan Anda.
+                  Komunitas rumpun lain terkunci. Komunitas Umum terbuka untuk semua rumpun jabatan.
                 </p>
               </div>
             </div>

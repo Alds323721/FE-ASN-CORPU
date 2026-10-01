@@ -24,7 +24,8 @@ const AdminSidebar = ({ activeMenu = 'katalog-kursus', onNavigate, isOpen, setIs
       }
       api.get('/admin-komunitas/komunitas-saya').then(res => {
         if (res.data?.data?.length > 0) {
-          setCommunityName(res.data.data[0].nama_komunitas);
+          const own = res.data.data.find(k => !k.is_umum) || res.data.data[0];
+          setCommunityName(own.nama_komunitas);
         }
       }).catch(() => {});
     } catch (e) {}
