@@ -5,7 +5,8 @@ import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Download, TrendingUp, Award, CheckCircle,
-  Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter
+  Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
+  QrCode, ExternalLink, Smartphone, Laptop, Tablet
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, isOpen, setIsOpen }) => {
@@ -121,7 +122,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass, iconColorClass }) => (
 
 const MonitoringReports = ({ onNavigate }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTabReport, setActiveTabReport] = useState('peserta'); // 'peserta' | 'ulasan'
+  const [activeTabReport, setActiveTabReport] = useState('peserta'); // 'peserta' | 'ulasan' | 'validasi'
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [komunitasList, setKomunitasList] = useState([]);
@@ -138,6 +139,20 @@ const MonitoringReports = ({ onNavigate }) => {
   });
   const [selectedRatingFilter, setSelectedRatingFilter] = useState('');
   const [loadingUlasan, setLoadingUlasan] = useState(false);
+
+  // Validasi QR State
+  const [validasiList, setValidasiList] = useState([]);
+  const [validasiStats, setValidasiStats] = useState({
+    total_validasi: 0,
+    sertifikat_unik: 0,
+    validasi_hari_ini: 0
+  });
+  const [loadingValidasi, setLoadingValidasi] = useState(false);
+  const [validasiPagination, setValidasiPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0
+  });
 
   const fetchKomunitas = async () => {
     try {
@@ -204,14 +219,45 @@ const MonitoringReports = ({ onNavigate }) => {
     }
   };
 
+  const fetchValidasiReports = async (page = 1) => {
+    try {
+      setLoadingValidasi(true);
+      const params = { page, per_page: 15 };
+      if (searchTerm) params.search = searchTerm;
+
+      const res = await api.get('/admin-bkpsdm/riwayat-validasi-sertifikat', { params });
+      if (res.data?.data) {
+        setValidasiList(res.data.data.data || []);
+        setValidasiPagination({
+          current_page: res.data.data.current_page || 1,
+          last_page: res.data.data.last_page || 1,
+          total: res.data.data.total || 0
+        });
+      }
+      if (res.data?.stats) {
+        setValidasiStats(res.data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to fetch validasi reports:', err);
+    } finally {
+      setLoadingValidasi(false);
+    }
+  };
+
   useEffect(() => {
     fetchKomunitas();
+    fetchValidasiReports(1);
   }, []);
 
   useEffect(() => {
-    fetchReports();
-    fetchUlasanReports();
-  }, [selectedKomunitas]);
+    if (activeTabReport === 'peserta') {
+      fetchReports();
+    } else if (activeTabReport === 'ulasan') {
+      fetchUlasanReports();
+    } else if (activeTabReport === 'validasi') {
+      fetchValidasiReports(1);
+    }
+  }, [activeTabReport, selectedKomunitas]);
 
   useEffect(() => {
     if (activeTabReport === 'ulasan') {
@@ -223,8 +269,10 @@ const MonitoringReports = ({ onNavigate }) => {
     e.preventDefault();
     if (activeTabReport === 'peserta') {
       fetchReports();
-    } else {
+    } else if (activeTabReport === 'ulasan') {
       fetchUlasanReports();
+    } else if (activeTabReport === 'validasi') {
+      fetchValidasiReports(1);
     }
   };
 
@@ -251,9 +299,10 @@ const MonitoringReports = ({ onNavigate }) => {
   };
 
   const handleViewCertificate = async (report) => {
-    if (!report.certificateId) return;
+    const certId = report?.certificateId || report?.sertifikat_id || report;
+    if (!certId) return;
     try {
-      const response = await api.get(`/user/certificates/${report.certificateId}/download`, {
+      const response = await api.get(`/admin-bkpsdm/sertifikat/${certId}/download`, {
         responseType: 'blob'
       });
       const fileUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
@@ -335,11 +384,11 @@ const MonitoringReports = ({ onNavigate }) => {
             <p className="text-sm text-gray-500">Pantau aktivitas belajar, progres peserta, evaluasi mutu, dan ulasan kepuasan pelatihan ASN.</p>
           </div>
 
-          {/* Switcher Tab: Peserta vs Ulasan Pelatihan */}
-          <div className="flex border-b border-gray-200 mb-6 gap-6">
+          {/* Switcher Tab: Peserta vs Ulasan vs Validasi QR */}
+          <div className="flex border-b border-gray-200 mb-6 gap-4 sm:gap-6 overflow-x-auto">
             <button
               onClick={() => setActiveTabReport('peserta')}
-              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 ${
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
                 activeTabReport === 'peserta'
                   ? 'text-teal-700 border-b-2 border-teal-700'
                   : 'text-gray-500 hover:text-gray-800'
@@ -353,7 +402,7 @@ const MonitoringReports = ({ onNavigate }) => {
             </button>
             <button
               onClick={() => setActiveTabReport('ulasan')}
-              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 ${
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
                 activeTabReport === 'ulasan'
                   ? 'text-teal-700 border-b-2 border-teal-700'
                   : 'text-gray-500 hover:text-gray-800'
@@ -363,6 +412,20 @@ const MonitoringReports = ({ onNavigate }) => {
               <span>Ulasan & Evaluasi Mutu Pelatihan</span>
               <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-bold">
                 {ulasanStats.total_ulasan || 0}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTabReport('validasi')}
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
+                activeTabReport === 'validasi'
+                  ? 'text-teal-700 border-b-2 border-teal-700'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span>Audit Validasi & Scan QR</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                {validasiStats.total_validasi || 0}
               </span>
             </button>
           </div>
@@ -435,20 +498,56 @@ const MonitoringReports = ({ onNavigate }) => {
             </div>
           )}
 
+          {/* Stat Cards - Validasi Tab */}
+          {activeTabReport === 'validasi' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <StatCard 
+                title="TOTAL PEMINDAIAN (SCAN)" 
+                value={validasiStats.total_validasi} 
+                icon={QrCode}
+                colorClass="bg-blue-50"
+                iconColorClass="text-blue-600"
+              />
+              <StatCard 
+                title="SERTIFIKAT TERVALIDASI" 
+                value={validasiStats.sertifikat_unik} 
+                icon={ShieldCheck}
+                colorClass="bg-green-50"
+                iconColorClass="text-green-600"
+              />
+              <StatCard 
+                title="VERIFIKASI HARI INI" 
+                value={validasiStats.validasi_hari_ini} 
+                icon={Calendar}
+                colorClass="bg-amber-50"
+                iconColorClass="text-amber-600"
+              />
+              <StatCard 
+                title="STATUS ARSIP" 
+                value="100% Otentik" 
+                icon={CheckCircle}
+                colorClass="bg-teal-50"
+                iconColorClass="text-teal-600"
+              />
+            </div>
+          )}
+
           {/* Main Card Container */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
             <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                <select 
-                  value={selectedKomunitas}
-                  onChange={(e) => setSelectedKomunitas(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
-                >
-                  <option value="">Semua Komunitas</option>
-                  {komunitasList.map(k => (
-                    <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
-                  ))}
-                </select>
+                {activeTabReport !== 'validasi' && (
+                  <select 
+                    value={selectedKomunitas}
+                    onChange={(e) => setSelectedKomunitas(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
+                  >
+                    <option value="">Semua Komunitas</option>
+                    {komunitasList.map(k => (
+                      <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
+                    ))}
+                  </select>
+                )}
 
                 {activeTabReport === 'ulasan' && (
                   <select 
@@ -465,12 +564,18 @@ const MonitoringReports = ({ onNavigate }) => {
                   </select>
                 )}
 
-                <div className="relative w-full sm:w-64">
+                <div className="relative w-full sm:w-72">
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder={activeTabReport === 'peserta' ? "Cari Nama / NIP..." : "Cari Peserta / Pelatihan / Kata Kunci..."}
+                    placeholder={
+                      activeTabReport === 'peserta'
+                        ? "Cari Nama / NIP..."
+                        : activeTabReport === 'ulasan'
+                        ? "Cari Peserta / Pelatihan / Kata Kunci..."
+                        : "Cari No. Sertifikat / Nama / NIP / IP..."
+                    }
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
                 </div>
@@ -661,6 +766,168 @@ const MonitoringReports = ({ onNavigate }) => {
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Table: Riwayat Validasi & Scan QR Sertifikat */}
+            {activeTabReport === 'validasi' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[1100px]">
+                  <thead>
+                    <tr className="bg-white border-b border-gray-100">
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">WAKTU PEMINDAIAN</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">NOMOR SERTIFIKAT</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENERIMA</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELATIHAN</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PERANGKAT & IP</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">STATUS</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">AKSI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {loadingValidasi ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                          Memuat data riwayat validasi sertifikat...
+                        </td>
+                      </tr>
+                    ) : validasiList.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                          <div className="max-w-md mx-auto text-center space-y-2">
+                            <QrCode className="w-8 h-8 text-emerald-500 mx-auto" />
+                            <p className="font-bold text-gray-800 text-sm">Belum Ada Riwayat Pemindaian QR</p>
+                            <p className="text-xs text-gray-500">Setiap kali QR Code pada sertifikat di-scan atau diverifikasi via tautan publik, data log pemindaian otomatis tersimpan di sini.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      validasiList.map((log) => {
+                        const recipientName = log.sertifikat?.nama_lengkap_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nama_lengkap || '-';
+                        const recipientNip = log.sertifikat?.nip_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nip || '-';
+                        const courseTitle = log.sertifikat?.pendaftaran?.pembelajaran?.judul_pembelajaran || '-';
+                        const isMobile = log.perangkat === 'Mobile';
+                        const isTablet = log.perangkat === 'Tablet';
+
+                        return (
+                          <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 text-xs text-gray-600 whitespace-nowrap">
+                              <p className="font-bold text-gray-800">
+                                {log.scanned_at ? new Date(log.scanned_at).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                }) : '-'}
+                              </p>
+                              <p className="text-gray-400">
+                                {log.scanned_at ? new Date(log.scanned_at).toLocaleTimeString('id-ID', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                }) + ' WITA' : '-'}
+                              </p>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded border border-teal-200 inline-block">
+                                {log.nomor_sertifikat}
+                              </span>
+                              {log.sertifikat?.verification_code && (
+                                <p className="text-[10px] text-gray-400 font-mono mt-1 truncate max-w-[180px]" title={log.sertifikat.verification_code}>
+                                  Kode: {log.sertifikat.verification_code.substring(0, 16)}...
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-gray-800 text-sm mb-0.5">{recipientName}</p>
+                              <p className="text-xs text-gray-500 font-mono">NIP. {recipientNip}</p>
+                            </td>
+
+                            <td className="px-6 py-4 max-w-xs">
+                              <p className="font-bold text-gray-800 text-sm line-clamp-2">{courseTitle}</p>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                {isMobile ? (
+                                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                                ) : isTablet ? (
+                                  <Tablet className="w-3.5 h-3.5 text-purple-600" />
+                                ) : (
+                                  <Laptop className="w-3.5 h-3.5 text-gray-600" />
+                                )}
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  isMobile ? 'bg-blue-50 text-blue-700' : isTablet ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {log.perangkat || 'Desktop'}
+                                </span>
+                              </div>
+                              <p className="text-xs font-mono text-gray-400">{log.ip_address || '-'}</p>
+                            </td>
+
+                            <td className="px-6 py-4 text-center">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 border border-green-200 text-green-700">
+                                <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                Sah & Valid
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-2">
+                                <a
+                                  href={`/validasi-sertifikat/${log.sertifikat?.verification_code || encodeURIComponent(log.nomor_sertifikat)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg border border-teal-200 transition-colors"
+                                  title="Buka Halaman Verifikasi Publik"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>Cek Verifikasi</span>
+                                </a>
+                                {log.sertifikat_id && (
+                                  <button
+                                    onClick={() => handleViewCertificate({ certificateId: log.sertifikat_id })}
+                                    className="inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-teal-800 bg-white hover:bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition-colors"
+                                    title="Unduh Berkas PDF Asli"
+                                  >
+                                    <Award className="w-3.5 h-3.5 text-teal-700" />
+                                    <span>Unduh PDF</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                {validasiPagination.last_page > 1 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                    <span className="text-xs text-gray-500 font-medium">
+                      Menampilkan halaman <strong className="text-gray-800">{validasiPagination.current_page}</strong> dari <strong className="text-gray-800">{validasiPagination.last_page}</strong> ({validasiPagination.total} total log scan)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        disabled={validasiPagination.current_page <= 1}
+                        onClick={() => fetchValidasiReports(validasiPagination.current_page - 1)}
+                        className="px-3 py-1.5 border border-gray-200 rounded text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white bg-white text-gray-700 transition-colors"
+                      >
+                        Sebelumnya
+                      </button>
+                      <button
+                        disabled={validasiPagination.current_page >= validasiPagination.last_page}
+                        onClick={() => fetchValidasiReports(validasiPagination.current_page + 1)}
+                        className="px-3 py-1.5 border border-gray-200 rounded text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white bg-white text-gray-700 transition-colors"
+                      >
+                        Selanjutnya
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

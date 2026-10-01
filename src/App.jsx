@@ -12,6 +12,7 @@ import Kuis from './pages/Kuis'
 import TestResult from './pages/TestResult'
 import HelpCenter from './pages/HelpCenter'
 import Certificates from './pages/Certificates'
+import PublicCertificateVerification from './pages/PublicCertificateVerification'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import AdminLoadingSkeleton from './components/AdminLoadingSkeleton'
 import AdminDashboard from './Admin-BKPSDM/AdminDashboard'
@@ -57,10 +58,18 @@ const routePaths = {
   'kuis': '/kuis',
   'test-result': '/test-result',
   'help-center': '/help-center',
+  'validasi-sertifikat': '/validasi-sertifikat',
 };
 
 function App() {
   const [currentRoute, setCurrentRoute] = useState(() => {
+    const path = window.location.pathname;
+
+    // Rute Publik Validasi Sertifikat (Bisa diakses siapa saja tanpa login saat scan QR Code)
+    if (path.startsWith('/validasi-sertifikat') || path.startsWith('/verify-certificate')) {
+      return 'validasi-sertifikat';
+    }
+
     // Keamanan: Cek apakah tab baru dibuka lebih dari 5 menit setelah login
     if (checkNewTabTimeout()) {
       clearAuth();
@@ -68,8 +77,6 @@ function App() {
       window.history.replaceState({ route: 'landing' }, '', '/');
       return 'landing';
     }
-
-    const path = window.location.pathname;
 
     // Jika tidak ada token yang valid, langsung arahkan ke landing
     if (!isAuthenticated()) {
@@ -184,6 +191,12 @@ function App() {
 
     // Logika Keamanan: Cegah tombol Back browser kembali ke halaman login saat sudah login
     const handlePopState = (event) => {
+      const path = window.location.pathname;
+      if (path.startsWith('/validasi-sertifikat') || path.startsWith('/verify-certificate')) {
+        setCurrentRoute('validasi-sertifikat');
+        return;
+      }
+
       if (isAuthenticated()) {
         const path = window.location.pathname;
         const activeRole = getActiveRole();
@@ -260,6 +273,13 @@ function App() {
   };
 
   const handleNavigate = (route) => {
+    if (route === 'validasi-sertifikat') {
+      setIsTransitioning(false);
+      setCurrentRoute('validasi-sertifikat');
+      window.scrollTo(0, 0);
+      return;
+    }
+
     if (route === 'landing') {
       handleLogout();
       setIsTransitioning(false);
@@ -316,6 +336,17 @@ function App() {
   }
 
   const renderRoute = () => {
+    // Rute Publik Validasi Sertifikat dapat diakses siapa pun tanpa login
+    if (currentRoute === 'validasi-sertifikat') {
+      const path = window.location.pathname;
+      const pathParts = path.split('/');
+      let initialCode = '';
+      if (pathParts.length > 2 && (pathParts[1] === 'validasi-sertifikat' || pathParts[1] === 'verify-certificate')) {
+        initialCode = decodeURIComponent(pathParts.slice(2).join('/'));
+      }
+      return <PublicCertificateVerification initialCode={initialCode} onNavigate={handleNavigate} />;
+    }
+
     // Jika tidak terautentikasi dan mencoba render selain landing, arahkan ke LandingPage
     if (!isAuthenticated() && currentRoute !== 'landing') {
       return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
