@@ -24,7 +24,8 @@ import {
   Video,
   HelpCircle,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Package
 } from 'lucide-react';
 
 const extractYouTubeId = (url) => {
@@ -55,7 +56,7 @@ const getDocumentUrl = (path) => {
 
 const isMateriVideo = (materi) => {
   if (!materi) return false;
-  if (materi.tipe === 'h5p') return false;
+  if (materi.tipe === 'h5p' || materi.tipe === 'scorm') return false;
   if (materi.tipe === 'video' || materi.tipe === 'video_embed') return true;
   if (extractYouTubeId(materi.tautan)) return true;
   if (materi.tautan && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(materi.tautan)) return true;
@@ -233,7 +234,7 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
                   key={mat.materi_id}
                   index={i + 1}
                   title={mat.judul}
-                  subtitle={`Tipe: ${mat.tipe === 'h5p' ? 'H5P Interaktif' : isMateriVideo(mat) ? 'Video' : 'Materi Bacaan'}`}
+                  subtitle={`Tipe: ${mat.tipe === 'h5p' ? 'H5P Interaktif' : mat.tipe === 'scorm' ? 'SCORM Interaktif' : isMateriVideo(mat) ? 'Video' : 'Materi Bacaan'}`}
                   duration={mat.durasi}
                   status={status}
                   badge={badge}
@@ -395,7 +396,8 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
   }
 
   const isH5P = activeMateri?.tipe === 'h5p';
-  const isVideo = !isH5P && isMateriVideo(activeMateri);
+  const isScorm = activeMateri?.tipe === 'scorm';
+  const isVideo = !isH5P && !isScorm && isMateriVideo(activeMateri);
   const youtubeId = isVideo ? extractYouTubeId(activeMateri.tautan) : null;
   const docUrl = getDocumentUrl(activeMateri.tautan);
 
@@ -410,6 +412,12 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
             <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-full flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-purple-500" />
               Video Interaktif (H5P)
+            </span>
+          )}
+          {isScorm && (
+            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-full flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-amber-500" />
+              Video Interaktif (SCORM)
             </span>
           )}
         </div>
@@ -429,6 +437,24 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
               <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center">
                 <Sparkles className="w-12 h-12 mb-2 text-purple-400" />
                 <p className="text-sm font-semibold text-white">Tautan video interaktif H5P tidak tersedia</p>
+              </div>
+            )}
+          </div>
+        ) : isScorm ? (
+          <div className="w-full bg-slate-950 aspect-video relative overflow-hidden flex items-center justify-center">
+            {activeMateri.tautan ? (
+              <iframe
+                id="scorm-interactive-player"
+                className="w-full h-full border-0"
+                src={getDocumentUrl(activeMateri.tautan)}
+                title={activeMateri.judul || 'Materi SCORM Interaktif'}
+                allow="autoplay; fullscreen; geolocation; microphone; camera; midi; encrypted-media"
+                allowFullScreen
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center">
+                <Package className="w-12 h-12 mb-2 text-amber-400" />
+                <p className="text-sm font-semibold text-white">Tautan berkas materi SCORM tidak tersedia</p>
               </div>
             )}
           </div>
@@ -491,7 +517,9 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
           <p className="text-xs text-gray-500">
             {isH5P
               ? 'Selesaikan seluruh kuis interaktif di dalam video atau klik tombol jika sudah selesai.'
-              : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
+              : isScorm
+                ? 'Selesaikan seluruh materi interaktif SCORM atau klik tombol jika sudah selesai.'
+                : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -503,13 +531,17 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
                 ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
                 : isH5P
                   ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                  : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+                  : isScorm
+                    ? 'bg-amber-600 text-white hover:bg-amber-700'
+                    : 'bg-[#1D315F] text-white hover:bg-[#162847]'
             }`}
           >
             {activeMateri.is_read ? (
               <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
             ) : isH5P ? (
               <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
+            ) : isScorm ? (
+              <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi SCORM</>
             ) : (
               'Tandai Telah Dibaca'
             )}
@@ -926,6 +958,91 @@ export default function CourseDetail({ onNavigate, onBack }) {
 
     window.addEventListener('message', handleH5PMessage);
     return () => window.removeEventListener('message', handleH5PMessage);
+  }, [activeMateri]);
+
+  // Listener & Runtime Bridge untuk Materi SCORM (SCORM 1.2 & SCORM 2004)
+  useEffect(() => {
+    if (activeMateri?.tipe !== 'scorm') return;
+
+    const cmiData = {
+      'cmi.core.lesson_status': 'incomplete',
+      'cmi.core.lesson_location': '',
+      'cmi.core.score.raw': '0',
+      'cmi.core.session_time': '00:00:00',
+      'cmi.suspend_data': '',
+      'cmi.completion_status': 'incomplete',
+      'cmi.success_status': 'unknown',
+      'cmi.score.raw': '0',
+    };
+
+    const triggerScormCompletion = (status) => {
+      const s = String(status || '').toLowerCase();
+      if ((s === 'completed' || s === 'passed') && activeMateri?.materi_id && !activeMateri.is_read) {
+        handleMarkAsRead();
+      }
+    };
+
+    // SCORM 1.2 Runtime API Bridge
+    window.API = {
+      LMSInitialize: () => "true",
+      LMSFinish: () => {
+        const status = cmiData['cmi.core.lesson_status'];
+        triggerScormCompletion(status);
+        return "true";
+      },
+      LMSGetValue: (element) => cmiData[element] || "",
+      LMSSetValue: (element, value) => {
+        cmiData[element] = String(value);
+        if (element === 'cmi.core.lesson_status') {
+          triggerScormCompletion(value);
+        }
+        return "true";
+      },
+      LMSCommit: () => {
+        const status = cmiData['cmi.core.lesson_status'];
+        triggerScormCompletion(status);
+        return "true";
+      },
+      LMSGetLastError: () => "0",
+      LMSGetErrorString: () => "No error",
+      LMSGetDiagnostic: () => ""
+    };
+
+    // SCORM 2004 Runtime API Bridge
+    window.API_1484_11 = {
+      Initialize: () => "true",
+      Terminate: () => {
+        const status = cmiData['cmi.completion_status'] || cmiData['cmi.success_status'];
+        triggerScormCompletion(status);
+        return "true";
+      },
+      GetValue: (element) => cmiData[element] || "",
+      SetValue: (element, value) => {
+        cmiData[element] = String(value);
+        if (element === 'cmi.completion_status' || element === 'cmi.success_status') {
+          triggerScormCompletion(value);
+        }
+        return "true";
+      },
+      Commit: () => {
+        const status = cmiData['cmi.completion_status'] || cmiData['cmi.success_status'];
+        triggerScormCompletion(status);
+        return "true";
+      },
+      GetLastError: () => "0",
+      GetErrorString: () => "No error",
+      GetDiagnostic: () => ""
+    };
+
+    return () => {
+      try {
+        delete window.API;
+        delete window.API_1484_11;
+      } catch (e) {
+        window.API = undefined;
+        window.API_1484_11 = undefined;
+      }
+    };
   }, [activeMateri]);
 
   if (loading) {

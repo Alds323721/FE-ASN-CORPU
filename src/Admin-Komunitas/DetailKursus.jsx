@@ -12,7 +12,7 @@ import {
   BarChart2, Book, HelpCircle, GraduationCap, HeadphonesIcon,
   ArrowLeft, Upload, Plus, AlertCircle, File, Eye, Trash2, Edit2, Download,
   ExternalLink, Video, Check, Image as ImageIcon, Grid, Sparkles, RefreshCw,
-  Star, MessageSquare, ThumbsUp
+  Star, MessageSquare, ThumbsUp, Package
 } from 'lucide-react';
 import { generateCrosswordLayout } from '../utils/crosswordGenerator';
 import CrosswordBoard from '../components/CrosswordBoard';
@@ -164,7 +164,9 @@ const DetailKursus = ({ onNavigate }) => {
     tipe_materi: 'pdf',
     durasi_menit: 15,
     tautan_atau_berkas_embed: '',
-    file_pdf: null
+    file_pdf: null,
+    file_scorm: null,
+    scorm_mode: 'zip' // 'zip' | 'link'
   });
 
   // Modal State: Edit Materi
@@ -176,6 +178,8 @@ const DetailKursus = ({ onNavigate }) => {
     durasi_menit: 15,
     tautan_atau_berkas_embed: '',
     file_pdf: null,
+    file_scorm: null,
+    scorm_mode: 'zip',
     apakah_wajib: true
   });
 
@@ -592,7 +596,9 @@ const DetailKursus = ({ onNavigate }) => {
       tipe_materi: 'pdf',
       durasi_menit: 15,
       tautan_atau_berkas_embed: '',
-      file_pdf: null
+      file_pdf: null,
+      file_scorm: null,
+      scorm_mode: 'zip'
     });
     setShowAddMaterialModal(true);
   };
@@ -626,6 +632,30 @@ const DetailKursus = ({ onNavigate }) => {
           return;
         }
         formData.append('file_pdf', materialForm.file_pdf);
+      } else if (materialForm.tipe_materi === 'scorm') {
+        if (materialForm.scorm_mode === 'zip') {
+          if (!materialForm.file_scorm) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Berkas SCORM (.zip) Belum Dipilih',
+              text: 'Silakan pilih paket file ZIP SCORM yang ingin diunggah.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('file_scorm', materialForm.file_scorm);
+        } else {
+          if (!materialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan SCORM Diperlukan',
+              text: 'Silakan masukkan tautan player SCORM eksternal.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
+        }
       } else {
         if (!materialForm.tautan_atau_berkas_embed.trim()) {
           Swal.fire({
@@ -703,12 +733,15 @@ const DetailKursus = ({ onNavigate }) => {
   const handleOpenEditMaterialModal = (materi, modulId) => {
     setTargetModuleId(modulId);
     setEditingMaterial(materi);
+    const isScormZip = materi.tipe_materi === 'scorm' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/scorm/');
     setEditMaterialForm({
       judul_materi: materi.judul_materi || '',
       tipe_materi: materi.tipe_materi || 'pdf',
       durasi_menit: materi.durasi_menit || 15,
-      tautan_atau_berkas_embed: materi.tipe_materi !== 'pdf' ? (materi.tautan_atau_berkas || '') : '',
+      tautan_atau_berkas_embed: (materi.tipe_materi !== 'pdf' && !isScormZip) ? (materi.tautan_atau_berkas || '') : '',
       file_pdf: null,
+      file_scorm: null,
+      scorm_mode: isScormZip ? 'zip' : (materi.tipe_materi === 'scorm' ? 'link' : 'zip'),
       apakah_wajib: materi.apakah_wajib !== undefined ? Boolean(materi.apakah_wajib) : true
     });
     setShowEditMaterialModal(true);
@@ -759,6 +792,23 @@ const DetailKursus = ({ onNavigate }) => {
       if (editMaterialForm.tipe_materi === 'pdf') {
         if (editMaterialForm.file_pdf) {
           formData.append('file_pdf', editMaterialForm.file_pdf);
+        }
+      } else if (editMaterialForm.tipe_materi === 'scorm') {
+        if (editMaterialForm.scorm_mode === 'zip') {
+          if (editMaterialForm.file_scorm) {
+            formData.append('file_scorm', editMaterialForm.file_scorm);
+          }
+        } else {
+          if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan SCORM Diperlukan',
+              text: 'Silakan masukkan tautan player SCORM eksternal.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
         }
       } else {
         if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
@@ -1878,9 +1928,9 @@ const DetailKursus = ({ onNavigate }) => {
                                   {materiList.map((mat) => (
                                     <div key={mat.materi_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-gray-100 rounded-lg bg-gray-50/70 hover:bg-gray-50 transition-colors gap-2">
                                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${mat.tipe_materi === 'pdf' ? 'bg-red-50 text-red-600' : mat.tipe_materi === 'h5p' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+                                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${mat.tipe_materi === 'pdf' ? 'bg-red-50 text-red-600' : mat.tipe_materi === 'h5p' ? 'bg-purple-50 text-purple-600' : mat.tipe_materi === 'scorm' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
                                           }`}>
-                                          {mat.tipe_materi === 'pdf' ? <FileText className="w-4 h-4" /> : mat.tipe_materi === 'h5p' ? <Sparkles className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                                          {mat.tipe_materi === 'pdf' ? <FileText className="w-4 h-4" /> : mat.tipe_materi === 'h5p' ? <Sparkles className="w-4 h-4" /> : mat.tipe_materi === 'scorm' ? <Package className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                                         </div>
                                         <div className="min-w-0 flex-1">
                                           <div className="flex items-center gap-2 flex-wrap">
@@ -1889,6 +1939,12 @@ const DetailKursus = ({ onNavigate }) => {
                                               <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold rounded-full flex items-center gap-1">
                                                 <Sparkles className="w-3 h-3 text-purple-500" />
                                                 H5P Interaktif
+                                              </span>
+                                            )}
+                                            {mat.tipe_materi === 'scorm' && (
+                                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-full flex items-center gap-1">
+                                                <Package className="w-3 h-3 text-amber-500" />
+                                                SCORM Interaktif
                                               </span>
                                             )}
                                             {mat.pre_test ? (
@@ -1902,7 +1958,7 @@ const DetailKursus = ({ onNavigate }) => {
                                             )}
                                           </div>
                                           <p className="text-xs text-gray-500">
-                                            {mat.tipe_materi === 'pdf' ? 'Dokumen PDF' : mat.tipe_materi === 'h5p' ? 'Video Interaktif (H5P)' : 'Video Pembelajaran'} • {mat.durasi_menit} Menit
+                                            {mat.tipe_materi === 'pdf' ? 'Dokumen PDF' : mat.tipe_materi === 'h5p' ? 'Video Interaktif (H5P)' : mat.tipe_materi === 'scorm' ? 'Video Interaktif (SCORM)' : 'Video Pembelajaran'} • {mat.durasi_menit} Menit
                                           </p>
                                         </div>
                                       </div>
@@ -2570,7 +2626,7 @@ const DetailKursus = ({ onNavigate }) => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Tipe Materi</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setMaterialForm({ ...materialForm, tipe_materi: 'pdf' })}
@@ -2601,6 +2657,17 @@ const DetailKursus = ({ onNavigate }) => {
                   >
                     <Sparkles className="w-3.5 h-3.5 text-purple-500" />
                     <span>H5P Interaktif</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialForm({ ...materialForm, tipe_materi: 'scorm' })}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${materialForm.tipe_materi === 'scorm'
+                        ? 'bg-amber-50 border-amber-600 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                  >
+                    <Package className="w-3.5 h-3.5 text-amber-500" />
+                    <span>SCORM Interaktif</span>
                   </button>
                 </div>
               </div>
@@ -2633,6 +2700,65 @@ const DetailKursus = ({ onNavigate }) => {
                   <p className="text-[11px] text-gray-500 mt-1">
                     💡 Masukkan URL run/embed dari Lumi Cloud, platform H5P, atau kode iframe video interaktif.
                   </p>
+                </div>
+              ) : materialForm.tipe_materi === 'scorm' ? (
+                <div className="space-y-3 bg-amber-50/40 p-3.5 rounded-lg border border-amber-200/70">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider">Metode Pengisian SCORM</label>
+                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-100/70 px-2 py-0.5 rounded">SCORM 1.2 / 2004</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMaterialForm({ ...materialForm, scorm_mode: 'zip' })}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${materialForm.scorm_mode === 'zip'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      📦 Unggah Paket ZIP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMaterialForm({ ...materialForm, scorm_mode: 'link' })}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${materialForm.scorm_mode === 'link'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      🔗 Tautan Eksternal
+                    </button>
+                  </div>
+
+                  {materialForm.scorm_mode === 'zip' ? (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Pilih Berkas ZIP SCORM (Maks. 100MB)</label>
+                      <input
+                        type="file"
+                        required
+                        accept=".zip,application/zip,application/x-zip-compressed"
+                        onChange={(e) => setMaterialForm({ ...materialForm, file_scorm: e.target.files[0] || null })}
+                        className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        💡 Sistem otomatis mengekstrak berkas dan membaca file launcher (<code className="bg-amber-100 px-1 rounded">imsmanifest.xml</code> / <code className="bg-amber-100 px-1 rounded">index.html</code>).
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tautan SCORM Cloud / Hosted URL</label>
+                      <input
+                        type="text"
+                        required
+                        value={materialForm.tautan_atau_berkas_embed || ''}
+                        onChange={(e) => setMaterialForm({ ...materialForm, tautan_atau_berkas_embed: e.target.value })}
+                        placeholder="https://cloud.scorm.com/tc/... atau URL player SCORM"
+                        className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        💡 Masukkan URL player SCORM Cloud atau URL hosting web eksternal.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -2721,7 +2847,7 @@ const DetailKursus = ({ onNavigate }) => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Tipe Materi</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setEditMaterialForm({ ...editMaterialForm, tipe_materi: 'pdf' })}
@@ -2755,6 +2881,18 @@ const DetailKursus = ({ onNavigate }) => {
                   >
                     <Sparkles className="w-3.5 h-3.5 text-purple-500" />
                     <span>H5P Interaktif</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditMaterialForm({ ...editMaterialForm, tipe_materi: 'scorm' })}
+                    className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${
+                      editMaterialForm.tipe_materi === 'scorm'
+                        ? 'bg-amber-50 border-amber-600 text-amber-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <Package className="w-3.5 h-3.5 text-amber-500" />
+                    <span>SCORM Interaktif</span>
                   </button>
                 </div>
               </div>
@@ -2802,6 +2940,77 @@ const DetailKursus = ({ onNavigate }) => {
                   <p className="text-[11px] text-gray-500 mt-1">
                     💡 Masukkan URL run/embed dari platform H5P atau iframe interaktif.
                   </p>
+                </div>
+              ) : editMaterialForm.tipe_materi === 'scorm' ? (
+                <div className="space-y-3 bg-amber-50/40 p-3.5 rounded-lg border border-amber-200/70">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider">Metode Pengisian SCORM</label>
+                    <span className="text-[10px] text-amber-700 font-semibold bg-amber-100/70 px-2 py-0.5 rounded">SCORM 1.2 / 2004</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditMaterialForm({ ...editMaterialForm, scorm_mode: 'zip' })}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${editMaterialForm.scorm_mode === 'zip'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      📦 Unggah Paket ZIP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditMaterialForm({ ...editMaterialForm, scorm_mode: 'link' })}
+                      className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${editMaterialForm.scorm_mode === 'link'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      🔗 Tautan Eksternal
+                    </button>
+                  </div>
+
+                  {editingMaterial?.tipe_materi === 'scorm' && editingMaterial?.tautan_atau_berkas && (
+                    <div className="p-2 bg-white border border-amber-200 rounded text-xs text-amber-900 flex items-center justify-between">
+                      <span className="truncate max-w-xs font-medium">Materi SCORM saat ini: {editingMaterial.tautan_atau_berkas}</span>
+                      <a 
+                        href={editingMaterial.tautan_atau_berkas.startsWith('http') ? editingMaterial.tautan_atau_berkas : `http://localhost:8000${editingMaterial.tautan_atau_berkas}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-amber-700 font-bold hover:underline shrink-0 ml-2"
+                      >
+                        Buka
+                      </a>
+                    </div>
+                  )}
+
+                  {editMaterialForm.scorm_mode === 'zip' ? (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                        Ganti Berkas ZIP SCORM (Opsional, Maks. 100MB)
+                      </label>
+                      <input
+                        type="file"
+                        accept=".zip,application/zip,application/x-zip-compressed"
+                        onChange={(e) => setEditMaterialForm({ ...editMaterialForm, file_scorm: e.target.files[0] || null })}
+                        className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Biarkan kosong jika tidak ingin mengubah berkas paket SCORM saat ini.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tautan SCORM Cloud / Hosted URL</label>
+                      <input
+                        type="text"
+                        required
+                        value={editMaterialForm.tautan_atau_berkas_embed || ''}
+                        onChange={(e) => setEditMaterialForm({ ...editMaterialForm, tautan_atau_berkas_embed: e.target.value })}
+                        placeholder="https://cloud.scorm.com/tc/... atau URL player SCORM"
+                        className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>

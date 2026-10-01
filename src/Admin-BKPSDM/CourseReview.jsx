@@ -16,7 +16,7 @@ const Toast = Swal.mixin({
 import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, ArrowLeft, BookOpen, FileText, HelpCircle,
-  Eye, File, Clock, PlayCircle, Layers, Sparkles, Star, MessageSquare
+  Eye, File, Clock, PlayCircle, Layers, Sparkles, Star, MessageSquare, Package
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, isOpen, setIsOpen }) => {
@@ -517,14 +517,17 @@ const CourseReview = ({ onNavigate }) => {
                                 <div className="divide-y divide-gray-100">
                                   {materiList.map((materi, mIdx) => (
                                     <div key={`materi-${materi.materi_id || mIdx}`} className="p-4 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${materi.tipe_materi === 'pdf' ? 'bg-red-50 text-red-600' : materi.tipe_materi === 'h5p' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                        {materi.tipe_materi === 'pdf' ? <FileText className="w-5 h-5" /> : materi.tipe_materi === 'h5p' ? <Sparkles className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
+                                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${materi.tipe_materi === 'pdf' ? 'bg-red-50 text-red-600' : materi.tipe_materi === 'h5p' ? 'bg-purple-50 text-purple-600' : materi.tipe_materi === 'scorm' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                                        {materi.tipe_materi === 'pdf' ? <FileText className="w-5 h-5" /> : materi.tipe_materi === 'h5p' ? <Sparkles className="w-5 h-5" /> : materi.tipe_materi === 'scorm' ? <Package className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                           <h4 className="font-semibold text-gray-800 text-sm truncate">{materi.judul_materi}</h4>
                                           {materi.tipe_materi === 'h5p' && (
                                             <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold rounded-full">H5P Interaktif</span>
+                                          )}
+                                          {materi.tipe_materi === 'scorm' && (
+                                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-full">SCORM Interaktif</span>
                                           )}
                                           {materi.apakah_wajib ? (
                                             <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-bold uppercase tracking-wider">Wajib</span>
@@ -534,7 +537,7 @@ const CourseReview = ({ onNavigate }) => {
                                         </div>
                                         <div className="flex items-center gap-4 text-xs text-gray-500">
                                           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {materi.durasi_menit} Menit</span>
-                                          <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" /> {materi.tipe_materi === 'h5p' ? 'VIDEO INTERAKTIF (H5P)' : (materi.tipe_materi || '').replace('_', ' ').toUpperCase()}</span>
+                                          <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" /> {materi.tipe_materi === 'h5p' ? 'VIDEO INTERAKTIF (H5P)' : materi.tipe_materi === 'scorm' ? 'VIDEO INTERAKTIF (SCORM)' : (materi.tipe_materi || '').replace('_', ' ').toUpperCase()}</span>
                                         </div>
                                       </div>
                                       <a href={materi.tautan_atau_berkas?.startsWith('/storage/') ? `http://localhost:8000${materi.tautan_atau_berkas}` : materi.tautan_atau_berkas} target="_blank" rel="noreferrer" className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shrink-0">
