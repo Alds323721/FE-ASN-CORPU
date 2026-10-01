@@ -114,7 +114,7 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
             <ShieldCheck className="w-4 h-4" />
             Pangkalan Data Verifikasi Sertifikat Resmi
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3 text-white !text-white">
             Verifikasi Keaslian Sertifikat Digital
           </h1>
           <p className="text-sm sm:text-base text-gray-200 max-w-xl mx-auto">
