@@ -14,6 +14,7 @@ const Toast = Swal.mixin({
   }
 });
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
+import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Plus, CheckCircle, ClipboardList, 
@@ -39,17 +40,11 @@ const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, isOpen,
         />
       )}
       <div className={`w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden shrink-0">
-              <img src="https://ui-avatars.com/api/?name=BKPSDM&background=0D8ABC&color=fff" alt="BKPSDM" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-800 text-sm">BKPSDM</h2>
-              <p className="text-xs text-gray-500">Super Admin</p>
-            </div>
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <AdminBkpsdmProfile onNavigate={onNavigate} variant="sidebar" />
           </div>
-          <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-700">
+          <button onClick={() => setIsOpen(false)} className="lg:hidden text-gray-500 hover:text-gray-700 p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -95,7 +90,7 @@ const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, isOpen,
   );
 };
 
-const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm }) => {
+const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm, onNavigate }) => {
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-10">
       <div className="flex items-center gap-2 sm:gap-4">
@@ -114,6 +109,9 @@ const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm }) => {
             placeholder="Cari komunitas..."
           />
         </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <AdminBkpsdmProfile onNavigate={onNavigate} variant="header" />
       </div>
     </div>
   );
@@ -330,7 +328,7 @@ const CommunityManagement = ({ onNavigate }) => {
       <AdminSidebar activeMenu="community-management" onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
-        <AdminHeader setIsOpen={setIsSidebarOpen} searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <AdminHeader setIsOpen={setIsSidebarOpen} searchTerm={searchTerm} setSearchTerm={setSearchTerm} onNavigate={onNavigate} />
         
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative">
           
