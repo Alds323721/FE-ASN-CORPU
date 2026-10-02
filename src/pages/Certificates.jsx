@@ -199,7 +199,7 @@ const CertificatesContent = () => {
               id={cert.sertifikat_id}
               image={cert.thumbnail_url || cert.image}
               title={cert.judul_pelatihan}
-              institution="BKPSDM Provinsi Buleleng"
+              institution="BKPSDM Kabupaten Buleleng"
               date={new Date(cert.tanggal_terbit).toLocaleDateString(language === 'EN' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
               certificateId={cert.nomor_sertifikat}
               isNew={false}
