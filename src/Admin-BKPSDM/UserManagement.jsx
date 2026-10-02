@@ -15,6 +15,7 @@ const Toast = Swal.mixin({
 });
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
+import { getUser, getActiveRole, setActiveRole } from '../utils/auth';
 import {
   Users, BookOpen, MessageSquare, Award, CheckCircle,
   TrendingUp, TrendingDown, ArrowRight, LayoutDashboard,
@@ -246,7 +247,22 @@ const UserManagement = ({ onNavigate }) => {
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
       
-      await api.put(`/admin-bkpsdm/pengguna/${selectedUser.pengguna_id}`, payload);
+      const res = await api.put(`/admin-bkpsdm/pengguna/${selectedUser.pengguna_id}`, payload);
+      const updatedUser = res.data?.data;
+      const currentUser = getUser();
+      if (currentUser && String(currentUser.pengguna_id) === String(selectedUser.pengguna_id)) {
+        const newUserObj = {
+          ...currentUser,
+          ...(updatedUser || {}),
+          roles: currentRoles,
+          peran: currentRoles[0] || currentUser.peran
+        };
+        localStorage.setItem('user', JSON.stringify(newUserObj));
+        if (!currentRoles.includes(getActiveRole())) {
+          setActiveRole(currentRoles[0] || 'admin_bkpsdm');
+        }
+      }
+
       setShowEditModal(false);
       setSelectedUser(null);
       fetchUsers();

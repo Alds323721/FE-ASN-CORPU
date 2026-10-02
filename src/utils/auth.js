@@ -44,17 +44,10 @@ export const getUser = () => {
 export const getUserRoles = () => {
   const user = getUser();
   if (!user) return [];
-  let roles = [];
   if (Array.isArray(user.roles) && user.roles.length > 0) {
-    roles = [...user.roles];
-  } else if (user.peran) {
-    roles = [user.peran];
+    return user.roles;
   }
-  // Admin BKPSDM secara default juga memiliki hak akses peserta
-  if (roles.includes('admin_bkpsdm') && !roles.includes('peserta')) {
-    roles.push('peserta');
-  }
-  return roles;
+  return user.peran ? [user.peran] : [];
 };
 
 /**
