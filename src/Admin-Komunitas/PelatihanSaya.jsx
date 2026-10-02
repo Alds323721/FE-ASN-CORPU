@@ -446,7 +446,7 @@ const PelatihanSaya = ({ onNavigate }) => {
                           <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                           <div className="flex items-center gap-1.5">
                             <BookOpen className="w-3.5 h-3.5 text-gray-400" />
-                            <span>ID: #{course.pembelajaran_id}</span>
+                            <span>{course.modules_count ?? course.modules ?? course.modul?.length ?? 0} Modul</span>
                           </div>
                         </div>
 

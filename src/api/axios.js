@@ -50,7 +50,8 @@ api.interceptors.response.use(
         if (error.response && error.response.status === 401) {
             if (
                 error.config?.url !== '/login' &&
-                !error.config?.url?.endsWith('/login')
+                !error.config?.url?.endsWith('/login') &&
+                !error.config?.url?.includes('/sertifikat/validasi')
             ) {
                 clearAuth();
                 window.location.href = '/';

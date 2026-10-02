@@ -406,7 +406,7 @@ const AdminKomunitasDashboard = ({ onNavigate }) => {
                                 <p className="font-bold text-gray-900 truncate max-w-xs">{course.judul_pembelajaran}</p>
                                 <div className="flex gap-3 mt-1 text-xs text-gray-500 font-medium">
                                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Min. {course.nilai_kelulusan}%</span>
-                                  <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> ID: #{course.pembelajaran_id}</span>
+                                  <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {course.modules_count ?? course.modules ?? course.modul?.length ?? 0} Modul</span>
                                 </div>
                               </div>
                             </div>

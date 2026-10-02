@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -34,9 +34,8 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
     setLoading(true);
     setErrorMsg(null);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
       const cleanTarget = targetCode.trim();
-      const res = await axios.get(`${apiUrl}/sertifikat/validasi/${encodeURIComponent(cleanTarget)}`);
+      const res = await api.get(`/sertifikat/validasi/${encodeURIComponent(cleanTarget)}`);
       if (res.data?.is_valid && res.data?.data) {
         setCertData(res.data.data);
       } else {
