@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ArrowLeftRight, Check, Shield, ChevronDown } from 'lucide-react';
 import api from '../api/axios';
+import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
 
 const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
@@ -80,7 +81,7 @@ const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-10 h-10 rounded-full bg-teal-100 border border-teal-300 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-teal-500 transition-colors">
             <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama_lengkap || 'Admin Komunitas')}&background=0D8ABC&color=fff`}
+              src={user?.foto_profil_url || user?.avatar || userImg}
               alt="Admin"
               className="w-full h-full object-cover"
             />

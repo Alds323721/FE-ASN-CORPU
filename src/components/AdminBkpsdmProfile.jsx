@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LogOut, ArrowLeftRight, Check, Shield, ChevronDown } from 'lucide-react';
 import api from '../api/axios';
+import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
 
 const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) => {
@@ -76,8 +77,7 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
     });
   };
 
-  const avatarUrl = user?.foto_profil_url || user?.avatar || 
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama_lengkap || 'Admin BKPSDM')}&background=DC2626&color=fff`;
+  const avatarUrl = user?.foto_profil_url || user?.avatar || userImg;
 
   if (variant === 'header') {
     return (
