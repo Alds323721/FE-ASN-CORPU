@@ -20,6 +20,7 @@ import DragDropQuiz from '../components/DragDropQuiz';
 
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
+import { validateThumbnailFile } from '../utils/imageValidation';
 
 import CourseBasicInfoCard from './DetailKursus/components/CourseBasicInfoCard';
 import CourseSyllabusSection from './DetailKursus/components/CourseSyllabusSection';
@@ -228,16 +229,10 @@ const DetailKursus = ({ onNavigate }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'File Terlalu Besar',
-        text: 'Ukuran file thumbnail maksimal 2MB.',
-        confirmButtonColor: '#0F766E'
-      });
-      e.target.value = '';
-      return;
-    }
+    const isValid = validateThumbnailFile(file, e.target, () => {
+      setCourseThumbnailFile(null);
+    });
+    if (!isValid) return;
 
     setCourseThumbnailFile(file);
     setCourseThumbnailPreview(URL.createObjectURL(file));
@@ -251,6 +246,12 @@ const DetailKursus = ({ onNavigate }) => {
   // --- Informasi Dasar & Aksi Kursus ---
   const handleUpdateBasicInfo = async () => {
     if (!course) return;
+
+    // Double-check validasi ukuran thumbnail kursus
+    if (courseThumbnailFile && !validateThumbnailFile(courseThumbnailFile, null, () => setCourseThumbnailFile(null))) {
+      return;
+    }
+
     const wasPublished = course.status === 'dipublikasikan';
     try {
       setSavingBasicInfo(true);
@@ -314,11 +315,31 @@ const DetailKursus = ({ onNavigate }) => {
       fetchCourseData();
     } catch (error) {
       console.error('Error updating course:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Menyimpan',
-        text: error.response?.data?.message || 'Gagal menyimpan perubahan.'
-      });
+      const errThumbnail = error.response?.data?.errors?.thumbnail?.[0];
+      const errMsg = errThumbnail || error.response?.data?.message || 'Gagal menyimpan perubahan.';
+
+      if (errThumbnail || (errMsg && errMsg.toLowerCase().includes('2mb'))) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Ukuran Foto Melebihi 2MB!',
+          html: `
+            <div class="text-left text-xs sm:text-sm text-gray-600 space-y-2 pt-1">
+              <p class="bg-red-50 text-red-800 p-2.5 rounded-lg border border-red-200">
+                ${errMsg}
+              </p>
+              <p>Harap <b>mengompres foto thumbnail kursus</b> Anda terlebih dahulu agar berukuran di bawah 2MB sebelum menyimpannya.</p>
+            </div>
+          `,
+          confirmButtonColor: '#0F766E',
+          confirmButtonText: 'Saya Mengerti, Kompres Dulu'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Menyimpan',
+          text: errMsg
+        });
+      }
     } finally {
       setSavingBasicInfo(false);
     }
@@ -388,16 +409,10 @@ const DetailKursus = ({ onNavigate }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'File Terlalu Besar',
-        text: 'Ukuran file thumbnail maksimal 2MB.',
-        confirmButtonColor: '#0F766E'
-      });
-      e.target.value = '';
-      return;
-    }
+    const isValid = validateThumbnailFile(file, e.target, () => {
+      setModuleThumbnailFile(null);
+    });
+    if (!isValid) return;
 
     setModuleThumbnailFile(file);
     setModuleThumbnailPreview(URL.createObjectURL(file));
@@ -406,6 +421,11 @@ const DetailKursus = ({ onNavigate }) => {
   const handleSaveModule = async (e) => {
     e.preventDefault();
     if (!moduleForm.judul_modul.trim()) return;
+
+    // Double-check validasi ukuran thumbnail modul
+    if (moduleThumbnailFile && !validateThumbnailFile(moduleThumbnailFile, null, () => setModuleThumbnailFile(null))) {
+      return;
+    }
 
     const desc = moduleForm.deskripsi?.trim() || `Gambaran umum modul ${moduleForm.judul_modul}`;
     const data = new FormData();
@@ -455,11 +475,31 @@ const DetailKursus = ({ onNavigate }) => {
       fetchCourseData();
     } catch (error) {
       console.error('Error saving module:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Menyimpan',
-        text: error.response?.data?.message || 'Gagal menyimpan modul.'
-      });
+      const errThumbnail = error.response?.data?.errors?.thumbnail?.[0];
+      const errMsg = errThumbnail || error.response?.data?.message || 'Gagal menyimpan modul.';
+
+      if (errThumbnail || (errMsg && errMsg.toLowerCase().includes('2mb'))) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Ukuran Foto Melebihi 2MB!',
+          html: `
+            <div class="text-left text-xs sm:text-sm text-gray-600 space-y-2 pt-1">
+              <p class="bg-red-50 text-red-800 p-2.5 rounded-lg border border-red-200">
+                ${errMsg}
+              </p>
+              <p>Harap <b>mengompres foto thumbnail modul</b> Anda terlebih dahulu agar berukuran di bawah 2MB sebelum menyimpannya.</p>
+            </div>
+          `,
+          confirmButtonColor: '#0F766E',
+          confirmButtonText: 'Saya Mengerti, Kompres Dulu'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Menyimpan',
+          text: errMsg
+        });
+      }
     }
   };
 

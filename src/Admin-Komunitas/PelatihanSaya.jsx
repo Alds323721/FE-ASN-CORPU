@@ -14,6 +14,7 @@ import {
 
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
+import { validateThumbnailFile } from '../utils/imageValidation';
 
 const PelatihanSaya = ({ onNavigate }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -40,16 +41,11 @@ const PelatihanSaya = ({ onNavigate }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'File Terlalu Besar',
-        text: 'Ukuran file thumbnail maksimal 2MB.',
-        confirmButtonColor: '#0F766E'
-      });
-      e.target.value = '';
-      return;
-    }
+    const isValid = validateThumbnailFile(file, e.target, () => {
+      setCourseThumbnailFile(null);
+      setCourseThumbnailPreview('');
+    });
+    if (!isValid) return;
 
     setCourseThumbnailFile(file);
     setCourseThumbnailPreview(URL.createObjectURL(file));
@@ -111,6 +107,14 @@ const PelatihanSaya = ({ onNavigate }) => {
 
   const handleCreateCourse = async (e) => {
     e.preventDefault();
+
+    if (courseThumbnailFile && !validateThumbnailFile(courseThumbnailFile, null, () => {
+      setCourseThumbnailFile(null);
+      setCourseThumbnailPreview('');
+    })) {
+      return;
+    }
+
     try {
       const data = new FormData();
       data.append('komunitas_id', formData.komunitas_id);
@@ -140,12 +144,32 @@ const PelatihanSaya = ({ onNavigate }) => {
       }, 1500);
     } catch (error) {
       console.error('Error creating course:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Membuat Pelatihan',
-        text: error.response?.data?.message || 'Gagal membuat pembelajaran',
-        confirmButtonColor: '#0F766E'
-      });
+      const errThumbnail = error.response?.data?.errors?.thumbnail?.[0];
+      const errMsg = errThumbnail || error.response?.data?.message || 'Gagal membuat pembelajaran';
+
+      if (errThumbnail || (errMsg && errMsg.toLowerCase().includes('2mb'))) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Ukuran Foto Melebihi 2MB!',
+          html: `
+            <div class="text-left text-xs sm:text-sm text-gray-600 space-y-2 pt-1">
+              <p class="bg-red-50 text-red-800 p-2.5 rounded-lg border border-red-200">
+                ${errMsg}
+              </p>
+              <p>Harap <b>mengompres foto thumbnail kursus</b> Anda terlebih dahulu agar berukuran di bawah 2MB sebelum menyimpannya.</p>
+            </div>
+          `,
+          confirmButtonColor: '#0F766E',
+          confirmButtonText: 'Saya Mengerti, Kompres Dulu'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Membuat Pelatihan',
+          text: errMsg,
+          confirmButtonColor: '#0F766E'
+        });
+      }
     }
   };
 
