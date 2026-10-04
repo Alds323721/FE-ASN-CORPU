@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
+import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
 import CrosswordBoard from '../components/CrosswordBoard';
@@ -18,7 +19,8 @@ import {
   Grid,
   BookOpen,
   Sparkles,
-  Check
+  Check,
+  Star
 } from 'lucide-react';
 
 /* ── Navbar ─────────────────────────────────────────── */
@@ -28,7 +30,8 @@ const KuisNavbar = ({ onNavigate }) => {
   return (
     <nav className="flex justify-between items-center py-4 px-6 md:px-12 bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="flex items-center gap-2 sm:gap-3">
-        <img src={logoImg} alt="Logo BKPSDM" className="w-6 sm:w-8 object-contain" />
+        <img src={logoImg} alt="Logo BKPSDM" className="w-6 sm:w-8 h-6 sm:h-8 object-contain" />
+        <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-6 sm:w-8 h-6 sm:h-8 object-contain" />
         <span className="font-semibold text-base sm:text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
       </div>
 
@@ -104,7 +107,7 @@ const KuisHeader = ({ onBack, testData, answeredCount = 0 }) => (
   </div>
 );
 
-const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, maxAttempts = 3, isPreTest = false, storageKey }) => {
+const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, maxAttempts = 3, isPreTest = false, isWeighted = false, storageKey }) => {
   const [time, setTime] = useState(() => {
     if (!storageKey || !durationMinutes) return (durationMinutes || 15) * 60;
     try {
@@ -188,8 +191,8 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, m
           <span className="text-[#006A63] font-semibold">Sedang Berjalan</span>
         </div>
         <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-          <span className="text-gray-600 font-semibold">{isPreTest ? 'Jenis Ujian' : 'Batas Kesempatan'}</span>
-          <span className="text-[#1D315F] font-semibold">{isPreTest ? 'Pre-Test Materi' : `${maxAttempts} Kali`}</span>
+          <span className="text-gray-600 font-semibold">{isPreTest ? 'Jenis Ujian' : (isWeighted ? 'Jenis Kuis' : 'Batas Kesempatan')}</span>
+          <span className="text-[#1D315F] font-semibold">{isPreTest ? 'Pre-Test Materi' : (isWeighted ? 'Kuis Nilai Berbobot' : `${maxAttempts} Kali`)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600 font-semibold">Soal Terjawab</span>
@@ -357,6 +360,7 @@ const Footer = () => (
       <div className="md:col-span-5 pr-8">
         <div className="flex items-center gap-3 mb-6">
           <img src={logoImg} alt="Logo BKPSDM" className="w-8 object-contain" />
+          <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
           <span className="font-semibold text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
         </div>
         <p className="text-[13px] text-gray-600 leading-relaxed mb-6 font-semibold">
@@ -481,11 +485,16 @@ export default function Kuis({ onNavigate, onBack }) {
         if (res.data?.data) {
           const data = res.data.data;
           setTestData(data);
-          const hasPG = (data.soal || []).some(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop'));
+          const hasPG = (data.soal || []).some(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop' && s.tipe_soal !== 'pilihan_berbobot'));
+          const hasWeighted = (data.soal || []).some(s => s.tipe_soal === 'pilihan_berbobot');
           const hasTTS = (data.soal || []).some(s => s.tipe_soal === 'tts');
           const hasDD = (data.soal || []).some(s => s.tipe_soal === 'drag_drop');
-          if (hasPG) {
+          if (data.tipe_kuis === 'kuis_berbobot' || (hasWeighted && !hasPG)) {
+            setActiveSection('weighted');
+          } else if (hasPG) {
             setActiveSection('pg');
+          } else if (hasWeighted) {
+            setActiveSection('weighted');
           } else if (hasTTS) {
             setActiveSection('tts');
           } else if (hasDD) {
@@ -519,9 +528,13 @@ export default function Kuis({ onNavigate, onBack }) {
     }
   }, [courseId]);
 
-  // Pisahkan soal PG, TTS, dan Drag & Drop
+  // Pisahkan soal PG, TTS, Drag & Drop, dan Pilihan Berbobot
   const pgQuestions = useMemo(() => {
-    return (testData?.soal || []).filter(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop'));
+    return (testData?.soal || []).filter(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop' && s.tipe_soal !== 'pilihan_berbobot'));
+  }, [testData]);
+
+  const weightedQuestions = useMemo(() => {
+    return (testData?.soal || []).filter(s => s.tipe_soal === 'pilihan_berbobot');
   }, [testData]);
 
   const ttsQuestions = useMemo(() => {
@@ -611,6 +624,7 @@ export default function Kuis({ onNavigate, onBack }) {
 
     if (!isTimeUp) {
       const unansPG = pgQuestions.filter(s => !answers[s.soal_kuis_id]).length;
+      const unansWeighted = weightedQuestions.filter(s => !answers[s.soal_kuis_id]).length;
       const unansTTS = ttsQuestions.filter(s => {
         const a = answers[s.soal_kuis_id];
         const minLen = s.panjang_kata || 2;
@@ -624,6 +638,7 @@ export default function Kuis({ onNavigate, onBack }) {
 
       const breakdownDetails = [];
       if (unansPG > 0) breakdownDetails.push(`<li><b>${unansPG}</b> Soal Pilihan Ganda</li>`);
+      if (unansWeighted > 0) breakdownDetails.push(`<li><b>${unansWeighted}</b> Soal Pilihan Berbobot</li>`);
       if (unansTTS > 0) breakdownDetails.push(`<li><b>${unansTTS}</b> Kata Teka-Teki Silang (TTS)</li>`);
       if (unansDD > 0) breakdownDetails.push(`<li><b>${unansDD}</b> Soal Drag & Drop / Dropdown</li>`);
 
@@ -639,7 +654,7 @@ export default function Kuis({ onNavigate, onBack }) {
           </div>
         ` : `
           <div class="text-left text-sm text-gray-600 space-y-2 pt-1">
-            <p>Anda telah menjawab seluruh <b>${totalSoal} butir soal, kata TTS & drag-drop</b> dengan lengkap.</p>
+            <p>Anda telah menjawab seluruh <b>${totalSoal} butir pertanyaan</b> dengan lengkap.</p>
             <p>Apakah Anda yakin ingin menyelesaikan dan mengumpulkan kuis ini?</p>
           </div>
         `,
@@ -680,7 +695,12 @@ export default function Kuis({ onNavigate, onBack }) {
       const isPassed = !!result?.apakah_lulus;
       const score = result?.nilai ?? 0;
       const passingGrade = testData?.nilai_kelulusan ?? 70;
-      const isPreTest = testData?.tipe_kuis === 'pre_test';
+      const isPreTest = testData?.tipe_kuis === 'pre_test' || result?.tipe_kuis === 'pre_test';
+      const isWeightedQuiz = testData?.tipe_kuis === 'kuis_berbobot'
+        || result?.tipe_kuis === 'kuis_berbobot'
+        || result?.is_kuis_berbobot
+        || (weightedQuestions.length > 0 && pgQuestions.length === 0 && ttsQuestions.length === 0 && dragDropQuestions.length === 0)
+        || Number(testData?.nilai_kelulusan ?? 0) === 0;
 
       if (isPreTest) {
         if (testData?.materi_id) {
@@ -710,6 +730,33 @@ export default function Kuis({ onNavigate, onBack }) {
           icon: 'success',
           confirmButtonColor: '#006A63',
           confirmButtonText: 'Buka Materi Pembelajaran',
+          allowOutsideClick: false
+        });
+      } else if (isWeightedQuiz) {
+        localStorage.setItem('userCompletedKuisModulId', modulId);
+        await Swal.fire({
+          title: 'Kuis Berbobot Selesai!',
+          html: `
+            <div class="text-center space-y-4 pt-2">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-700 text-3xl font-bold mx-auto">
+                ★
+              </div>
+              <div>
+                <div class="text-4xl font-extrabold text-amber-600">
+                  ${score}
+                </div>
+                <div class="text-xs text-gray-500 font-semibold mt-1">
+                  Skor Penilaian Berbobot
+                </div>
+              </div>
+              <div class="p-3.5 rounded-lg text-xs md:text-sm text-left leading-relaxed bg-amber-50 text-amber-950 border border-amber-200">
+                <b>Terima kasih!</b> Anda telah menyelesaikan kuis berbobot ini. Seluruh pilihan jawaban Anda telah direkam dan dinilai berdasarkan bobot masing-masing opsi tanpa sistem kelulusan benar/salah mutlak.
+              </div>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonColor: '#D97706',
+          confirmButtonText: 'Lanjutkan Pelatihan',
           allowOutsideClick: false
         });
       } else {
@@ -800,6 +847,7 @@ export default function Kuis({ onNavigate, onBack }) {
               durationMinutes={testData.durasi_menit || 15}
               maxAttempts={testData.maks_percobaan || 3}
               isPreTest={testData.tipe_kuis === 'pre_test'}
+              isWeighted={testData.tipe_kuis === 'kuis_berbobot' || (weightedQuestions.length > 0 && pgQuestions.length === 0 && ttsQuestions.length === 0 && dragDropQuestions.length === 0) || Number(testData.nilai_kelulusan || 0) === 0}
               storageKey={timerStorageKey}
               onTimeUp={() => handleSubmit(true)}
             />
@@ -808,10 +856,11 @@ export default function Kuis({ onNavigate, onBack }) {
           {/* Tab Selector jika Kuis memiliki lebih dari 1 jenis soal (Hybrid) */}
           {[
             pgQuestions.length > 0 ? 'pg' : null,
+            weightedQuestions.length > 0 ? 'weighted' : null,
             ttsQuestions.length > 0 ? 'tts' : null,
             dragDropQuestions.length > 0 ? 'drag_drop' : null
           ].filter(Boolean).length > 1 && (
-              <div className="flex bg-white p-1.5 rounded-xl border border-gray-200 mb-6 shadow-xs max-w-2xl overflow-x-auto">
+              <div className="flex bg-white p-1.5 rounded-xl border border-gray-200 mb-6 shadow-xs max-w-3xl overflow-x-auto">
                 {pgQuestions.length > 0 && (
                   <button
                     type="button"
@@ -825,6 +874,22 @@ export default function Kuis({ onNavigate, onBack }) {
                     <span>Pilihan Ganda</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'pg' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
                       {pgQuestions.filter(s => answers[s.soal_kuis_id]).length}/{pgQuestions.length}
+                    </span>
+                  </button>
+                )}
+                {weightedQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('weighted')}
+                    className={`flex-1 min-w-[150px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${activeSection === 'weighted'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Star className="w-4 h-4 fill-amber-300" />
+                    <span>Pilihan Berbobot</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'weighted' ? 'bg-amber-800 text-amber-100' : 'bg-gray-100 text-gray-600'}`}>
+                      {weightedQuestions.filter(s => answers[s.soal_kuis_id]).length}/{weightedQuestions.length}
                     </span>
                   </button>
                 )}
@@ -1044,6 +1109,111 @@ export default function Kuis({ onNavigate, onBack }) {
                 <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-xs text-gray-500">
                     Pastikan seluruh titik kosong pada semua soal telah terisi sebelum menyelesaikan kuis.
+                  </div>
+                  <button
+                    onClick={() => handleSubmit(false)}
+                    disabled={submitting}
+                    className="w-full sm:w-auto px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 text-sm cursor-pointer"
+                  >
+                    <span className="text-base">▶</span>
+                    {submitting ? 'Mengumpulkan...' : 'Submit Kuis'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAMPILAN 4: PILIHAN BERBOBOT (SURVEI / SKALA / ASESMEN BOBOT) */}
+          {activeSection === 'weighted' && weightedQuestions.length > 0 && (
+            <div className="space-y-6">
+              <div className="bg-white border border-[#BBC9C7] rounded-xl p-4 sm:p-6 md:p-8 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-[#1D315F] flex items-center gap-2">
+                      <Star className="w-6 h-6 text-amber-500 fill-amber-400" />
+                      {testData?.tipe_kuis === 'kuis_berbobot' ? 'Kuis Nilai Berbobot (Asesmen Mandiri)' : 'Soal Pilihan Berbobot'}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      Pilihlah salah satu jawaban yang paling tepat sesuai kondisi Anda. Setiap pilihan memiliki bobot penilaian tersendiri.
+                    </p>
+                  </div>
+                  <div className="text-xs bg-amber-50 text-amber-900 font-bold px-3 py-1.5 rounded-lg border border-amber-200 self-start sm:self-auto flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-amber-600 fill-amber-500" />
+                    {weightedQuestions.filter(s => answers[s.soal_kuis_id]).length} dari {weightedQuestions.length} Soal Terjawab
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {weightedQuestions.map((q, idx) => {
+                    const options = q.pilihan_jawaban ? Object.entries(q.pilihan_jawaban) : [];
+                    const savedAns = answers[q.soal_kuis_id];
+                    return (
+                      <div key={q.soal_kuis_id} className="p-4 sm:p-6 rounded-2xl border border-gray-200 bg-white shadow-xs space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5">
+                            <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <p className="font-semibold text-sm md:text-base text-[#1D315F] leading-relaxed">
+                              {q.teks_soal}
+                            </p>
+                          </div>
+                          <span className="text-[11px] text-amber-800 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md shrink-0">
+                            Bobot: {q.bobot_nilai || 5} Poin
+                          </span>
+                        </div>
+
+                        <div className="space-y-2.5 pl-0 sm:pl-8">
+                          {options.map(([optKey, optVal]) => {
+                            const text = typeof optVal === 'object' ? (optVal.teks || '') : String(optVal);
+                            const isSelected = savedAns !== undefined && savedAns !== null && String(savedAns).trim().toUpperCase() === String(optKey).trim().toUpperCase();
+                            return (
+                              <div
+                                key={optKey}
+                                onClick={() => handleAnswer(q.soal_kuis_id, optKey)}
+                                className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border cursor-pointer transition-all duration-150 select-none ${
+                                  isSelected
+                                    ? 'border-amber-500 bg-amber-50/70 shadow-2xs ring-2 ring-amber-400/20'
+                                    : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50/80'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                                    isSelected
+                                      ? 'bg-amber-600 text-white shadow-xs'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {optKey}
+                                  </span>
+                                  <span className={`text-xs sm:text-sm font-semibold leading-relaxed ${
+                                    isSelected ? 'text-amber-950 font-bold' : 'text-gray-700'
+                                  }`}>
+                                    {text}
+                                  </span>
+                                </div>
+
+                                <div className="shrink-0 pl-2">
+                                  {isSelected ? (
+                                    <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                                      <Check className="w-3 h-3 stroke-[3]" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full border border-gray-300" />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Submit Button Section for Weighted Questions */}
+                <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-xs text-gray-500">
+                    Pastikan Anda telah memilih jawaban untuk seluruh pertanyaan sebelum menyelesaikan kuis.
                   </div>
                   <button
                     onClick={() => handleSubmit(false)}

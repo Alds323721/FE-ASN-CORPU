@@ -201,16 +201,31 @@ const DetailKursus = ({ onNavigate }) => {
     opsiA: '',
     opsiB: '',
     opsiC: '',
-    opsiD: ''
+    opsiD: '',
+    bobot_nilai: 1
   });
-  const [quizActiveTab, setQuizActiveTab] = useState('pilihan_ganda'); // 'pilihan_ganda' | 'tts'
+  const [quizActiveTab, setQuizActiveTab] = useState('pilihan_ganda'); // 'pilihan_ganda' | 'tts' | 'drag_drop' | 'pilihan_berbobot'
   const [ttsInputWords, setTtsInputWords] = useState([]);
-  const [newTtsItem, setNewTtsItem] = useState({ word: '', clue: '' });
+  const [newTtsItem, setNewTtsItem] = useState({ word: '', clue: '', bobot_nilai: 1 });
   const [ttsLayout, setTtsLayout] = useState(null);
   const [newDragDropItem, setNewDragDropItem] = useState({
     teks_soal: '',
     distractors: '',
     bobot_nilai: 1
+  });
+  const [newWeightedItem, setNewWeightedItem] = useState({
+    teks_soal: '',
+    opsiA: '',
+    bobotA: 5,
+    opsiB: '',
+    bobotB: 4,
+    opsiC: '',
+    bobotC: 3,
+    opsiD: '',
+    bobotD: 2,
+    opsiE: '',
+    bobotE: 1,
+    bobot_nilai: 5
   });
 
   // Surat Pernyataan State
@@ -856,21 +871,37 @@ const DetailKursus = ({ onNavigate }) => {
   };
 
   // --- Helper Kuis ---
-  const getModulQuiz = (m) => {
+  const getModulQuiz = (m, type = 'evaluasi_modul') => {
     if (!m) return null;
+    if (type === 'kuis_berbobot') {
+      if (m.kuis_berbobot) return m.kuis_berbobot;
+      if (Array.isArray(m.semua_kuis)) {
+        return m.semua_kuis.find(k => k.tipe_kuis === 'kuis_berbobot') || null;
+      }
+      if (Array.isArray(m.kuis)) {
+        return m.kuis.find(k => k.tipe_kuis === 'kuis_berbobot') || null;
+      }
+      return null;
+    }
+    // Evaluasi Modul (default)
     if (Array.isArray(m.kuis)) {
-      return m.kuis.find(k => k.tipe_kuis === 'evaluasi_modul' || !k.tipe_kuis) || (m.kuis.length > 0 ? m.kuis[0] : null);
+      return m.kuis.find(k => k.tipe_kuis === 'evaluasi_modul' || !k.tipe_kuis) || (m.kuis.length > 0 && m.kuis[0].tipe_kuis !== 'kuis_berbobot' ? m.kuis[0] : null);
     }
     if (Array.isArray(m.semua_kuis)) {
       const q = m.semua_kuis.find(k => k.tipe_kuis === 'evaluasi_modul' || !k.tipe_kuis);
       if (q) return q;
     }
-    return m.kuis || null;
+    return (m.kuis && m.kuis.tipe_kuis !== 'kuis_berbobot') ? m.kuis : null;
   };
 
   // --- Kuis Handlers ---
   const syncTtsLayoutToQuizForm = (layout, wordSource) => {
     if (!layout || layout.placedWords.length === 0) return;
+
+    const sourceMap = {};
+    (wordSource || []).forEach(w => {
+      sourceMap[w.word] = Number(w.bobot_nilai) || 1;
+    });
 
     const ttsSoalItems = layout.placedWords.map(w => ({
       tipe_soal: 'tts',
@@ -881,14 +912,14 @@ const DetailKursus = ({ onNavigate }) => {
       baris_mulai: w.row,
       kolom_mulai: w.col,
       pilihan_jawaban_json: null,
-      bobot_nilai: 1
+      bobot_nilai: sourceMap[w.word] || Number(w.bobot_nilai) || 1
     }));
 
     setQuizForm(prev => {
-      const pgOnly = prev.soal.filter(s => s.tipe_soal !== 'tts');
+      const nonTts = prev.soal.filter(s => s.tipe_soal !== 'tts');
       return {
         ...prev,
-        soal: [...pgOnly, ...ttsSoalItems],
+        soal: [...nonTts, ...ttsSoalItems],
         grid_config_json: {
           rows: layout.rows,
           cols: layout.cols
@@ -902,9 +933,21 @@ const DetailKursus = ({ onNavigate }) => {
     setTargetQuizModule(freshModul);
     setTargetQuizType(type);
     setTargetQuizMateri(materi);
-    setQuizActiveTab('pilihan_ganda');
 
-    const existingQuiz = type === 'pre_test' ? (materi?.pre_test || null) : getModulQuiz(freshModul);
+    if (type === 'kuis_berbobot') {
+      setQuizActiveTab('pilihan_berbobot');
+    } else {
+      setQuizActiveTab('pilihan_ganda');
+    }
+
+    let existingQuiz = null;
+    if (type === 'pre_test') {
+      existingQuiz = materi?.pre_test || null;
+    } else if (type === 'kuis_berbobot') {
+      existingQuiz = getModulQuiz(freshModul, 'kuis_berbobot');
+    } else {
+      existingQuiz = getModulQuiz(freshModul, 'evaluasi_modul');
+    }
 
     if (existingQuiz && existingQuiz.kuis_id) {
       const allSoal = (existingQuiz.soal_kuis || []).map(s => {
@@ -922,7 +965,7 @@ const DetailKursus = ({ onNavigate }) => {
           nomor_urut: s.nomor_urut || null,
           baris_mulai: s.baris_mulai || null,
           kolom_mulai: s.kolom_mulai || null,
-          bobot_nilai: s.bobot_nilai ?? 1
+          bobot_nilai: Number(s.bobot_nilai) || 1
         };
       });
 
@@ -930,15 +973,20 @@ const DetailKursus = ({ onNavigate }) => {
       const initialTts = ttsSoal.map((s, idx) => ({
         id: s.soal_kuis_id ? `tts-${s.soal_kuis_id}` : `tts-init-${idx}`,
         word: s.kunci_jawaban || '',
-        clue: s.teks_soal || ''
+        clue: s.teks_soal || '',
+        bobot_nilai: Number(s.bobot_nilai) || 1
       }));
 
       setTtsInputWords(initialTts);
 
+      let defaultTitle = `Kuis ${modul.judul_modul}`;
+      if (type === 'pre_test') defaultTitle = `Pre-Test: ${materi?.judul_materi}`;
+      if (type === 'kuis_berbobot') defaultTitle = `Kuis Berbobot: ${modul.judul_modul}`;
+
       setQuizForm({
-        judul_kuis: existingQuiz.judul_kuis || (type === 'pre_test' ? `Pre-Test: ${materi?.judul_materi}` : `Kuis ${modul.judul_modul}`),
+        judul_kuis: existingQuiz.judul_kuis || defaultTitle,
         durasi_menit: existingQuiz.durasi_menit || 15,
-        nilai_kelulusan: type === 'pre_test' ? 0 : (existingQuiz.nilai_kelulusan ?? 70),
+        nilai_kelulusan: (type === 'pre_test' || type === 'kuis_berbobot') ? (existingQuiz.nilai_kelulusan ?? 0) : (existingQuiz.nilai_kelulusan ?? 70),
         maks_percobaan: type === 'pre_test' ? 1 : (existingQuiz.maks_percobaan ?? 3),
         soal: allSoal,
         grid_config_json: existingQuiz.grid_config_json || null
@@ -951,10 +999,14 @@ const DetailKursus = ({ onNavigate }) => {
         setTtsLayout(null);
       }
     } else {
+      let defaultTitle = `Kuis ${modul.judul_modul}`;
+      if (type === 'pre_test') defaultTitle = `Pre-Test: ${materi?.judul_materi}`;
+      if (type === 'kuis_berbobot') defaultTitle = `Kuis Berbobot: ${modul.judul_modul}`;
+
       setQuizForm({
-        judul_kuis: type === 'pre_test' ? `Pre-Test: ${materi?.judul_materi}` : `Kuis ${modul.judul_modul}`,
+        judul_kuis: defaultTitle,
         durasi_menit: 15,
-        nilai_kelulusan: type === 'pre_test' ? 0 : 70,
+        nilai_kelulusan: (type === 'pre_test' || type === 'kuis_berbobot') ? 0 : 70,
         maks_percobaan: type === 'pre_test' ? 1 : 3,
         soal: [],
         grid_config_json: null
@@ -969,10 +1021,25 @@ const DetailKursus = ({ onNavigate }) => {
       opsiA: '',
       opsiB: '',
       opsiC: '',
-      opsiD: ''
+      opsiD: '',
+      bobot_nilai: 1
     });
-    setNewTtsItem({ word: '', clue: '' });
+    setNewTtsItem({ word: '', clue: '', bobot_nilai: 1 });
     setNewDragDropItem({ teks_soal: '', distractors: '', bobot_nilai: 1 });
+    setNewWeightedItem({
+      teks_soal: '',
+      opsiA: '',
+      bobotA: 5,
+      opsiB: '',
+      bobotB: 4,
+      opsiC: '',
+      bobotC: 3,
+      opsiD: '',
+      bobotD: 2,
+      opsiE: '',
+      bobotE: 1,
+      bobot_nilai: 5
+    });
     setShowQuizModal(true);
   };
 
@@ -998,7 +1065,7 @@ const DetailKursus = ({ onNavigate }) => {
         C: newQuizItem.opsiC || '-',
         D: newQuizItem.opsiD || '-'
       },
-      bobot_nilai: 1
+      bobot_nilai: Number(newQuizItem.bobot_nilai) || 1
     };
 
     setQuizForm(prev => ({
@@ -1012,14 +1079,90 @@ const DetailKursus = ({ onNavigate }) => {
       opsiA: '',
       opsiB: '',
       opsiC: '',
-      opsiD: ''
+      opsiD: '',
+      bobot_nilai: 1
     });
   };
 
   const handleRemoveQuestionFromQuiz = (index) => {
-    // index pada filter soal PG
-    const pgQuestions = quizForm.soal.filter(s => s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop');
+    const pgQuestions = quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal);
     const targetItem = pgQuestions[index];
+    if (!targetItem) return;
+
+    setQuizForm(prev => ({
+      ...prev,
+      soal: prev.soal.filter(s => s !== targetItem)
+    }));
+  };
+
+  const handleAddWeightedToQuiz = (e) => {
+    e.preventDefault();
+    if (!newWeightedItem.teks_soal.trim() || !newWeightedItem.opsiA.trim() || !newWeightedItem.opsiB.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Butir Soal Belum Lengkap',
+        text: 'Teks pertanyaan dan minimal pilihan opsi A & B beserta bobot nilainya wajib diisi!',
+        confirmButtonColor: '#0F766E'
+      });
+      return;
+    }
+
+    const options = {
+      A: { teks: newWeightedItem.opsiA.trim(), bobot: Number(newWeightedItem.bobotA) || 0 },
+      B: { teks: newWeightedItem.opsiB.trim(), bobot: Number(newWeightedItem.bobotB) || 0 }
+    };
+
+    if (newWeightedItem.opsiC.trim()) {
+      options.C = { teks: newWeightedItem.opsiC.trim(), bobot: Number(newWeightedItem.bobotC) || 0 };
+    }
+    if (newWeightedItem.opsiD.trim()) {
+      options.D = { teks: newWeightedItem.opsiD.trim(), bobot: Number(newWeightedItem.bobotD) || 0 };
+    }
+    if (newWeightedItem.opsiE.trim()) {
+      options.E = { teks: newWeightedItem.opsiE.trim(), bobot: Number(newWeightedItem.bobotE) || 0 };
+    }
+
+    let maxBobot = 0;
+    let bestKey = 'A';
+    Object.entries(options).forEach(([k, v]) => {
+      if (v.bobot > maxBobot) {
+        maxBobot = v.bobot;
+        bestKey = k;
+      }
+    });
+
+    const item = {
+      tipe_soal: 'pilihan_berbobot',
+      teks_soal: newWeightedItem.teks_soal.trim(),
+      kunci_jawaban: bestKey,
+      pilihan_jawaban_json: options,
+      bobot_nilai: Number(newWeightedItem.bobot_nilai) || (maxBobot > 0 ? maxBobot : 1)
+    };
+
+    setQuizForm(prev => ({
+      ...prev,
+      soal: [...prev.soal, item]
+    }));
+
+    setNewWeightedItem({
+      teks_soal: '',
+      opsiA: '',
+      bobotA: 5,
+      opsiB: '',
+      bobotB: 4,
+      opsiC: '',
+      bobotC: 3,
+      opsiD: '',
+      bobotD: 2,
+      opsiE: '',
+      bobotE: 1,
+      bobot_nilai: 5
+    });
+  };
+
+  const handleRemoveWeightedFromQuiz = (index) => {
+    const weightedQuestions = quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot');
+    const targetItem = weightedQuestions[index];
     if (!targetItem) return;
 
     setQuizForm(prev => ({
@@ -1143,12 +1286,13 @@ const DetailKursus = ({ onNavigate }) => {
       {
         id: `tts-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         word: cleanWord,
-        clue: newTtsItem.clue.trim()
+        clue: newTtsItem.clue.trim(),
+        bobot_nilai: Number(newTtsItem.bobot_nilai) || 1
       }
     ];
 
     setTtsInputWords(updatedWords);
-    setNewTtsItem({ word: '', clue: '' });
+    setNewTtsItem({ word: '', clue: '', bobot_nilai: 1 });
 
     // Auto-generate layout TTS
     const layout = generateCrosswordLayout(updatedWords, 12);
@@ -1196,23 +1340,25 @@ const DetailKursus = ({ onNavigate }) => {
 
     try {
       const isPreTest = targetQuizType === 'pre_test';
+      const isWeighted = targetQuizType === 'kuis_berbobot';
       const payload = {
         judul_kuis: quizForm.judul_kuis,
         durasi_menit: Number(quizForm.durasi_menit) || 15,
         tipe_kuis: targetQuizType,
         materi_id: isPreTest ? targetQuizMateri?.materi_id : null,
-        nilai_kelulusan: isPreTest ? 0 : Number(quizForm.nilai_kelulusan),
+        nilai_kelulusan: (isPreTest || isWeighted) ? Number(quizForm.nilai_kelulusan || 0) : Number(quizForm.nilai_kelulusan),
         maks_percobaan: isPreTest ? 1 : Number(quizForm.maks_percobaan),
         grid_config_json: quizForm.grid_config_json,
         soal: quizForm.soal
       };
 
-      let existingQuiz = isPreTest ? targetQuizMateri?.pre_test : getModulQuiz(targetQuizModule);
-      if (!existingQuiz && !isPreTest && targetQuizModule) {
-        const foundInModules = modules.find(m => m.modul_id === targetQuizModule.modul_id);
-        if (foundInModules) {
-          existingQuiz = getModulQuiz(foundInModules);
-        }
+      let existingQuiz = null;
+      if (isPreTest) {
+        existingQuiz = targetQuizMateri?.pre_test;
+      } else if (isWeighted) {
+        existingQuiz = getModulQuiz(targetQuizModule, 'kuis_berbobot');
+      } else {
+        existingQuiz = getModulQuiz(targetQuizModule, 'evaluasi_modul');
       }
 
       if (existingQuiz && existingQuiz.kuis_id) {
@@ -1224,11 +1370,14 @@ const DetailKursus = ({ onNavigate }) => {
       const countPG = quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length;
       const countTTS = quizForm.soal.filter(s => s.tipe_soal === 'tts').length;
       const countDD = quizForm.soal.filter(s => s.tipe_soal === 'drag_drop').length;
+      const countWeighted = quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').length;
+
+      const typeTitle = isPreTest ? 'Pre-Test' : (isWeighted ? 'Kuis Nilai Berbobot' : 'Kuis Evaluasi Modul');
 
       await Swal.fire({
         icon: 'success',
-        title: isPreTest ? 'Pre-Test Berhasil Disimpan!' : 'Kuis Berhasil Disimpan!',
-        text: `${isPreTest ? 'Pre-test materi' : 'Kuis evaluasi modul'} berhasil disimpan (${countPG} PG, ${countTTS} TTS, ${countDD} Drag & Drop). Durasi: ${payload.durasi_menit} menit.`,
+        title: `${typeTitle} Berhasil Disimpan!`,
+        text: `${typeTitle} berhasil disimpan (${countPG} PG, ${countTTS} TTS, ${countDD} Drag & Drop, ${countWeighted} Berbobot). Durasi: ${payload.durasi_menit} menit.`,
         confirmButtonColor: '#0F766E',
         timer: 2500,
         showConfirmButton: true
@@ -2037,41 +2186,89 @@ const DetailKursus = ({ onNavigate }) => {
                       <p className="text-xs text-gray-400 italic">Tambahkan modul terlebih dahulu untuk menyusun kuis.</p>
                     ) : (
                       modules.map((m) => {
-                        const quiz = getModulQuiz(m);
-                        const hasQuiz = Boolean(quiz && quiz.kuis_id);
-                        const questionCount = quiz?.soal_kuis?.length || 0;
+                        const evalQuiz = getModulQuiz(m, 'evaluasi_modul');
+                        const hasEvalQuiz = Boolean(evalQuiz && evalQuiz.kuis_id);
+                        const evalCount = evalQuiz?.soal_kuis?.length || 0;
+
+                        const weightedQuiz = getModulQuiz(m, 'kuis_berbobot');
+                        const hasWeightedQuiz = Boolean(weightedQuiz && weightedQuiz.kuis_id);
+                        const weightedCount = weightedQuiz?.soal_kuis?.length || 0;
 
                         return (
                           <div
                             key={m.modul_id}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-xl transition-colors ${hasQuiz ? 'border-gray-200 bg-gray-50/50' : 'border-dashed border-amber-200 bg-amber-50/30'
-                              }`}
+                            className="p-4 border border-gray-200 rounded-xl bg-gray-50/50 space-y-3.5"
                           >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-bold text-gray-900">{m.judul_modul}</p>
-                                {hasQuiz ? (
-                                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">Kuis Aktif</span>
-                                ) : (
-                                  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">Belum Ada Kuis</span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {hasQuiz
-                                  ? `${questionCount} Butir Soal • Durasi ${quiz?.durasi_menit || 15} Menit • Batas Lulus ${quiz?.nilai_kelulusan ?? 70}% • Maks. ${quiz?.maks_percobaan ?? 3}x Coba`
-                                  : 'Modul ini belum memiliki evaluasi kuis'}
-                              </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-bold text-gray-900">{m.judul_modul}</p>
+                              <span className="text-[11px] text-gray-500 font-semibold bg-white px-2 py-0.5 rounded border border-gray-200">
+                                Modul #{m.urutan || 1}
+                              </span>
                             </div>
 
-                            <button
-                              onClick={() => handleOpenQuizModal(m)}
-                              className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition-colors w-full sm:w-auto ${hasQuiz
-                                  ? 'bg-white border border-gray-200 text-teal-700 hover:bg-gray-50'
-                                  : 'bg-[#0F766E] text-white hover:bg-teal-800'
-                                }`}
-                            >
-                              {hasQuiz ? <><Edit2 className="w-3.5 h-3.5" /> Edit Kuis</> : <><Plus className="w-3.5 h-3.5" /> Buat Kuis</>}
-                            </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                              {/* 1. Kuis Evaluasi Modul */}
+                              <div className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 ${hasEvalQuiz ? 'bg-white border-teal-200 shadow-2xs' : 'bg-gray-50/80 border-dashed border-gray-200'}`}>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                      <BookOpen className="w-3.5 h-3.5 text-[#0F766E]" /> Kuis Evaluasi Modul
+                                    </span>
+                                    {hasEvalQuiz ? (
+                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">Aktif ({evalCount} Soal)</span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">Belum Ada</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-500">
+                                    {hasEvalQuiz
+                                      ? `Durasi: ${evalQuiz?.durasi_menit || 15}m • KKM: ${evalQuiz?.nilai_kelulusan ?? 70}% • Percobaan: ${evalQuiz?.maks_percobaan ?? 3}x`
+                                      : 'Kuis evaluasi pemahaman modul dengan sistem salah & benar.'}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenQuizModal(m, 'evaluasi_modul')}
+                                  className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${hasEvalQuiz
+                                    ? 'bg-teal-50 text-[#0F766E] border border-teal-200 hover:bg-teal-100'
+                                    : 'bg-[#0F766E] text-white hover:bg-teal-800'
+                                  }`}
+                                >
+                                  {hasEvalQuiz ? <><Edit2 className="w-3.5 h-3.5" /> Edit Kuis Evaluasi</> : <><Plus className="w-3.5 h-3.5" /> Buat Kuis Evaluasi</>}
+                                </button>
+                              </div>
+
+                              {/* 2. Kuis Nilai Berbobot */}
+                              <div className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 ${hasWeightedQuiz ? 'bg-white border-amber-300 shadow-2xs' : 'bg-amber-50/30 border-dashed border-amber-200'}`}>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                      <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" /> Kuis Nilai Berbobot
+                                    </span>
+                                    {hasWeightedQuiz ? (
+                                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full">Aktif ({weightedCount} Soal)</span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">Opsional</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-500">
+                                    {hasWeightedQuiz
+                                      ? `Durasi: ${weightedQuiz?.durasi_menit || 15}m • Penilaian Bobot Nilai (Tanpa Salah/Benar Mutlak)`
+                                      : 'Kuis dengan bobot nilai tiap butir & opsi jawaban (asesmen / skala nilai).'}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenQuizModal(m, 'kuis_berbobot')}
+                                  className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${hasWeightedQuiz
+                                    ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                                  }`}
+                                >
+                                  {hasWeightedQuiz ? <><Edit2 className="w-3.5 h-3.5" /> Edit Kuis Berbobot</> : <><Plus className="w-3.5 h-3.5" /> Buat Kuis Berbobot</>}
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         );
                       })
@@ -3081,20 +3278,26 @@ const DetailKursus = ({ onNavigate }) => {
                   <h3 className="font-bold text-gray-900 text-base">
                     {targetQuizType === 'pre_test'
                       ? `Kelola Pre-Test Materi: ${targetQuizMateri?.judul_materi}`
+                      : targetQuizType === 'kuis_berbobot'
+                      ? `Kelola Kuis Nilai Berbobot: ${targetQuizModule.judul_modul}`
                       : `Kelola Kuis Evaluasi: ${targetQuizModule.judul_modul}`}
                   </h3>
                   <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                     targetQuizType === 'pre_test'
                       ? 'bg-amber-100 text-amber-800'
+                      : targetQuizType === 'kuis_berbobot'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
                       : 'bg-teal-100 text-teal-800'
                   }`}>
-                    {targetQuizType === 'pre_test' ? 'Pre-Test Materi' : 'Evaluasi Modul'}
+                    {targetQuizType === 'pre_test' ? 'Pre-Test Materi' : targetQuizType === 'kuis_berbobot' ? 'Kuis Nilai Berbobot' : 'Evaluasi Modul'}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {targetQuizType === 'pre_test'
                     ? 'Pre-test ini wajib dikerjakan peserta untuk membuka berkas materi. Tidak ada nilai kelulusan minimal.'
-                    : 'Konfigurasi soal evaluasi pemahaman modul (Pilihan Ganda, TTS, atau Drag & Drop).'}
+                    : targetQuizType === 'kuis_berbobot'
+                    ? 'Kuis dengan sistem penilaian berbasis bobot nilai pada setiap butir soal & opsi (tidak ada salah/benar mutlak).'
+                    : 'Konfigurasi soal evaluasi pemahaman modul (Pilihan Ganda, TTS, Drag & Drop, atau Pilihan Berbobot).'}
                 </p>
               </div>
               <button onClick={() => setShowQuizModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -3105,7 +3308,7 @@ const DetailKursus = ({ onNavigate }) => {
             {/* Quiz General Settings */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
               <div className={targetQuizType === 'pre_test' ? 'sm:col-span-2' : ''}>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Judul {targetQuizType === 'pre_test' ? 'Pre-Test' : 'Kuis'}</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Judul {targetQuizType === 'pre_test' ? 'Pre-Test' : targetQuizType === 'kuis_berbobot' ? 'Kuis Berbobot' : 'Kuis'}</label>
                 <input
                   type="text"
                   value={quizForm.judul_kuis || ''}
@@ -3151,6 +3354,31 @@ const DetailKursus = ({ onNavigate }) => {
                     />
                   </div>
                 </>
+              ) : targetQuizType === 'kuis_berbobot' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Passing Grade (%)</label>
+                    <input
+                      type="number"
+                      min="0" max="100"
+                      value={quizForm.nilai_kelulusan ?? 0}
+                      onChange={(e) => setQuizForm({ ...quizForm, nilai_kelulusan: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
+                      placeholder="0 (Selalu Lulus)"
+                    />
+                    <span className="text-[10px] text-gray-400">0 = Otomatis lulus</span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Maks. Percobaan</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quizForm.maks_percobaan ?? 3}
+                      onChange={(e) => setQuizForm({ ...quizForm, maks_percobaan: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
+                    />
+                  </div>
+                </>
               ) : (
                 <div className="flex items-center">
                   <div className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
@@ -3160,7 +3388,7 @@ const DetailKursus = ({ onNavigate }) => {
               )}
             </div>
 
-            {/* Tab Nav: Pilihan Ganda vs Teka-Teki Silang vs Drag & Drop */}
+            {/* Tab Nav: Pilihan Ganda vs Teka-Teki Silang vs Drag & Drop vs Pilihan Berbobot */}
             <div className="flex border-b border-gray-200 gap-2 sm:gap-4 overflow-x-auto">
               <button
                 type="button"
@@ -3172,7 +3400,7 @@ const DetailKursus = ({ onNavigate }) => {
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
-                Soal Pilihan Ganda ({quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length})
+                Pilihan Ganda ({quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length})
               </button>
               <button
                 type="button"
@@ -3196,7 +3424,19 @@ const DetailKursus = ({ onNavigate }) => {
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
-                Dropdown / Drag & Drop ({quizForm.soal.filter(s => s.tipe_soal === 'drag_drop').length})
+                Drag & Drop ({quizForm.soal.filter(s => s.tipe_soal === 'drag_drop').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuizActiveTab('pilihan_berbobot')}
+                className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-bold transition-all border-b-2 shrink-0 ${
+                  quizActiveTab === 'pilihan_berbobot'
+                    ? 'border-amber-600 text-amber-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                Pilihan Berbobot ({quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').length})
               </button>
             </div>
 
@@ -3205,19 +3445,23 @@ const DetailKursus = ({ onNavigate }) => {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                    Daftar Butir Pilihan Ganda ({quizForm.soal.filter(s => s.tipe_soal !== 'tts').length})
+                    Daftar Butir Pilihan Ganda ({quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length})
                   </h4>
-                  {quizForm.soal.filter(s => s.tipe_soal !== 'tts').length === 0 ? (
+                  {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length === 0 ? (
                     <p className="text-xs text-gray-400 italic py-3 bg-gray-50 rounded-lg text-center">
                       Belum ada butir soal pilihan ganda. Tambahkan melalui formulir di bawah jika diperlukan.
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {quizForm.soal.filter(s => s.tipe_soal !== 'tts').map((q, idx) => (
+                      {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).map((q, idx) => (
                         <div key={idx} className="p-3 border border-gray-100 rounded-lg bg-gray-50/70 flex justify-between items-start gap-2">
                           <div className="text-xs space-y-1">
                             <p className="font-bold text-gray-900">{idx + 1}. {q.teks_soal}</p>
-                            <p className="text-teal-700 font-semibold">Kunci Jawaban: {q.kunci_jawaban}</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-teal-700 font-semibold">Kunci: {q.kunci_jawaban}</span>
+                              <span className="text-gray-300">•</span>
+                              <span className="text-gray-600 font-medium">Bobot: {q.bobot_nilai || 1} Poin</span>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -3259,23 +3503,35 @@ const DetailKursus = ({ onNavigate }) => {
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-700">Kunci Jawaban Benar:</span>
-                      <select
-                        value={newQuizItem.kunci_jawaban || 'A'}
-                        onChange={(e) => setNewQuizItem({ ...newQuizItem, kunci_jawaban: e.target.value })}
-                        className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-bold text-teal-700"
-                      >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">Bobot Nilai:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newQuizItem.bobot_nilai || 1}
+                          onChange={(e) => setNewQuizItem({ ...newQuizItem, bobot_nilai: Number(e.target.value) })}
+                          className="w-16 h-8 px-2 bg-white border border-gray-300 rounded text-xs font-bold text-teal-800 text-center"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-700">Kunci Jawaban Benar:</span>
+                        <select
+                          value={newQuizItem.kunci_jawaban || 'A'}
+                          onChange={(e) => setNewQuizItem({ ...newQuizItem, kunci_jawaban: e.target.value })}
+                          className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-bold text-teal-700"
+                        >
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                          <option value="D">D</option>
+                        </select>
+                      </div>
                     </div>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800 flex items-center gap-1"
+                      className="px-3 py-1.5 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800 flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" /> Tambah Soal PG
                     </button>
@@ -3318,7 +3574,7 @@ const DetailKursus = ({ onNavigate }) => {
                       />
                     </div>
 
-                    <div className="md:col-span-6">
+                    <div className="md:col-span-5">
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-xs font-bold text-gray-700">Petunjuk (Clue / Soal)</label>
                         <span className="text-[10px] text-gray-400">Pertanyaan peserta</span>
@@ -3329,6 +3585,19 @@ const DetailKursus = ({ onNavigate }) => {
                         value={newTtsItem.clue}
                         onChange={(e) => setNewTtsItem({ ...newTtsItem, clue: e.target.value })}
                         className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-bold text-gray-700">Bobot</label>
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newTtsItem.bobot_nilai || 1}
+                        onChange={(e) => setNewTtsItem({ ...newTtsItem, bobot_nilai: Number(e.target.value) })}
+                        className="w-full h-10 px-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-teal-800 text-center focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs"
                       />
                     </div>
 
@@ -3550,25 +3819,264 @@ const DetailKursus = ({ onNavigate }) => {
               </div>
             )}
 
+            {/* TAB CONTENT: PILIHAN BERBOBOT (SURVEI / SKALA / ASESMEN BOBOT) */}
+            {quizActiveTab === 'pilihan_berbobot' && (
+              <div className="space-y-5">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-amber-950">
+                  <Star className="w-4 h-4 text-amber-600 fill-amber-500 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-bold">Konsep Soal Berbobot Nilai (Tanpa Benar/Salah Mutlak):</span> Setiap pilihan jawaban memiliki poin bobot tersendiri (misalnya A=5, B=4, C=3, D=2, E=1). Peserta akan mendapatkan skor sesuai opsi yang dipilih secara proporsional terhadap bobot maksimal butir soal ini.
+                  </div>
+                </div>
+
+                {/* Form Tambah Soal Berbobot */}
+                <form onSubmit={handleAddWeightedToQuiz} className="border border-amber-200 bg-amber-50/20 p-4 sm:p-5 rounded-2xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-extrabold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-amber-700" /> Tambah Soal Pilihan Berbobot
+                    </h4>
+                    <span className="text-[11px] text-gray-500 font-medium">Tentukan poin untuk masing-masing opsi</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Pertanyaan / Pernyataan Soal
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Contoh: Seberapa siap instansi Anda dalam menerapkan transformasi digital pelayanan publik?"
+                      value={newWeightedItem.teks_soal}
+                      onChange={(e) => setNewWeightedItem({ ...newWeightedItem, teks_soal: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-xs leading-relaxed focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <label className="block text-xs font-bold text-gray-700">
+                      Opsi Pilihan Jawaban & Bobot Nilai Poin
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {/* Opsi A */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-2xs">
+                        <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">A</span>
+                        <input
+                          type="text"
+                          placeholder="Teks Opsi A (Wajib)"
+                          value={newWeightedItem.opsiA}
+                          onChange={(e) => setNewWeightedItem({ ...newWeightedItem, opsiA: e.target.value })}
+                          className="w-full text-xs bg-transparent focus:outline-none"
+                        />
+                        <div className="flex items-center gap-1 shrink-0 border-l border-gray-200 pl-2">
+                          <span className="text-[10px] text-gray-400 font-semibold">Poin:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newWeightedItem.bobotA}
+                            onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobotA: Number(e.target.value) })}
+                            className="w-12 h-7 px-1 bg-amber-50 border border-amber-300 rounded text-center text-xs font-bold text-amber-900"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Opsi B */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-2xs">
+                        <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">B</span>
+                        <input
+                          type="text"
+                          placeholder="Teks Opsi B (Wajib)"
+                          value={newWeightedItem.opsiB}
+                          onChange={(e) => setNewWeightedItem({ ...newWeightedItem, opsiB: e.target.value })}
+                          className="w-full text-xs bg-transparent focus:outline-none"
+                        />
+                        <div className="flex items-center gap-1 shrink-0 border-l border-gray-200 pl-2">
+                          <span className="text-[10px] text-gray-400 font-semibold">Poin:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newWeightedItem.bobotB}
+                            onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobotB: Number(e.target.value) })}
+                            className="w-12 h-7 px-1 bg-amber-50 border border-amber-300 rounded text-center text-xs font-bold text-amber-900"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Opsi C */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-2xs">
+                        <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">C</span>
+                        <input
+                          type="text"
+                          placeholder="Teks Opsi C (Opsional)"
+                          value={newWeightedItem.opsiC}
+                          onChange={(e) => setNewWeightedItem({ ...newWeightedItem, opsiC: e.target.value })}
+                          className="w-full text-xs bg-transparent focus:outline-none"
+                        />
+                        <div className="flex items-center gap-1 shrink-0 border-l border-gray-200 pl-2">
+                          <span className="text-[10px] text-gray-400 font-semibold">Poin:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newWeightedItem.bobotC}
+                            onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobotC: Number(e.target.value) })}
+                            className="w-12 h-7 px-1 bg-amber-50 border border-amber-300 rounded text-center text-xs font-bold text-amber-900"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Opsi D */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-2xs">
+                        <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">D</span>
+                        <input
+                          type="text"
+                          placeholder="Teks Opsi D (Opsional)"
+                          value={newWeightedItem.opsiD}
+                          onChange={(e) => setNewWeightedItem({ ...newWeightedItem, opsiD: e.target.value })}
+                          className="w-full text-xs bg-transparent focus:outline-none"
+                        />
+                        <div className="flex items-center gap-1 shrink-0 border-l border-gray-200 pl-2">
+                          <span className="text-[10px] text-gray-400 font-semibold">Poin:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newWeightedItem.bobotD}
+                            onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobotD: Number(e.target.value) })}
+                            className="w-12 h-7 px-1 bg-amber-50 border border-amber-300 rounded text-center text-xs font-bold text-amber-900"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Opsi E */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-2xs md:col-span-2">
+                        <span className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">E</span>
+                        <input
+                          type="text"
+                          placeholder="Teks Opsi E (Opsional)"
+                          value={newWeightedItem.opsiE}
+                          onChange={(e) => setNewWeightedItem({ ...newWeightedItem, opsiE: e.target.value })}
+                          className="w-full text-xs bg-transparent focus:outline-none"
+                        />
+                        <div className="flex items-center gap-1 shrink-0 border-l border-gray-200 pl-2">
+                          <span className="text-[10px] text-gray-400 font-semibold">Poin:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newWeightedItem.bobotE}
+                            onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobotE: Number(e.target.value) })}
+                            className="w-12 h-7 px-1 bg-amber-50 border border-amber-300 rounded text-center text-xs font-bold text-amber-900"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-200/60">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-700">Bobot Maksimal Soal:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newWeightedItem.bobot_nilai || 5}
+                        onChange={(e) => setNewWeightedItem({ ...newWeightedItem, bobot_nilai: Number(e.target.value) })}
+                        className="w-16 h-8 px-2 bg-white border border-gray-300 rounded text-xs font-bold text-amber-900 text-center"
+                      />
+                      <span className="text-[11px] text-gray-400">(Digunakan saat kalkulasi total nilai)</span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Simpan Soal Berbobot
+                    </button>
+                  </div>
+                </form>
+
+                {/* Daftar Soal Berbobot */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Daftar Soal Pilihan Berbobot</span>
+                    <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').length} Soal
+                    </span>
+                  </h4>
+
+                  {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').length === 0 ? (
+                    <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl bg-gray-50">
+                      <Star className="w-8 h-8 text-gray-300 mx-auto mb-1.5" />
+                      <p className="text-xs font-medium text-gray-500">Belum ada butir soal pilihan berbobot.</p>
+                      <p className="text-[11px] text-gray-400">Tambahkan pertanyaan asesmen / skala bertingkat di atas.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').map((item, idx) => (
+                        <div key={idx} className="bg-white border border-amber-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-xs space-y-1">
+                              <p className="font-bold text-gray-900 flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-bold">
+                                  {idx + 1}
+                                </span>
+                                {item.teks_soal}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold">
+                                Bobot Soal: {item.bobot_nilai || 5}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveWeightedFromQuiz(idx)}
+                                className="text-gray-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors cursor-pointer text-xs"
+                                title="Hapus Soal"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 pt-1">
+                            {Object.entries(item.pilihan_jawaban_json || {}).map(([key, opt]) => (
+                              <div key={key} className="flex items-center justify-between text-[11px] bg-amber-50/50 border border-amber-100 rounded px-2 py-1">
+                                <span className="text-gray-700 truncate pr-1">
+                                  <strong className="text-amber-800 mr-1">{key}.</strong>
+                                  {typeof opt === 'object' ? opt.teks : opt}
+                                </span>
+                                <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded shrink-0">
+                                  {typeof opt === 'object' ? opt.bobot : 0} pt
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center pt-3 border-t border-gray-100">
               <div className="text-xs text-gray-500">
                 Total Soal: <span className="font-bold text-gray-800">{quizForm.soal.length}</span> (
                 {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_ganda' || !s.tipe_soal).length} PG,{' '}
                 {quizForm.soal.filter(s => s.tipe_soal === 'tts').length} TTS,{' '}
-                {quizForm.soal.filter(s => s.tipe_soal === 'drag_drop').length} Drag & Drop)
+                {quizForm.soal.filter(s => s.tipe_soal === 'drag_drop').length} Drag & Drop,{' '}
+                {quizForm.soal.filter(s => s.tipe_soal === 'pilihan_berbobot').length} Berbobot)
               </div>
               <div className="flex items-center gap-2">
                 {((targetQuizType === 'pre_test' && targetQuizMateri?.pre_test?.kuis_id) ||
-                  (targetQuizType === 'evaluasi_modul' && getModulQuiz(targetQuizModule)?.kuis_id)) && (
+                  (targetQuizType === 'evaluasi_modul' && getModulQuiz(targetQuizModule, 'evaluasi_modul')?.kuis_id) ||
+                  (targetQuizType === 'kuis_berbobot' && getModulQuiz(targetQuizModule, 'kuis_berbobot')?.kuis_id)) && (
                   <button
                     type="button"
                     onClick={() => {
-                      const qId = targetQuizType === 'pre_test' ? targetQuizMateri?.pre_test?.kuis_id : getModulQuiz(targetQuizModule)?.kuis_id;
-                      handleDeleteQuiz(qId, targetQuizType === 'pre_test' ? 'Pre-Test' : 'Kuis');
+                      const qId = targetQuizType === 'pre_test'
+                        ? targetQuizMateri?.pre_test?.kuis_id
+                        : (targetQuizType === 'kuis_berbobot' ? getModulQuiz(targetQuizModule, 'kuis_berbobot')?.kuis_id : getModulQuiz(targetQuizModule, 'evaluasi_modul')?.kuis_id);
+                      handleDeleteQuiz(qId, targetQuizType === 'pre_test' ? 'Pre-Test' : (targetQuizType === 'kuis_berbobot' ? 'Kuis Berbobot' : 'Kuis'));
                     }}
                     className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 flex items-center gap-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Hapus {targetQuizType === 'pre_test' ? 'Pre-Test' : 'Kuis'}
+                    <Trash2 className="w-3.5 h-3.5" /> Hapus {targetQuizType === 'pre_test' ? 'Pre-Test' : (targetQuizType === 'kuis_berbobot' ? 'Kuis Berbobot' : 'Kuis')}
                   </button>
                 )}
                 <button
@@ -3583,7 +4091,7 @@ const DetailKursus = ({ onNavigate }) => {
                   onClick={handleSaveQuiz}
                   className="px-6 py-2 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800 shadow-sm"
                 >
-                  Simpan Seluruh {targetQuizType === 'pre_test' ? 'Pre-Test' : 'Kuis'}
+                  Simpan Seluruh {targetQuizType === 'pre_test' ? 'Pre-Test' : (targetQuizType === 'kuis_berbobot' ? 'Kuis Berbobot' : 'Kuis')}
                 </button>
               </div>
             </div>

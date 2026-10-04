@@ -155,7 +155,10 @@ const getQuizBadges = (tipeSoalList = []) => {
   if (tipeSoalList.includes('drag_drop')) {
     badges.push({ label: '🎯 Drag & Drop', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
   }
-  if (tipeSoalList.includes('pilihan_ganda') && (tipeSoalList.includes('tts') || tipeSoalList.includes('drag_drop'))) {
+  if (tipeSoalList.includes('pilihan_berbobot')) {
+    badges.push({ label: '⭐ Berbobot', color: 'bg-amber-50 text-amber-700 border-amber-200' });
+  }
+  if (tipeSoalList.includes('pilihan_ganda') && (tipeSoalList.includes('tts') || tipeSoalList.includes('drag_drop') || tipeSoalList.includes('pilihan_berbobot'))) {
     badges.push({ label: '📝 PG', color: 'bg-teal-50 text-teal-700 border-teal-200' });
   }
   return badges;
@@ -280,6 +283,32 @@ const Sidebar = ({ courseData, activeMateri, onSelectMateri, onNavigate }) => {
                   }
                   localStorage.setItem('userModulId', modul.modul_id);
                   localStorage.setItem('userKuisId', modul.kuis.kuis_id);
+                  onNavigate('kuis');
+                }}
+              />
+            )}
+            {modul.kuis_berbobot && (
+              <SyllabusItem
+                key={`kuis-berbobot-${modul.kuis_berbobot.kuis_id}`}
+                index="Asesmen"
+                title={modul.kuis_berbobot.judul}
+                subtitle="Kuis Nilai Berbobot"
+                duration={modul.kuis_berbobot.durasi}
+                status={modul.kuis_berbobot.is_completed ? 'completed' : (modul.kuis_berbobot.is_locked ? 'locked' : 'pending')}
+                isActive={false}
+                typeBadges={getQuizBadges(modul.kuis_berbobot.tipe_soal_list || ['pilihan_berbobot'])}
+                onClick={() => {
+                  if (modul.kuis_berbobot.is_locked) {
+                    Swal.fire({
+                      icon: 'info',
+                      title: 'Kuis Berbobot Terkunci',
+                      text: 'Selesaikan kuis evaluasi dan seluruh materi modul ini terlebih dahulu sebelum mengerjakan kuis berbobot.',
+                      confirmButtonColor: '#006A63'
+                    });
+                    return;
+                  }
+                  localStorage.setItem('userModulId', modul.modul_id);
+                  localStorage.setItem('userKuisId', modul.kuis_berbobot.kuis_id);
                   onNavigate('kuis');
                 }}
               />
@@ -657,6 +686,16 @@ const findNextMateriInfo = (allModuls, currentModulId, currentMateriId) => {
     return {
       type: 'modul_kuis',
       kuis: currentModul.kuis,
+      modul: currentModul,
+      modulId: currentModul.modul_id
+    };
+  }
+
+  // 2b. Jika kuis evaluasi modul sudah selesai atau tidak ada, periksa kuis nilai berbobot
+  if (currentModul.kuis_berbobot && !currentModul.kuis_berbobot.is_completed) {
+    return {
+      type: 'modul_kuis',
+      kuis: currentModul.kuis_berbobot,
       modul: currentModul,
       modulId: currentModul.modul_id
     };
