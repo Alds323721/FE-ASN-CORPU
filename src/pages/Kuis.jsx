@@ -706,6 +706,7 @@ export default function Kuis({ onNavigate, onBack }) {
         if (testData?.materi_id) {
           localStorage.setItem('userActiveMateriId', testData.materi_id);
           localStorage.setItem('userModulId', modulId);
+          localStorage.setItem('userJustCompletedPreTest', 'true');
         }
         await Swal.fire({
           title: 'Pre-Test Selesai!',
@@ -730,10 +731,18 @@ export default function Kuis({ onNavigate, onBack }) {
           icon: 'success',
           confirmButtonColor: '#006A63',
           confirmButtonText: 'Buka Materi Pembelajaran',
-          allowOutsideClick: false
+          allowOutsideClick: false,
+          timer: 2500,
+          timerProgressBar: true
         });
       } else if (isWeightedQuiz) {
         localStorage.setItem('userCompletedKuisModulId', modulId);
+        localStorage.setItem('userCompletedKuisId', kuisId);
+        localStorage.setItem('userJustPassedKuis', JSON.stringify({
+          modulId: String(modulId),
+          kuisId: String(kuisId),
+          isWeighted: true
+        }));
         await Swal.fire({
           title: 'Kuis Berbobot Selesai!',
           html: `
@@ -756,12 +765,20 @@ export default function Kuis({ onNavigate, onBack }) {
           `,
           icon: 'success',
           confirmButtonColor: '#D97706',
-          confirmButtonText: 'Lanjutkan Pelatihan',
-          allowOutsideClick: false
+          confirmButtonText: 'Lanjut ke Materi Berikutnya',
+          allowOutsideClick: false,
+          timer: 2500,
+          timerProgressBar: true
         });
       } else {
         if (isPassed) {
           localStorage.setItem('userCompletedKuisModulId', modulId);
+          localStorage.setItem('userCompletedKuisId', kuisId);
+          localStorage.setItem('userJustPassedKuis', JSON.stringify({
+            modulId: String(modulId),
+            kuisId: String(kuisId),
+            isWeighted: false
+          }));
         }
         // Pop-up keterangan kelulusan kuis evaluasi modul
         await Swal.fire({
@@ -781,15 +798,16 @@ export default function Kuis({ onNavigate, onBack }) {
               </div>
               <div class="p-3.5 rounded-lg text-xs md:text-sm text-left leading-relaxed ${isPassed ? 'bg-teal-50 text-teal-900 border border-teal-200' : 'bg-amber-50 text-amber-900 border border-amber-200'}">
                 ${isPassed
-              ? '<b>Hebat!</b> Anda telah memahami materi modul ini dengan baik dan berhak melanjutkan ke modul berikutnya.'
+              ? '<b>Hebat!</b> Anda telah memahami materi modul ini dengan baik dan berhak melanjutkan ke materi/modul berikutnya.'
               : 'Nilai Anda belum mencapai batas minimal kelulusan. Silakan pelajari kembali materi pada modul ini dan ulangi kuis evaluasi.'}
               </div>
             </div>
           `,
           icon: isPassed ? 'success' : 'warning',
           confirmButtonColor: isPassed ? '#006A63' : '#1D315F',
-          confirmButtonText: isPassed ? 'Lanjutkan Pelatihan' : 'Kembali ke Materi',
-          allowOutsideClick: false
+          confirmButtonText: isPassed ? 'Lanjut ke Materi Berikutnya' : 'Kembali ke Materi',
+          allowOutsideClick: false,
+          ...(isPassed ? { timer: 2500, timerProgressBar: true } : {})
         });
       }
 

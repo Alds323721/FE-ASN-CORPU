@@ -491,8 +491,9 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
           <div className="w-full bg-black aspect-video relative overflow-hidden flex items-center justify-center">
             {youtubeId ? (
               <iframe
+                id="youtube-player"
                 className="w-full h-full border-0"
-                src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+                src={`https://www.youtube.com/embed/${youtubeId}?rel=0&enablejsapi=1`}
                 title={activeMateri.judul || 'Video Pembelajaran'}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
@@ -502,6 +503,11 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
                 controls
                 className="w-full h-full object-contain"
                 src={getDocumentUrl(activeMateri.tautan)}
+                onEnded={() => {
+                  if (!activeMateri.is_read) {
+                    onMarkAsRead();
+                  }
+                }}
               >
                 Browser Anda tidak mendukung pemutar video.
               </video>
@@ -548,7 +554,9 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
               ? 'Selesaikan seluruh kuis interaktif di dalam video atau klik tombol jika sudah selesai.'
               : isScorm
                 ? 'Selesaikan seluruh materi interaktif SCORM atau klik tombol jika sudah selesai.'
-                : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
+                : isVideo
+                  ? 'Tonton video hingga selesai atau klik tombol jika sudah selesai menonton materi ini.'
+                  : 'Tandai telah selesai jika Anda sudah memahami materi ini.'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -562,17 +570,21 @@ const MainContent = ({ activeMateri, onMarkAsRead, onNavigate, onNextMateri, nex
                   ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
                   : isScorm
                     ? 'bg-amber-600 text-white hover:bg-amber-700'
-                    : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+                    : isVideo
+                      ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
+                      : 'bg-[#1D315F] text-white hover:bg-[#162847]'
             }`}
           >
             {activeMateri.is_read ? (
-              <><CheckCircle2 className="w-5 h-5" /> Selesai Dipelajari</>
+              <><CheckCircle2 className="w-5 h-5" /> {isVideo ? 'Selesai Ditonton' : 'Selesai Dipelajari'}</>
             ) : isH5P ? (
               <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
             ) : isScorm ? (
               <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi SCORM</>
+            ) : isVideo ? (
+              <><CheckCircle2 className="w-5 h-5" /> Tandai Telah Ditonton</>
             ) : (
-              'Tandai Telah Dibaca'
+              <><CheckCircle2 className="w-5 h-5" /> Tandai Telah Dibaca</>
             )}
           </button>
 
@@ -666,16 +678,23 @@ const Footer = ({ onNavigate }) => {
 const findNextMateriInfo = (allModuls, currentModulId, currentMateriId) => {
   if (!allModuls || allModuls.length === 0) return null;
 
-  const currentModul = allModuls.find(m => String(m.modul_id) === String(currentModulId));
+  let currentModul = null;
+  if (currentModulId) {
+    currentModul = allModuls.find(m => String(m.modul_id) === String(currentModulId));
+  }
+  if (!currentModul && currentMateriId) {
+    currentModul = allModuls.find(m => m.materi?.some(mat => String(mat.materi_id) === String(currentMateriId)));
+  }
   if (!currentModul || !Array.isArray(currentModul.materi)) return null;
 
-  const currIdx = currentModul.materi.findIndex(m => String(m.materi_id) === String(currentMateriId));
+  const sortedMateri = [...currentModul.materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+  const currIdx = sortedMateri.findIndex(m => String(m.materi_id) === String(currentMateriId));
 
   // 1. Cek apakah ada materi berikutnya di modul yang sama
-  if (currIdx !== -1 && currIdx + 1 < currentModul.materi.length) {
+  if (currIdx !== -1 && currIdx + 1 < sortedMateri.length) {
     return {
       type: 'same_modul_materi',
-      materi: currentModul.materi[currIdx + 1],
+      materi: sortedMateri[currIdx + 1],
       modul: currentModul,
       modulId: currentModul.modul_id
     };
@@ -702,13 +721,14 @@ const findNextMateriInfo = (allModuls, currentModulId, currentMateriId) => {
   }
 
   // 3. Cek apakah ada modul berikutnya
-  const curModulIdx = allModuls.findIndex(m => String(m.modul_id) === String(currentModulId));
+  const curModulIdx = allModuls.findIndex(m => String(m.modul_id) === String(currentModul.modul_id));
   if (curModulIdx !== -1 && curModulIdx + 1 < allModuls.length) {
     const nextMod = allModuls[curModulIdx + 1];
     if (nextMod.materi && nextMod.materi.length > 0) {
+      const nextSortedMateri = [...nextMod.materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
       return {
         type: 'next_modul_materi',
-        materi: nextMod.materi[0],
+        materi: nextSortedMateri[0],
         modul: nextMod,
         modulId: nextMod.modul_id
       };
@@ -730,35 +750,118 @@ export default function CourseDetail({ onNavigate, onBack }) {
   const resolveActiveMateri = (data, currentActive) => {
     if (!data?.modul || data.modul.length === 0) return null;
 
-    // A. Cek apakah user baru saja lulus kuis modul
-    const passedKuisModulId = localStorage.getItem('userCompletedKuisModulId');
-    if (passedKuisModulId) {
-      localStorage.removeItem('userCompletedKuisModulId');
-      const passedIdx = data.modul.findIndex(m => String(m.modul_id) === String(passedKuisModulId));
-      if (passedIdx !== -1) {
-        const curMod = data.modul[passedIdx];
-        // Cek jika masih ada materi yang belum selesai di modul yang sama
-        const unreadInSameMod = curMod.materi?.find(mat => !mat.is_read && !mat.is_locked);
-        if (unreadInSameMod) {
-          localStorage.setItem('userActiveMateriId', unreadInSameMod.materi_id);
-          localStorage.setItem('userModulId', curMod.modul_id);
-          return { ...unreadInSameMod, currentModulId: curMod.modul_id };
-        }
-
-        // Lanjut ke materi pertama di modul berikutnya
-        if (passedIdx + 1 < data.modul.length) {
-          const nextMod = data.modul[passedIdx + 1];
-          if (nextMod.materi && nextMod.materi.length > 0) {
-            const nextMat = nextMod.materi[0];
-            localStorage.setItem('userActiveMateriId', nextMat.materi_id);
-            localStorage.setItem('userModulId', nextMod.modul_id);
-            return { ...nextMat, currentModulId: nextMod.modul_id };
+    // A. Cek apakah user baru saja menyelesaikan Pre-Test
+    const justCompletedPreTest = localStorage.getItem('userJustCompletedPreTest');
+    if (justCompletedPreTest) {
+      localStorage.removeItem('userJustCompletedPreTest');
+      const savedMateriId = localStorage.getItem('userActiveMateriId');
+      if (savedMateriId) {
+        for (const m of data.modul) {
+          const found = m.materi?.find(mat => String(mat.materi_id) === String(savedMateriId));
+          if (found) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Pre-Test Selesai!',
+              text: `Materi "${found.judul}" sekarang terbuka dan siap dipelajari.`,
+              timer: 2000,
+              showConfirmButton: false
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return { ...found, currentModulId: m.modul_id };
           }
         }
       }
     }
 
-    // B. Cek materi yang tersimpan di localStorage (misal dari pre-test atau materi yang terakhir dibuka)
+    // B. Cek apakah user baru saja lulus kuis modul / menyelesaikan kuis berbobot
+    const passedKuisModulId = localStorage.getItem('userCompletedKuisModulId');
+    const justPassedKuisStr = localStorage.getItem('userJustPassedKuis');
+    if (passedKuisModulId || justPassedKuisStr) {
+      localStorage.removeItem('userCompletedKuisModulId');
+      localStorage.removeItem('userJustPassedKuis');
+      let targetModulId = passedKuisModulId;
+      let targetKuisId = localStorage.getItem('userCompletedKuisId');
+      localStorage.removeItem('userCompletedKuisId');
+
+      try {
+        if (justPassedKuisStr) {
+          const parsed = JSON.parse(justPassedKuisStr);
+          if (parsed?.modulId) targetModulId = parsed.modulId;
+          if (parsed?.kuisId) targetKuisId = parsed.kuisId;
+        }
+      } catch (e) {}
+
+      const passedIdx = data.modul.findIndex(m => String(m.modul_id) === String(targetModulId));
+      if (passedIdx !== -1) {
+        const curMod = data.modul[passedIdx];
+        
+        // 1. Cek jika masih ada materi yang belum selesai di modul yang sama
+        const unreadInSameMod = curMod.materi?.find(mat => !mat.is_read && !mat.is_locked);
+        if (unreadInSameMod) {
+          localStorage.setItem('userActiveMateriId', unreadInSameMod.materi_id);
+          localStorage.setItem('userModulId', curMod.modul_id);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return { ...unreadInSameMod, currentModulId: curMod.modul_id };
+        }
+
+        // 2. Cek jika modul ini memiliki kuis nilai berbobot yang belum selesai (jika yang baru selesai adalah kuis evaluasi biasa)
+        if (curMod.kuis_berbobot && !curMod.kuis_berbobot.is_completed && targetKuisId !== String(curMod.kuis_berbobot.kuis_id)) {
+          localStorage.setItem('userModulId', curMod.modul_id);
+          localStorage.setItem('userKuisId', curMod.kuis_berbobot.kuis_id);
+          Swal.fire({
+            icon: 'info',
+            title: 'Lanjut ke Kuis Berbobot',
+            text: `Modul ini memiliki kuis nilai berbobot: "${curMod.kuis_berbobot.judul}". Membuka kuis...`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          onNavigate('kuis');
+          return null;
+        }
+
+        // 3. Lanjut ke materi pertama di modul berikutnya
+        if (passedIdx + 1 < data.modul.length) {
+          const nextMod = data.modul[passedIdx + 1];
+          if (nextMod.materi && nextMod.materi.length > 0) {
+            const sortedMateri = [...nextMod.materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+            const nextMat = sortedMateri[0];
+            localStorage.setItem('userActiveMateriId', nextMat.materi_id);
+            localStorage.setItem('userModulId', nextMod.modul_id);
+            Swal.fire({
+              icon: 'success',
+              title: 'Lanjut ke Modul Berikutnya!',
+              text: `Melanjutkan ke ${nextMod.judul}: "${nextMat.judul}"`,
+              timer: 2200,
+              showConfirmButton: false
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return { ...nextMat, currentModulId: nextMod.modul_id };
+          }
+        } else {
+          // Modul terakhir telah selesai, cek Post Test
+          if (data.post_test && data.status_pendaftaran !== 'lulus') {
+            setTimeout(() => {
+              Swal.fire({
+                icon: 'success',
+                title: '🎉 Selamat! Seluruh Modul Selesai',
+                text: 'Anda telah menyelesaikan seluruh materi dan kuis modul pelatihan. Lanjutkan ke Post Test Akhir Pelatihan?',
+                showCancelButton: true,
+                confirmButtonColor: '#006A63',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: 'Mulai Post Test Sekarang',
+                cancelButtonText: 'Nanti'
+              }).then((res) => {
+                if (res.isConfirmed) {
+                  onNavigate('post-test');
+                }
+              });
+            }, 600);
+          }
+        }
+      }
+    }
+
+    // C. Cek materi yang tersimpan di localStorage (misal materi yang terakhir dibuka)
     const savedMateriId = localStorage.getItem('userActiveMateriId');
     if (savedMateriId) {
       for (const m of data.modul) {
@@ -769,7 +872,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
       }
     }
 
-    // C. Jika currentActive sudah ada di state, refresh status terbarunya dari data API
+    // D. Jika currentActive sudah ada di state, refresh status terbarunya dari data API
     if (currentActive) {
       for (const m of data.modul) {
         const found = m.materi?.find(mat => String(mat.materi_id) === String(currentActive.materi_id));
@@ -779,17 +882,19 @@ export default function CourseDetail({ onNavigate, onBack }) {
       }
     }
 
-    // D. Cari materi pertama yang belum dibaca dan tidak terkunci
+    // E. Cari materi pertama yang belum dibaca dan tidak terkunci
     for (const m of data.modul) {
-      const firstUnread = m.materi?.find(mat => !mat.is_read && !mat.is_locked);
+      const sortedM = [...(m.materi || [])].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      const firstUnread = sortedM.find(mat => !mat.is_read && !mat.is_locked);
       if (firstUnread) {
         return { ...firstUnread, currentModulId: m.modul_id };
       }
     }
 
-    // E. Default: materi pertama di modul pertama
+    // F. Default: materi pertama di modul pertama
     if (data.modul[0]?.materi?.[0]) {
-      return { ...data.modul[0].materi[0], currentModulId: data.modul[0].modul_id };
+      const sortedFirst = [...data.modul[0].materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      return { ...sortedFirst[0], currentModulId: data.modul[0].modul_id };
     }
 
     return null;
@@ -843,6 +948,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
     if (materiWithModul?.currentModulId) {
       localStorage.setItem('userModulId', materiWithModul.currentModulId);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGoNext = (nextMateri, nextModulId) => {
@@ -860,6 +966,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
     setActiveMateri(newActive);
     localStorage.setItem('userActiveMateriId', nextMateri.materi_id);
     localStorage.setItem('userModulId', nextModulId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleMarkAsRead = async () => {
@@ -887,16 +994,17 @@ export default function CourseDetail({ onNavigate, onBack }) {
         setActiveMateri(newActive);
         localStorage.setItem('userActiveMateriId', nextMat.materi_id);
         localStorage.setItem('userModulId', nextStep.modulId);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         Swal.fire({
           icon: 'success',
-          title: 'Materi Selesai!',
+          title: isMateriVideo(activeMateri) ? 'Video Selesai Ditonton!' : 'Materi Selesai Dibaca!',
           text: `Melanjutkan ke materi berikutnya: "${nextMat.judul}"`,
           timer: 1800,
           showConfirmButton: false
         });
       } else if (nextStep?.type === 'modul_kuis') {
-        // Materi terakhir di modul ini, arahkan ke kuis evaluasi modul
+        // Materi terakhir di modul ini, arahkan otomatis ke kuis evaluasi modul
         const result = await Swal.fire({
           icon: 'success',
           title: 'Materi Modul Selesai!',
@@ -904,18 +1012,20 @@ export default function CourseDetail({ onNavigate, onBack }) {
             <div class="text-left text-sm text-gray-600 space-y-2 pt-1">
               <p>Selamat! Anda telah menyelesaikan seluruh materi pada <b>${nextStep.modul.judul}</b>.</p>
               <p class="text-xs text-teal-800 bg-teal-50 p-2.5 rounded border border-teal-200">
-                Langkah berikutnya: Selesaikan <b>Kuis Evaluasi Modul</b> untuk mengukur pemahaman Anda dan membuka modul berikutnya.
+                Langkah berikutnya: Selesaikan <b>${nextStep.kuis.judul || 'Kuis Evaluasi Modul'}</b> untuk mengukur pemahaman Anda dan membuka modul berikutnya.
               </p>
             </div>
           `,
           showCancelButton: true,
           confirmButtonColor: '#006A63',
           cancelButtonColor: '#6B7280',
-          confirmButtonText: 'Mulai Kerjakan Kuis',
-          cancelButtonText: 'Tetap di Halaman Ini'
+          confirmButtonText: 'Mulai Kerjakan Kuis Sekarang',
+          cancelButtonText: 'Tetap di Halaman Ini',
+          timer: 3000,
+          timerProgressBar: true
         });
 
-        if (result.isConfirmed) {
+        if (result.isConfirmed || result.dismiss === Swal.DismissReason.timer) {
           localStorage.setItem('userModulId', nextStep.modulId);
           localStorage.setItem('userKuisId', nextStep.kuis.kuis_id);
           onNavigate('kuis');
@@ -929,6 +1039,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         setActiveMateri(newActive);
         localStorage.setItem('userActiveMateriId', nextMat.materi_id);
         localStorage.setItem('userModulId', nextStep.modulId);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         Swal.fire({
           icon: 'success',
@@ -940,7 +1051,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
       } else {
         // Seluruh materi & modul selesai
         setActiveMateri(prev => ({ ...prev, is_read: true }));
-        if (updatedCourse?.post_test) {
+        if (updatedCourse?.post_test && updatedCourse?.status_pendaftaran !== 'lulus') {
           const result = await Swal.fire({
             icon: 'success',
             title: '🎉 Selamat! Seluruh Silabus Selesai',
@@ -948,7 +1059,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
             showCancelButton: true,
             confirmButtonColor: '#006A63',
             cancelButtonColor: '#6B7280',
-            confirmButtonText: 'Mulai Post Test',
+            confirmButtonText: 'Mulai Post Test Sekarang',
             cancelButtonText: 'Nanti'
           });
           if (result.isConfirmed) {
@@ -957,7 +1068,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         } else {
           Swal.fire({
             icon: 'success',
-            title: 'Materi Selesai!',
+            title: isMateriVideo(activeMateri) ? 'Video Selesai Ditonton!' : 'Materi Selesai!',
             text: 'Progres belajar Anda telah tersimpan.',
             timer: 1500,
             showConfirmButton: false
@@ -974,29 +1085,44 @@ export default function CourseDetail({ onNavigate, onBack }) {
     }
   };
 
-  // Listener event postMessage / xAPI dari player H5P
+  // Listener event postMessage / xAPI dari player H5P dan YouTube Player
   useEffect(() => {
-    const handleH5PMessage = (event) => {
+    const handleWindowMessage = (event) => {
       try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        let data = event.data;
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {}
+        }
         if (!data) return;
 
+        // 1. Deteksi H5P selesai
         const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
-        const isCompleted =
+        const isH5PCompleted =
           (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed') || verb.includes('answered'))) ||
           data?.event === 'h5p-completed' ||
           data?.action === 'completed';
 
-        if (isCompleted && activeMateri?.materi_id && !activeMateri.is_read && activeMateri.tipe === 'h5p') {
+        if (isH5PCompleted && activeMateri?.materi_id && !activeMateri.is_read && activeMateri.tipe === 'h5p') {
           handleMarkAsRead();
+          return;
+        }
+
+        // 2. Deteksi YouTube player selesai (state 0 = ENDED)
+        if (data?.event === 'onStateChange' && Number(data?.info) === 0) {
+          if (activeMateri?.materi_id && !activeMateri.is_read && isMateriVideo(activeMateri)) {
+            handleMarkAsRead();
+            return;
+          }
         }
       } catch (e) {
         // Data non-JSON diabaikan
       }
     };
 
-    window.addEventListener('message', handleH5PMessage);
-    return () => window.removeEventListener('message', handleH5PMessage);
+    window.addEventListener('message', handleWindowMessage);
+    return () => window.removeEventListener('message', handleWindowMessage);
   }, [activeMateri]);
 
   // Listener & Runtime Bridge untuk Materi SCORM (SCORM 1.2 & SCORM 2004)
