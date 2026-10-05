@@ -128,7 +128,7 @@ const CertificatePreview = ({ sertifikat }) => {
       <Award className="w-8 h-8 md:w-10 md:h-10 text-[#006A63]" />
     </div>
     
-    <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">SERTIFIKAT KELULUSAN</p>
+    <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">HALAMAN KELULUSAN</p>
     
     <h2 className="text-2xl md:text-3xl font-semibold text-[#1D315F] mb-6 md:mb-8">
       {sertifikat?.judul_pembelajaran || 'Pelatihan'}
