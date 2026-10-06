@@ -47,7 +47,7 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
   };
 
   return (
-    <div className="w-full min-h-screen lg:h-screen lg:overflow-hidden relative flex flex-col font-['Inter'] bg-white select-none">
+    <div className="w-full min-h-0 lg:h-screen lg:overflow-hidden relative flex flex-col font-['Inter'] bg-white select-none">
       {/* Container Banner & Tombol */}
       <div className="w-full relative flex items-center justify-center lg:flex-1 lg:h-full lg:w-full lg:overflow-hidden bg-white">
         {/* Wrapper Banner yang menjaga proporsi gambar dan posisi logo */}
@@ -60,16 +60,16 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
           />
 
           {/* LOGO DI POJOK KIRI ATAS BANNER (Tepat di atas tulisan "Selamat Datang di", tidak menutupi tulisan) */}
-          <div className="absolute top-2 sm:top-2.5 md:top-3 lg:top-3.5 xl:top-4 left-3 sm:left-4 md:left-5 lg:left-6 xl:left-8 z-30 flex items-center gap-1.5 sm:gap-2">
+          <div className="absolute top-1 sm:top-1.5 md:top-2.5 lg:top-3.5 xl:top-4 left-2.5 sm:left-3.5 md:left-5 lg:left-6 xl:left-8 z-30 flex items-center gap-1 sm:gap-1.5 lg:gap-2">
             <img 
               src={logoBkpsdm} 
               alt="Logo BKPSDM" 
-              className="h-5 sm:h-6 md:h-6.5 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
+              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform" 
             />
             <img 
               src={asnCorpuLogo} 
               alt="Logo ASN Corpu" 
-              className="h-5 sm:h-6 md:h-6.5 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
+              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform" 
             />
           </div>
 
@@ -169,9 +169,9 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
       </div>
 
       {/* TAMPILAN MOBILE & IPAD/TABLET (< 1024px): Tombol tepat di bawah gambar tanpa celah berlebih, latar putih bersih */}
-      <div className="lg:hidden w-full bg-white px-4 sm:px-6 pt-2 pb-6 sm:pb-8">
+      <div className="lg:hidden w-full bg-white px-4 sm:px-6 pt-1.5 pb-4 sm:pb-6">
         <div className="w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto">
-          <div className="text-center mb-3 sm:mb-4">
+          <div className="text-center mb-2.5 sm:mb-3.5">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
               PILIH LAYANAN SISTEM TERPADU
             </h2>
@@ -180,24 +180,24 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5 sm:gap-3.5">
+          <div className="grid grid-cols-1 gap-2 sm:gap-3">
             {/* Mobile / Tablet HCDP */}
             <button
               type="button"
               onClick={handleHcdpClick}
-              className="group flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#0066EB] to-[#0047AB] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-blue-400/20"
+              className="group flex items-center justify-between py-2.5 px-3.5 sm:py-3.5 sm:px-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#0066EB] to-[#0047AB] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-blue-400/20"
             >
-              <div className="flex items-center gap-3 sm:gap-3.5">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
-                  <Target className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
+              <div className="flex items-center gap-2.5 sm:gap-3.5">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <Target className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-white" />
                 </div>
                 <div>
-                  <div className="text-base sm:text-lg font-black text-white leading-none">HCDP</div>
-                  <div className="text-[11px] sm:text-xs text-blue-100 font-medium mt-1">Human Capital Development Plan</div>
+                  <div className="text-sm sm:text-lg font-black text-white leading-none">HCDP</div>
+                  <div className="text-[10px] sm:text-xs text-blue-100 font-medium mt-0.5 sm:mt-1">Human Capital Development Plan</div>
                 </div>
               </div>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
-                <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#0047AB] stroke-[3]" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-[#0047AB] stroke-[3]" />
               </div>
             </button>
 
@@ -205,19 +205,19 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
             <button
               type="button"
               onClick={handleIdpClick}
-              className="group flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#C27C00] to-[#8C5800] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-amber-400/20"
+              className="group flex items-center justify-between py-2.5 px-3.5 sm:py-3.5 sm:px-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#C27C00] to-[#8C5800] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-amber-400/20"
             >
-              <div className="flex items-center gap-3 sm:gap-3.5">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
-                  <UserCheck className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
+              <div className="flex items-center gap-2.5 sm:gap-3.5">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <UserCheck className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-white" />
                 </div>
                 <div>
-                  <div className="text-base sm:text-lg font-black text-white leading-none">IDP</div>
-                  <div className="text-[11px] sm:text-xs text-amber-100 font-medium mt-1">Individual Development Plan</div>
+                  <div className="text-sm sm:text-lg font-black text-white leading-none">IDP</div>
+                  <div className="text-[10px] sm:text-xs text-amber-100 font-medium mt-0.5 sm:mt-1">Individual Development Plan</div>
                 </div>
               </div>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
-                <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#8C5800] stroke-[3]" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-[#8C5800] stroke-[3]" />
               </div>
             </button>
 
@@ -225,19 +225,19 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
             <button
               type="button"
               onClick={onNavigateLMS}
-              className="group flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#00895D] to-[#005B3D] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-emerald-400/20"
+              className="group flex items-center justify-between py-2.5 px-3.5 sm:py-3.5 sm:px-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#00895D] to-[#005B3D] text-white shadow-md hover:shadow-lg active:scale-98 transition-all duration-150 text-left cursor-pointer border border-emerald-400/20"
             >
-              <div className="flex items-center gap-3 sm:gap-3.5">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
-                  <MonitorPlay className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
+              <div className="flex items-center gap-2.5 sm:gap-3.5">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <MonitorPlay className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-white" />
                 </div>
                 <div>
-                  <div className="text-base sm:text-lg font-black text-white leading-none">LMS</div>
-                  <div className="text-[11px] sm:text-xs text-emerald-100 font-medium mt-1">Learning Management System</div>
+                  <div className="text-sm sm:text-lg font-black text-white leading-none">LMS</div>
+                  <div className="text-[10px] sm:text-xs text-emerald-100 font-medium mt-0.5 sm:mt-1">Learning Management System</div>
                 </div>
               </div>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
-                <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#005B3D] stroke-[3]" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:translate-x-0.5 transition-transform">
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-[#005B3D] stroke-[3]" />
               </div>
             </button>
           </div>
