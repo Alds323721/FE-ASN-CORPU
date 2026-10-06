@@ -49,32 +49,32 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
   return (
     <div className="w-full min-h-screen lg:h-screen lg:overflow-hidden relative flex flex-col font-['Inter'] bg-white select-none">
       {/* Container Banner & Tombol */}
-      <div className="w-full relative flex items-center justify-center lg:flex-1 lg:overflow-hidden bg-white">
+      <div className="w-full relative flex items-center justify-center lg:flex-1 lg:h-full lg:w-full lg:overflow-hidden bg-white">
         {/* Wrapper Banner yang menjaga proporsi gambar dan posisi logo */}
         <div className="relative w-full max-w-7xl mx-auto lg:max-w-none lg:w-full lg:h-full flex items-center justify-center">
-          {/* Gambar Poster Full Screen pada Desktop, Natural Aspect Ratio pada Mobile & iPad */}
+          {/* Gambar Poster: Stretched rapi mengisi layar desktop penuh tanpa terpotong (object-fill), Natural Aspect Ratio pada Mobile & iPad */}
           <img
             src={portalBannerImg}
             alt="Selamat Datang di Buleleng ASN Corpu"
-            className="w-full h-auto lg:h-full object-contain md:object-fill lg:object-fill xl:object-fill 2xl:object-cover pointer-events-none select-none block"
+            className="w-full h-auto lg:w-full lg:h-full object-contain lg:object-fill pointer-events-none select-none block"
           />
 
-          {/* LOGO DI POJOK KIRI ATAS BANNER (Tepat di atas tulisan "Selamat Datang di") */}
-          <div className="absolute top-1.5 sm:top-2 md:top-2.5 lg:top-2.5 left-2 sm:left-3 md:left-4 lg:left-6 z-30 flex items-center gap-1.5 sm:gap-2">
+          {/* LOGO DI POJOK KIRI ATAS BANNER (Tepat di atas tulisan "Selamat Datang di", tidak menutupi tulisan) */}
+          <div className="absolute top-2 sm:top-2.5 md:top-3 lg:top-3.5 xl:top-4 left-3 sm:left-4 md:left-5 lg:left-6 xl:left-8 z-30 flex items-center gap-1.5 sm:gap-2">
             <img 
               src={logoBkpsdm} 
               alt="Logo BKPSDM" 
-              className="h-5 sm:h-6 md:h-6.5 lg:h-7 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
+              className="h-5 sm:h-6 md:h-6.5 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
             />
             <img 
               src={asnCorpuLogo} 
               alt="Logo ASN Corpu" 
-              className="h-5 sm:h-6 md:h-6.5 lg:h-7 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
+              className="h-5 sm:h-6 md:h-6.5 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
             />
           </div>
 
           {/* TOMBOL KESAMPING (Desktop Layar Besar >= 1024px) */}
-          <div className="hidden lg:block absolute left-0 right-0 z-20 px-6 lg:px-8 bottom-[21%] lg:bottom-[23%] xl:bottom-[24%] 2xl:bottom-[25%]">
+          <div className="hidden lg:block absolute left-0 right-0 z-20 px-6 lg:px-8 bottom-[19%] lg:bottom-[20%] xl:bottom-[21%] 2xl:bottom-[22%]">
             <div className="w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto">
               <div className="grid grid-cols-3 gap-3.5 lg:gap-5 xl:gap-6">
                 
