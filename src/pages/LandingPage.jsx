@@ -20,7 +20,10 @@ export default function LandingPage({ onLogin, onNavigate }) {
 
   return (
     <div className="min-h-screen flex flex-col font-['Inter'] bg-white">
-      <LandingNavbar onLoginClick={() => handleAuthClick('dashboard')} />
+      <LandingNavbar 
+        onLoginClick={() => handleAuthClick('dashboard')} 
+        onNavigatePortal={() => onNavigate && onNavigate('portal')}
+      />
       
       <main className="flex-grow pt-12 sm:pt-14">
         <HeroSection onAuthClick={() => handleAuthClick('dashboard')} />
