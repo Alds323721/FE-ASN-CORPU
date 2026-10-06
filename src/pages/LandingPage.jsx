@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import LandingNavbar from './LandingPage/LandingNavbar';
 import HeroSection from './LandingPage/HeroSection';
 import AuthModal from './LandingPage/AuthModal';
-import FeaturesBanner from './LandingPage/FeaturesBanner';
 import CategoriesSection from './LandingPage/CategoriesSection';
 import PopularCoursesSection from './LandingPage/PopularCoursesSection';
 import NewsSection from './LandingPage/NewsSection';
@@ -25,9 +24,8 @@ export default function LandingPage({ onLogin, onNavigate }) {
         onNavigatePortal={() => onNavigate && onNavigate('portal')}
       />
       
-      <main className="flex-grow pt-12 sm:pt-14">
+      <main className="flex-grow pt-14 sm:pt-16">
         <HeroSection onAuthClick={() => handleAuthClick('dashboard')} />
-        <FeaturesBanner />
         <CategoriesSection />
         <PopularCoursesSection />
         <NewsSection />
