@@ -14,16 +14,27 @@ import {
 } from 'lucide-react';
 
 const AdminKomunitasSidebar = ({ activeMenu = 'admin-komunitas', onNavigate, onLogout, isOpen, setIsOpen }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [communityName, setCommunityName] = useState('Dinas Kesehatan');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [communityName, setCommunityName] = useState('');
 
   useEffect(() => {
     try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const u = JSON.parse(userStr);
-        setCurrentUser(u);
-      }
+      // 1. Ambil data profil terbaru dari database (/me) agar unit_kerja selalu akurat
+      api.get('/me').then(res => {
+        if (res.data) {
+          setCurrentUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
+        }
+      }).catch(() => { });
+
+      // 2. Ambil data komunitas yang dikelola oleh admin ini
       api.get('/admin-komunitas/komunitas-saya').then(res => {
         if (res.data?.data?.length > 0) {
           const own = res.data.data.find(k => !k.is_umum) || res.data.data[0];

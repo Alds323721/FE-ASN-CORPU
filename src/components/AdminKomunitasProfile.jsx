@@ -8,7 +8,17 @@ const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const user = currentUser || getUser() || {};
+  const [user, setUser] = useState(() => currentUser || getUser() || {});
+
+  useEffect(() => {
+    if (currentUser) {
+      setUser(currentUser);
+    } else {
+      const u = getUser();
+      if (u) setUser(u);
+    }
+  }, [currentUser]);
+
   const userRoles = getUserRoles();
   const hasMultipleRoles = canSwitchRole();
   const currentActiveRole = getActiveRole() || 'admin_komunitas';
@@ -87,11 +97,11 @@ const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
             />
           </div>
           <div className="overflow-hidden">
-            <h2 className="font-bold text-gray-900 text-sm truncate w-32 group-hover:text-teal-700 transition-colors">
+            <h2 className="font-bold text-gray-900 text-sm truncate max-w-[140px] group-hover:text-teal-700 transition-colors" title={user?.nama_lengkap || 'Admin Komunitas'}>
               {user?.nama_lengkap || 'Admin Komunitas'}
             </h2>
-            <p className="text-xs text-gray-500 truncate w-32">
-              {communityName || 'Komunitas TI'}
+            <p className="text-xs text-gray-500 truncate max-w-[140px]" title={user?.unit_kerja || user?.jabatan || (communityName || 'Unit Kerja Belum Diatur')}>
+              {user?.unit_kerja || user?.jabatan || (communityName || 'Unit Kerja Belum Diatur')}
             </p>
           </div>
         </div>
@@ -103,7 +113,7 @@ const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
         <div className="absolute left-0 right-0 top-full mt-3 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-[70] animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header Identitas */}
           <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-bold text-gray-800 truncate">
+            <p className="text-sm font-bold text-gray-800 truncate" title={user?.nama_lengkap}>
               {user?.nama_lengkap || 'Admin Komunitas'}
             </p>
             <p className="text-xs text-gray-500 font-mono">
@@ -114,9 +124,14 @@ const AdminKomunitasProfile = ({ currentUser, communityName, onNavigate }) => {
                 <Shield className="w-3 h-3" />
                 Peran: {roleLabels[currentActiveRole]?.label || currentActiveRole}
               </span>
+              {user?.unit_kerja && (
+                <span className="text-[11px] text-gray-600 truncate flex items-center gap-1 font-medium" title={user.unit_kerja}>
+                  🏢 {user.unit_kerja}
+                </span>
+              )}
               {communityName && (
-                <span className="text-[11px] text-gray-500 truncate">
-                  🏢 {communityName}
+                <span className="text-[11px] text-gray-500 truncate flex items-center gap-1" title={communityName}>
+                  👥 {communityName}
                 </span>
               )}
             </div>
