@@ -42,6 +42,7 @@ export default function AuthModal({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [resetErrorType, setResetErrorType] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [serverMessage, setServerMessage] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -311,6 +312,7 @@ export default function AuthModal({
                       setShowForgotPassword(true);
                       setResetStep('email');
                       setError('');
+                      setResetErrorType('');
                       setResetSuccess('');
                       setLoginCaptchaToken('');
                       setResetCaptchaToken('');
@@ -367,172 +369,230 @@ export default function AuthModal({
                   </p>
                 </div>
 
-                {resetError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs sm:text-sm mb-4 flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
-                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-red-800">Gagal Memproses Permintaan</p>
-                      <p className="text-xs text-red-700 mt-0.5 leading-relaxed">{resetError}</p>
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  const isEmailMismatch = resetErrorType === 'email_mismatch';
+                  const isEmailError = isEmailMismatch || resetErrorType === 'email_taken' || (Boolean(resetError) && resetError.toLowerCase().includes('email'));
+                  const isNipError = resetErrorType === 'nip_not_found' || (!isEmailError && Boolean(resetError) && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')));
 
-                {/* STEP 1: Input NIP & Email */}
-                {resetStep === 'email' && (
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (otpLockoutCountdown > 0) {
-                      setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
-                      resetRecaptchaRef.current?.reset();
-                      setResetCaptchaToken('');
-                      return;
-                    }
-                    if (!resetNip.trim() || !resetEmail.trim()) {
-                      setResetError('Silakan isi NIP dan email Anda terlebih dahulu.');
-                      resetRecaptchaRef.current?.reset();
-                      setResetCaptchaToken('');
-                      return;
-                    }
-                    if (!resetCaptchaToken) {
-                      setResetError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
-                      resetRecaptchaRef.current?.reset();
-                      return;
-                    }
-                    setResetError('');
-                    setResetLoading(true);
-                    try {
-                      const response = await api.post('/forgot-password', {
-                        nip: resetNip,
-                        email: resetEmail,
-                        recaptcha_token: resetCaptchaToken,
-                      });
-                      if (!response.data?.unique_id) {
-                        setResetError(response.data?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
-                        resetRecaptchaRef.current?.reset();
-                        setResetCaptchaToken('');
-                        return;
-                      }
-                      setResetUniqueId(response.data.unique_id);
-                      setServerMessage(response.data?.message || 'Kode OTP telah dikirimkan ke email Anda.');
-                      setResetStep('otp');
-                      setResendCount(0);
-                      setResendCountdown(60);
-                    } catch (err) {
-                      resetRecaptchaRef.current?.reset();
-                      setResetCaptchaToken('');
-                      const resData = err.response?.data;
-                      if (err.response?.status === 429) {
-                        const retryAfter = Number(resData?.retry_after) || 1800;
-                        setOtpLockoutCountdown(retryAfter);
-                        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
-                        setResetError(resData?.message || 'Batas pengiriman OTP telah tercapai. Akses dibatasi selama 30 menit.');
-                      } else {
-                        setResetError(resData?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
-                      }
-                    } finally {
-                      setResetLoading(false);
-                    }
-                  }}>
-                    {otpLockoutCountdown > 0 && (
-                      <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
-                        <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
-                          <Clock className="w-4 h-4 text-red-600 animate-pulse" />
-                          <span>Akses OTP Dibatasi (30 Menit)</span>
+                  return (
+                    <>
+                      {resetError && (
+                        <div className={`p-3.5 rounded-xl text-xs sm:text-sm mb-4 flex items-start gap-3 shadow-sm border transition-all animate-in fade-in duration-200 ${
+                          isEmailMismatch
+                            ? 'bg-rose-50/90 border-rose-300 text-rose-900'
+                            : 'bg-red-50 border-red-200 text-red-700'
+                        }`}>
+                          <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${isEmailMismatch ? 'text-rose-600' : 'text-red-600'}`} />
+                          <div className="flex-1">
+                            <p className={`font-bold ${isEmailMismatch ? 'text-rose-900 text-sm' : 'text-red-800'}`}>
+                              {isEmailMismatch ? 'Permintaan OTP Ditolak (Email Tidak Sesuai)' : 'Gagal Memproses Permintaan'}
+                            </p>
+                            <p className={`text-xs mt-1 leading-relaxed ${isEmailMismatch ? 'text-rose-700 font-medium' : 'text-red-700'}`}>
+                              {resetError}
+                            </p>
+                            {isEmailMismatch && (
+                              <div className="mt-2.5 p-2.5 rounded-lg bg-rose-100/80 border border-rose-200/80 text-[11px] text-rose-800 leading-relaxed">
+                                <span className="font-semibold block mb-0.5 text-rose-900">🛡️ Proteksi Keamanan Akun:</span>
+                                Akun dengan NIP ini sudah memiliki email resmi yang terdaftar dan terkunci. Sistem menolak pengiriman OTP ke alamat email lain guna mencegah pengambilalihan akun. Silakan masukkan email yang sebelumnya didaftarkan pada akun ini.
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-red-600">
-                          Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
-                        </p>
-                        <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
-                          {formatCountdown(otpLockoutCountdown)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="mb-4">
-                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
-                      <div className="relative">
-                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')) ? 'text-red-500' : 'text-gray-400'}`}>
-                          <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </div>
-                        <input
-                          type="text"
-                          name="reset-nip"
-                          autoComplete="username"
-                          value={resetNip}
-                          onChange={(e) => {
-                            setResetNip(e.target.value);
-                            if (resetError) setResetError('');
-                          }}
-                          required
-                          disabled={resetLoading || otpLockoutCountdown > 0}
-                          className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
-                            resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan'))
-                              ? 'border-red-400 focus:ring-red-300 focus:border-red-500 bg-red-50/20'
-                              : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
-                          }`}
-                          placeholder="Masukkan 18 digit NIP Anda"
-                        />
-                      </div>
-                      {resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')) && (
-                        <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1 font-medium animate-in fade-in duration-150">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{resetError}</span>
-                        </p>
                       )}
-                    </div>
-                    <div className="mb-5">
-                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">ALAMAT EMAIL</label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </div>
-                        <input
-                          type="email"
-                          name="reset-email"
-                          autoComplete="email"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          required
-                          disabled={resetLoading || otpLockoutCountdown > 0}
-                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
-                          placeholder="contoh: user@bkpsdm.go.id"
-                        />
-                      </div>
-                    </div>
-                    {/* reCAPTCHA v2 Checkbox */}
-                    <div className="mb-4 flex flex-col items-center justify-center">
-                      <ReCaptcha
-                        ref={resetRecaptchaRef}
-                        onChange={setResetCaptchaToken}
-                        onExpired={() => setResetCaptchaToken('')}
-                      />
-                    </div>
 
-                    <button
-                      type="submit"
-                      disabled={resetLoading || otpLockoutCountdown > 0}
-                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowForgotPassword(false);
-                        setResetError('');
-                        setResetNip('');
-                        setResetEmail('');
-                        setResetCaptchaToken('');
-                        setLoginCaptchaToken('');
-                        resetRecaptchaRef.current?.reset();
-                        loginRecaptchaRef.current?.reset();
-                      }}
-                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
-                    >
-                      Kembali ke Login
-                    </button>
-                  </form>
-                )}
+                      {/* STEP 1: Input NIP & Email */}
+                      {resetStep === 'email' && (
+                        <form onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (otpLockoutCountdown > 0) {
+                            setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                            resetRecaptchaRef.current?.reset();
+                            setResetCaptchaToken('');
+                            return;
+                          }
+                          if (!resetNip.trim() || !resetEmail.trim()) {
+                            setResetError('Silakan isi NIP dan email Anda terlebih dahulu.');
+                            resetRecaptchaRef.current?.reset();
+                            setResetCaptchaToken('');
+                            return;
+                          }
+                          if (!resetCaptchaToken) {
+                            setResetError('Silakan centang verifikasi "Saya bukan robot" terlebih dahulu.');
+                            resetRecaptchaRef.current?.reset();
+                            return;
+                          }
+                          setResetError('');
+                          setResetErrorType('');
+                          setResetLoading(true);
+                          try {
+                            const response = await api.post('/forgot-password', {
+                              nip: resetNip,
+                              email: resetEmail,
+                              recaptcha_token: resetCaptchaToken,
+                            });
+                            if (!response.data?.unique_id) {
+                              setResetError(response.data?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
+                              setResetErrorType(response.data?.error_type || '');
+                              resetRecaptchaRef.current?.reset();
+                              setResetCaptchaToken('');
+                              return;
+                            }
+                            setResetUniqueId(response.data.unique_id);
+                            setServerMessage(response.data?.message || 'Kode OTP telah dikirimkan ke email Anda.');
+                            setResetStep('otp');
+                            setResendCount(0);
+                            setResendCountdown(60);
+                            setResetErrorType('');
+                          } catch (err) {
+                            resetRecaptchaRef.current?.reset();
+                            setResetCaptchaToken('');
+                            const resData = err.response?.data;
+                            const errType = resData?.error_type || '';
+                            setResetErrorType(errType);
+                            if (err.response?.status === 429) {
+                              const retryAfter = Number(resData?.retry_after) || 1800;
+                              setOtpLockoutCountdown(retryAfter);
+                              sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+                              setResetError(resData?.message || 'Batas pengiriman OTP telah tercapai. Akses dibatasi selama 30 menit.');
+                            } else {
+                              setResetError(resData?.message || 'Terjadi kesalahan saat memproses permintaan.');
+                            }
+                          } finally {
+                            setResetLoading(false);
+                          }
+                        }}>
+                          {otpLockoutCountdown > 0 && (
+                            <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
+                              <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
+                                <Clock className="w-4 h-4 text-red-600 animate-pulse" />
+                                <span>Akses OTP Dibatasi (30 Menit)</span>
+                              </div>
+                              <p className="text-[11px] text-red-600">
+                                Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
+                              </p>
+                              <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
+                                {formatCountdown(otpLockoutCountdown)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="mb-4">
+                            <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
+                            <div className="relative">
+                              <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${isNipError ? 'text-red-500' : 'text-gray-400'}`}>
+                                <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </div>
+                              <input
+                                type="text"
+                                name="reset-nip"
+                                autoComplete="username"
+                                value={resetNip}
+                                onChange={(e) => {
+                                  setResetNip(e.target.value);
+                                  if (isNipError) {
+                                    setResetError('');
+                                    setResetErrorType('');
+                                  }
+                                }}
+                                required
+                                disabled={resetLoading || otpLockoutCountdown > 0}
+                                className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
+                                  isNipError
+                                    ? 'border-red-400 focus:ring-red-300 focus:border-red-500 bg-red-50/20'
+                                    : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
+                                }`}
+                                placeholder="Masukkan 18 digit NIP Anda"
+                              />
+                            </div>
+                            {isNipError && (
+                              <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1 font-medium animate-in fade-in duration-150">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{resetError}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="mb-5">
+                            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                              <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold">ALAMAT EMAIL</label>
+                              {isEmailMismatch && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-100/90 px-2 py-0.5 rounded border border-rose-300">
+                                  Email Tidak Cocok
+                                </span>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${isEmailError ? 'text-rose-500' : 'text-gray-400'}`}>
+                                <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </div>
+                              <input
+                                type="email"
+                                name="reset-email"
+                                autoComplete="email"
+                                value={resetEmail}
+                                onChange={(e) => {
+                                  setResetEmail(e.target.value);
+                                  if (isEmailError) {
+                                    setResetError('');
+                                    setResetErrorType('');
+                                  }
+                                }}
+                                required
+                                disabled={resetLoading || otpLockoutCountdown > 0}
+                                className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
+                                  isEmailError
+                                    ? 'border-rose-400 focus:ring-rose-300 focus:border-rose-500 bg-rose-50/30'
+                                    : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
+                                }`}
+                                placeholder="contoh: user@bkpsdm.go.id"
+                              />
+                            </div>
+                            {isEmailError && (
+                              <p className="text-rose-600 text-xs mt-1.5 flex items-center gap-1 font-medium animate-in fade-in duration-150">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{resetError}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          {/* reCAPTCHA v2 Checkbox */}
+                          <div className="mb-4 flex flex-col items-center justify-center">
+                            <ReCaptcha
+                              ref={resetRecaptchaRef}
+                              onChange={setResetCaptchaToken}
+                              onExpired={() => setResetCaptchaToken('')}
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={resetLoading || otpLockoutCountdown > 0}
+                            className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowForgotPassword(false);
+                              setResetError('');
+                              setResetErrorType('');
+                              setResetNip('');
+                              setResetEmail('');
+                              setResetCaptchaToken('');
+                              setLoginCaptchaToken('');
+                              resetRecaptchaRef.current?.reset();
+                              loginRecaptchaRef.current?.reset();
+                            }}
+                            className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
+                          >
+                            Kembali ke Login
+                          </button>
+                        </form>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* STEP 2: Input & Verify OTP */}
                 {resetStep === 'otp' && (
