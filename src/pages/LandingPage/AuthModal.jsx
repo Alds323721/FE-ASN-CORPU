@@ -15,7 +15,8 @@ import {
   Check,
   Mail,
   ShieldCheck,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function AuthModal({
@@ -367,8 +368,12 @@ export default function AuthModal({
                 </div>
 
                 {resetError && (
-                  <div className="bg-red-100 text-red-600 p-2.5 rounded text-xs sm:text-sm mb-4 text-center font-medium">
-                    {resetError}
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs sm:text-sm mb-4 flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
+                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-red-800">Gagal Memproses Permintaan</p>
+                      <p className="text-xs text-red-700 mt-0.5 leading-relaxed">{resetError}</p>
+                    </div>
                   </div>
                 )}
 
@@ -401,9 +406,13 @@ export default function AuthModal({
                         email: resetEmail,
                         recaptcha_token: resetCaptchaToken,
                       });
-                      if (response.data?.unique_id) {
-                        setResetUniqueId(response.data.unique_id);
+                      if (!response.data?.unique_id) {
+                        setResetError(response.data?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
+                        resetRecaptchaRef.current?.reset();
+                        setResetCaptchaToken('');
+                        return;
                       }
+                      setResetUniqueId(response.data.unique_id);
                       setServerMessage(response.data?.message || 'Kode OTP telah dikirimkan ke email Anda.');
                       setResetStep('otp');
                       setResendCount(0);
@@ -418,7 +427,7 @@ export default function AuthModal({
                         sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
                         setResetError(resData?.message || 'Batas pengiriman OTP telah tercapai. Akses dibatasi selama 30 menit.');
                       } else {
-                        setResetError(resData?.message || 'NIP atau email tidak ditemukan di pangkalan data kami.');
+                        setResetError(resData?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
                       }
                     } finally {
                       setResetLoading(false);
@@ -442,7 +451,7 @@ export default function AuthModal({
                     <div className="mb-4">
                       <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
                       <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')) ? 'text-red-500' : 'text-gray-400'}`}>
                           <User className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                         <input
@@ -450,13 +459,26 @@ export default function AuthModal({
                           name="reset-nip"
                           autoComplete="username"
                           value={resetNip}
-                          onChange={(e) => setResetNip(e.target.value)}
+                          onChange={(e) => {
+                            setResetNip(e.target.value);
+                            if (resetError) setResetError('');
+                          }}
                           required
                           disabled={resetLoading || otpLockoutCountdown > 0}
-                          className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400"
+                          className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
+                            resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan'))
+                              ? 'border-red-400 focus:ring-red-300 focus:border-red-500 bg-red-50/20'
+                              : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
+                          }`}
                           placeholder="Masukkan 18 digit NIP Anda"
                         />
                       </div>
+                      {resetError && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')) && (
+                        <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1 font-medium animate-in fade-in duration-150">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{resetError}</span>
+                        </p>
+                      )}
                     </div>
                     <div className="mb-5">
                       <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">ALAMAT EMAIL</label>
