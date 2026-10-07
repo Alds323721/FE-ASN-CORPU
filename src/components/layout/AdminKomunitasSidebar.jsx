@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import logoImg from '../../assets/logo-removebg-preview 1.png';
 import AdminKomunitasProfile from '../AdminKomunitasProfile';
+import { logout } from '../../utils/auth';
 import {
   LayoutDashboard,
   GraduationCap,
@@ -12,7 +13,7 @@ import {
   LogOut
 } from 'lucide-react';
 
-const AdminKomunitasSidebar = ({ activeMenu = 'admin-komunitas', onNavigate, isOpen, setIsOpen }) => {
+const AdminKomunitasSidebar = ({ activeMenu = 'admin-komunitas', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [communityName, setCommunityName] = useState('Dinas Kesehatan');
 
@@ -96,7 +97,19 @@ const AdminKomunitasSidebar = ({ activeMenu = 'admin-komunitas', onNavigate, isO
             <HeadphonesIcon className="w-4 h-4" /> Bantuan Teknis
           </button>
           <button
-            onClick={() => onNavigate && onNavigate('landing')}
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                logout(() => {
+                  if (typeof onNavigate === 'function') {
+                    onNavigate('portal');
+                  } else {
+                    window.location.href = '/';
+                  }
+                });
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors"
           >
             <LogOut className="w-5 h-5 text-gray-400 shrink-0" />

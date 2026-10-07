@@ -3,6 +3,7 @@ import api from '../api/axios';
 import Swal from 'sweetalert2';
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
+import { logout } from '../utils/auth';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Download, TrendingUp, Award, CheckCircle,
@@ -10,7 +11,7 @@ import {
   QrCode, ExternalLink, Smartphone, Laptop, Tablet
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, isOpen, setIsOpen }) => {
+const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'admin', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'user-management', label: 'Manajemen Pengguna', icon: Users },
@@ -67,7 +68,19 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, isOpen, s
             Bantuan Teknis
           </button>
           <button 
-            onClick={() => onNavigate && onNavigate('landing')}
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                logout(() => {
+                  if (typeof onNavigate === 'function') {
+                    onNavigate('portal');
+                  } else {
+                    window.location.href = '/';
+                  }
+                });
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors"
           >
             <LogOut className="w-5 h-5 text-gray-400 shrink-0" />
@@ -118,7 +131,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass, iconColorClass }) => (
   </div>
 );
 
-const MonitoringReports = ({ onNavigate }) => {
+const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTabReport, setActiveTabReport] = useState('peserta'); // 'peserta' | 'ulasan' | 'validasi'
   const [reports, setReports] = useState([]);
@@ -370,7 +383,7 @@ const MonitoringReports = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
-      <AdminSidebar activeMenu="monitoring-reports" onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <AdminSidebar activeMenu="monitoring-reports" onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <AdminHeader setIsOpen={setIsSidebarOpen} onNavigate={onNavigate} />

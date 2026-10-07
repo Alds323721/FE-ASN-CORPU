@@ -14,7 +14,7 @@ import {
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
 
-const PusatBantuan = ({ onNavigate }) => {
+const PusatBantuan = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [faqs, setFaqs] = useState([]);
   const [openFaqId, setOpenFaqId] = useState(null);
@@ -79,7 +79,7 @@ const PusatBantuan = ({ onNavigate }) => {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-      <AdminKomunitasSidebar activeMenu="pusat-bantuan" onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <AdminKomunitasSidebar activeMenu="pusat-bantuan" onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64">
         <AdminKomunitasHeader setIsOpen={setIsSidebarOpen} />

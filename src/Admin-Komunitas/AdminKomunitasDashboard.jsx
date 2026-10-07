@@ -101,7 +101,7 @@ const LineChartMockup = ({ data = [] }) => {
   );
 };
 
-const AdminKomunitasDashboard = ({ onNavigate }) => {
+const AdminKomunitasDashboard = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [courses, setCourses] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -144,7 +144,7 @@ const AdminKomunitasDashboard = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex font-sans">
-      <AdminKomunitasSidebar onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <AdminKomunitasSidebar onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <AdminKomunitasHeader setIsOpen={setIsSidebarOpen} />

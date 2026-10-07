@@ -16,7 +16,7 @@ import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
 import { validateThumbnailFile } from '../utils/imageValidation';
 
-const PelatihanSaya = ({ onNavigate }) => {
+const PelatihanSaya = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Aktif');
   const [toastMessage, setToastMessage] = useState('');
@@ -230,6 +230,7 @@ const PelatihanSaya = ({ onNavigate }) => {
       <AdminKomunitasSidebar 
         activeMenu="pelatihan-saya" 
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

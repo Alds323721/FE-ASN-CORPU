@@ -14,7 +14,7 @@ import {
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
 
-const BankSoal = ({ onNavigate }) => {
+const BankSoal = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('semua'); // 'semua', 'pilihan_ganda', 'benar_salah'
   const [searchQuery, setSearchQuery] = useState('');
@@ -293,6 +293,7 @@ const BankSoal = ({ onNavigate }) => {
       <AdminKomunitasSidebar 
         activeMenu="katalog-kursus" 
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

@@ -31,7 +31,7 @@ import ModuleModal from './DetailKursus/modals/ModuleModal';
 import MaterialModal from './DetailKursus/modals/MaterialModal';
 import QuizBuilderModal from './DetailKursus/modals/QuizBuilderModal';
 
-const DetailKursus = ({ onNavigate }) => {
+const DetailKursus = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [course, setCourse] = useState(null);
   const [modules, setModules] = useState([]);
@@ -1612,6 +1612,7 @@ const DetailKursus = ({ onNavigate }) => {
       <AdminKomunitasSidebar
         activeMenu="katalog-kursus"
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

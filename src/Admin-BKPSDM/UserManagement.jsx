@@ -15,7 +15,7 @@ const Toast = Swal.mixin({
 });
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
-import { getUser, getActiveRole, setActiveRole } from '../utils/auth';
+import { getUser, getActiveRole, setActiveRole, logout } from '../utils/auth';
 import {
   Users, BookOpen, MessageSquare, Award, CheckCircle,
   TrendingUp, TrendingDown, ArrowRight, LayoutDashboard,
@@ -24,7 +24,7 @@ import {
   ClipboardList, Edit, Download, ChevronLeft, Trash2, Key, Layers
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, isOpen, setIsOpen }) => {
+const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'admin', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'user-management', label: 'Manajemen Pengguna', icon: Users },
@@ -80,7 +80,19 @@ const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, isOpen, setI
             Bantuan Teknis
           </button>
           <button
-            onClick={() => onNavigate && onNavigate('landing')}
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                logout(() => {
+                  if (typeof onNavigate === 'function') {
+                    onNavigate('portal');
+                  } else {
+                    window.location.href = '/';
+                  }
+                });
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors"
           >
             <LogOut className="w-5 h-5 text-gray-400 shrink-0" />
@@ -131,7 +143,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass, iconColorClass }) => (
   </div>
 );
 
-const UserManagement = ({ onNavigate }) => {
+const UserManagement = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -395,7 +407,7 @@ const UserManagement = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
-      <AdminSidebar activeMenu="user-management" onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <AdminSidebar activeMenu="user-management" onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <AdminHeader setIsOpen={setIsSidebarOpen} searchTerm={searchTerm} setSearchTerm={setSearchTerm} onNavigate={onNavigate} />

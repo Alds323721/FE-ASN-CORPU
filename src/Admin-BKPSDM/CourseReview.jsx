@@ -14,13 +14,14 @@ const Toast = Swal.mixin({
   }
 });
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
+import { logout } from '../utils/auth';
 import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, ArrowLeft, BookOpen, FileText, HelpCircle,
   Eye, File, Clock, PlayCircle, Layers, Sparkles, Star, MessageSquare, Package
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, isOpen, setIsOpen }) => {
+const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'admin', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'user-management', label: 'Manajemen Pengguna', icon: Users },
@@ -76,7 +77,19 @@ const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, isOpen, se
             Bantuan Teknis
           </button>
           <button
-            onClick={() => onNavigate && onNavigate('landing')}
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                logout(() => {
+                  if (typeof onNavigate === 'function') {
+                    onNavigate('portal');
+                  } else {
+                    window.location.href = '/';
+                  }
+                });
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors"
           >
             <LogOut className="w-5 h-5 text-gray-400 shrink-0" />
@@ -113,7 +126,7 @@ const AdminHeader = ({ setIsOpen, onNavigate }) => {
   );
 };
 
-const CourseReview = ({ onNavigate }) => {
+const CourseReview = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [course, setCourse] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -170,7 +183,7 @@ const CourseReview = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
-      <AdminSidebar activeMenu="course-validation" onNavigate={onNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <AdminSidebar activeMenu="course-validation" onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <AdminHeader setIsOpen={setIsSidebarOpen} onNavigate={onNavigate} />

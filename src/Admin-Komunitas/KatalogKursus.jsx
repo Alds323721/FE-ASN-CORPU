@@ -99,7 +99,7 @@ const CourseCard = ({ course, onNavigate }) => {
   );
 };
 
-const KatalogKursus = ({ onNavigate }) => {
+const KatalogKursus = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,6 +185,7 @@ const KatalogKursus = ({ onNavigate }) => {
       <AdminKomunitasSidebar 
         activeMenu="katalog-kursus" 
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

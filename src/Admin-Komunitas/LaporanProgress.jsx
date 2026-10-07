@@ -36,7 +36,7 @@ const StatCard = ({ title, value, subtitle, trend, trendLabel, icon: Icon, iconB
   </div>
 );
 
-const LaporanProgress = ({ onNavigate }) => {
+const LaporanProgress = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pesertaList, setPesertaList] = useState([]);
   const [pembelajaranList, setPembelajaranList] = useState([]);
@@ -158,6 +158,7 @@ const LaporanProgress = ({ onNavigate }) => {
       <AdminKomunitasSidebar 
         activeMenu="laporan-progress" 
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />

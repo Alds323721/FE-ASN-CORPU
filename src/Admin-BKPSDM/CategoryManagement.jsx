@@ -3,6 +3,7 @@ import api from '../api/axios';
 import Swal from 'sweetalert2';
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
+import { logout } from '../utils/auth';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Plus, Layers, Edit, Trash2, 
@@ -21,7 +22,7 @@ const Toast = Swal.mixin({
   }
 });
 
-const AdminSidebar = ({ activeMenu = 'category-management', onNavigate, isOpen, setIsOpen }) => {
+const AdminSidebar = ({ activeMenu = 'category-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'admin', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'user-management', label: 'Manajemen Pengguna', icon: Users },
@@ -75,7 +76,19 @@ const AdminSidebar = ({ activeMenu = 'category-management', onNavigate, isOpen, 
 
         <div className="p-4 border-t border-gray-100 space-y-2">
           <button 
-            onClick={() => onNavigate && onNavigate('landing')}
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                logout(() => {
+                  if (typeof onNavigate === 'function') {
+                    onNavigate('portal');
+                  } else {
+                    window.location.href = '/';
+                  }
+                });
+              }
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors"
           >
             <LogOut className="w-5 h-5 text-gray-400 shrink-0" />
@@ -115,7 +128,7 @@ const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm, onNavigate }) => {
   );
 };
 
-export default function CategoryManagement({ onNavigate }) {
+export default function CategoryManagement({ onNavigate, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -274,6 +287,7 @@ export default function CategoryManagement({ onNavigate }) {
       <AdminSidebar
         activeMenu="category-management"
         onNavigate={onNavigate}
+        onLogout={onLogout}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
       />
