@@ -147,7 +147,24 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationMeta, setPaginationMeta] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 20,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
+  const [userStats, setUserStats] = useState({
+    total: 0,
+    aktif: 0,
+    admin_komunitas: 0,
+    belum_aktivasi: 0,
+  });
   const [komunitasList, setKomunitasList] = useState([]);
   const [filterBelumAktivasi, setFilterBelumAktivasi] = useState(false);
 
@@ -162,22 +179,46 @@ const UserManagement = ({ onNavigate, onLogout }) => {
     jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: ''
   });
 
-  const fetchUsers = async () => {
+  // Debounce search agar tidak membebani server saat mengetik
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const fetchUsers = async (page = currentPage, search = debouncedSearch, belumAktivasi = filterBelumAktivasi) => {
     try {
-      const response = await api.get('/admin-bkpsdm/pengguna');
-      const resData = response.data?.data;
-      if (Array.isArray(resData)) {
-        setUsers(resData);
-      } else if (resData && Array.isArray(resData.data)) {
-        setUsers(resData.data);
-      } else {
-        setUsers([]);
+      setTableLoading(true);
+      const params = {
+        page: page,
+        per_page: 20,
+      };
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
+      if (belumAktivasi) {
+        params.belum_aktivasi = 1;
+      }
+
+      const response = await api.get('/admin-bkpsdm/pengguna', { params });
+      const res = response.data;
+      const resData = res?.data;
+      setUsers(Array.isArray(resData) ? resData : []);
+
+      if (res?.meta) {
+        setPaginationMeta(res.meta);
+      }
+      if (res?.stats) {
+        setUserStats(res.stats);
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
       setUsers([]);
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -193,7 +234,10 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(currentPage, debouncedSearch, filterBelumAktivasi);
+  }, [currentPage, debouncedSearch, filterBelumAktivasi]);
+
+  useEffect(() => {
     fetchKomunitas();
   }, []);
 
@@ -388,20 +432,36 @@ const UserManagement = ({ onNavigate, onLogout }) => {
     );
   };
 
-  const userList = Array.isArray(users) ? users : [];
+  const filteredUsers = Array.isArray(users) ? users : [];
 
-  const filteredUsers = userList.filter(u => {
-    const matchesSearch = 
-      (u.nama_lengkap && u.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase())) || 
-      (u.nip && u.nip.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (u.rumpun_jabatan && u.rumpun_jabatan.toLowerCase().includes(searchTerm.toLowerCase()));
+  const getPageNumbers = () => {
+    const totalPages = paginationMeta.last_page || 1;
+    const current = currentPage;
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
 
-    if (filterBelumAktivasi) {
-      return matchesSearch && u.sudah_aktivasi === false;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
     }
-    return matchesSearch;
-  });
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
+  };
 
   if (loading) return <AdminLoadingSkeleton />;
 
@@ -433,21 +493,21 @@ const UserManagement = ({ onNavigate, onLogout }) => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <StatCard
               title="Total Pengguna"
-              value={userList.length}
+              value={(userStats.total || paginationMeta.total || 0).toLocaleString('id-ID')}
               icon={Users}
               colorClass="bg-blue-100"
               iconColorClass="text-blue-600"
             />
             <StatCard
               title="Pengguna Aktif"
-              value={userList.filter(u => u.status === 'aktif').length}
+              value={(userStats.aktif || 0).toLocaleString('id-ID')}
               icon={CheckCircle}
               colorClass="bg-emerald-100"
               iconColorClass="text-emerald-500"
             />
             <StatCard
               title="Admin Komunitas"
-              value={userList.filter(u => u.peran === 'admin_komunitas').length}
+              value={(userStats.admin_komunitas || 0).toLocaleString('id-ID')}
               icon={ClipboardList}
               colorClass="bg-orange-100"
               iconColorClass="text-orange-500"
@@ -467,7 +527,10 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                 />
                 <button
                   type="button"
-                  onClick={() => setFilterBelumAktivasi(!filterBelumAktivasi)}
+                  onClick={() => {
+                    setFilterBelumAktivasi(!filterBelumAktivasi);
+                    setCurrentPage(1);
+                  }}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors border ${
                     filterBelumAktivasi
                       ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
@@ -479,7 +542,15 @@ const UserManagement = ({ onNavigate, onLogout }) => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
+              {tableLoading && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 transition-opacity">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md border border-gray-200 text-sm font-medium text-teal-700">
+                    <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                    Memuat data...
+                  </div>
+                </div>
+              )}
               <table className="w-full text-left border-collapse min-w-[950px]">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
@@ -574,6 +645,54 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {paginationMeta.total > 0 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50">
+                <div className="text-sm text-gray-500 text-center md:text-left">
+                  Menampilkan <span className="font-semibold text-gray-700">{paginationMeta.from || 0}</span> - <span className="font-semibold text-gray-700">{paginationMeta.to || 0}</span> dari <span className="font-semibold text-gray-700">{paginationMeta.total?.toLocaleString('id-ID') || 0}</span> pengguna
+                </div>
+                
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage <= 1 || tableLoading}
+                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sebelumnya</span>
+                  </button>
+
+                  {getPageNumbers().map((pageItem, idx) => (
+                    pageItem === '...' ? (
+                      <span key={`dots-${idx}`} className="px-2 py-1 text-gray-400 text-sm select-none">...</span>
+                    ) : (
+                      <button
+                        key={pageItem}
+                        onClick={() => setCurrentPage(pageItem)}
+                        disabled={tableLoading}
+                        className={`min-w-8 h-8 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
+                          currentPage === pageItem
+                            ? 'bg-teal-700 text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-white hover:text-teal-700 border border-gray-200'
+                        }`}
+                      >
+                        {pageItem}
+                      </button>
+                    )
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, paginationMeta.last_page))}
+                    disabled={currentPage >= paginationMeta.last_page || tableLoading}
+                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                  >
+                    <span className="hidden sm:inline">Berikutnya</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Add User Modal */}
