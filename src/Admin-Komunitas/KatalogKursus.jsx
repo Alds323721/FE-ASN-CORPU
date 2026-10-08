@@ -99,6 +99,39 @@ const CourseCard = ({ course, onNavigate }) => {
   );
 };
 
+/* ── Skeletons ───────────────────────────────────────── */
+const CategorySkeleton = () => (
+  <div className="space-y-3 py-1">
+    {[80, 65, 85, 60, 75].map((w, i) => (
+      <div key={i} className="flex items-center gap-3 animate-pulse">
+        <div className="w-5 h-5 rounded border border-gray-200 bg-gray-200 shrink-0" />
+        <div className="h-4 bg-gray-200 rounded" style={{ width: `${w}%` }} />
+      </div>
+    ))}
+  </div>
+);
+
+const CourseCardSkeleton = () => (
+  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col animate-pulse">
+    <div className="h-48 bg-gray-200 relative">
+      <div className="absolute top-3 left-3 w-24 h-6 rounded-md bg-gray-300" />
+    </div>
+    <div className="p-5 flex-1 flex flex-col">
+      <div className="h-5 bg-gray-200 rounded w-11/12 mb-2" />
+      <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
+      <div className="space-y-1.5 mb-4 flex-1">
+        <div className="h-3 bg-gray-200 rounded w-full" />
+        <div className="h-3 bg-gray-200 rounded w-5/6" />
+      </div>
+      <div className="flex items-center gap-4 py-3 border-t border-b border-gray-100 mb-4">
+        <div className="h-4 w-16 bg-gray-200 rounded" />
+        <div className="h-4 w-16 bg-gray-200 rounded" />
+      </div>
+      <div className="w-full h-10 bg-gray-200 rounded-lg mt-auto" />
+    </div>
+  </div>
+);
+
 const KatalogKursus = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
@@ -108,11 +141,7 @@ const KatalogKursus = ({ onNavigate, onLogout }) => {
   const itemsPerPage = 6;
 
   const [categories, setCategories] = useState([
-    'Semua Kategori',
-    'Manajemen ASN',
-    'Teknologi Informasi',
-    'Pengembangan Kompetensi',
-    'Pelayanan Publik'
+    'Semua Kategori'
   ]);
 
   const [courses, setCourses] = useState([]);
@@ -222,27 +251,31 @@ const KatalogKursus = ({ onNavigate, onLogout }) => {
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                   <h3 className="font-bold text-gray-900 mb-4">Kategori</h3>
                   <div className="space-y-3">
-                    {categories.map((cat) => (
-                      <label 
-                        key={cat} 
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setCurrentPage(1);
-                        }}
-                        className="flex items-center gap-3 cursor-pointer group"
-                      >
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                          selectedCategory === cat 
-                            ? 'bg-[#0F766E] border-[#0F766E]' 
-                            : 'border-gray-300 group-hover:border-[#0F766E]'
-                        }`}>
-                          {selectedCategory === cat && <Check className="w-3.5 h-3.5 text-white" />}
-                        </div>
-                        <span className={`text-sm ${selectedCategory === cat ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>
-                          {cat}
-                        </span>
-                      </label>
-                    ))}
+                    {loading ? (
+                      <CategorySkeleton />
+                    ) : (
+                      categories.map((cat) => (
+                        <label 
+                          key={cat} 
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setCurrentPage(1);
+                          }}
+                          className="flex items-center gap-3 cursor-pointer group"
+                        >
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            selectedCategory === cat 
+                              ? 'bg-[#0F766E] border-[#0F766E]' 
+                              : 'border-gray-300 group-hover:border-[#0F766E]'
+                          }`}>
+                            {selectedCategory === cat && <Check className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                          <span className={`text-sm ${selectedCategory === cat ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>
+                            {cat}
+                          </span>
+                        </label>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -268,7 +301,9 @@ const KatalogKursus = ({ onNavigate, onLogout }) => {
               <div className="flex-1 flex flex-col">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
                   {loading ? (
-                    <div className="col-span-full text-center py-16 text-gray-500 font-medium">Memuat katalog kursus...</div>
+                    [...Array(6)].map((_, i) => (
+                      <CourseCardSkeleton key={i} />
+                    ))
                   ) : displayedCourses.length === 0 ? (
                     <div className="col-span-full text-center py-16 text-gray-500 font-medium">
                       Tidak ada kursus yang sesuai dengan filter atau pencarian Anda.

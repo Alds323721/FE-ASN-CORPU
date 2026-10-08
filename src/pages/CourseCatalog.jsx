@@ -198,6 +198,56 @@ const CatalogCard = ({ id, image, category, title, description, jpl, modules, is
   );
 };
 
+/* ── Skeleton Loaders ───────────────────────────────── */
+const CategoryFilterSkeleton = () => (
+  <div className="space-y-3.5 py-1">
+    {[82, 64, 76, 55, 68].map((width, idx) => (
+      <div key={idx} className="flex items-center gap-3 animate-pulse">
+        <div className="w-5 h-5 rounded bg-gray-200 border border-gray-200 shrink-0" />
+        <div 
+          className="h-4 bg-gray-200 rounded" 
+          style={{ width: `${width}%` }} 
+        />
+      </div>
+    ))}
+  </div>
+);
+
+const CourseCardSkeleton = () => (
+  <div className="bg-white border border-[#BBC9C7]/70 rounded-lg overflow-hidden flex flex-col animate-pulse shadow-xs">
+    {/* Image Skeleton */}
+    <div className="h-44 bg-gray-200 relative overflow-hidden">
+      <div className="absolute top-3 left-3 w-24 h-5 rounded bg-gray-300" />
+    </div>
+
+    {/* Content Skeleton */}
+    <div className="p-6 flex-1 flex flex-col">
+      {/* Community tag */}
+      <div className="h-3.5 w-28 bg-gray-200 rounded mb-2.5" />
+
+      {/* Title */}
+      <div className="h-5 bg-gray-200 rounded w-11/12 mb-2" />
+      <div className="h-5 bg-gray-200 rounded w-3/4 mb-4" />
+
+      {/* Description */}
+      <div className="space-y-2 mb-5 flex-1">
+        <div className="h-3 bg-gray-200 rounded w-full" />
+        <div className="h-3 bg-gray-200 rounded w-5/6" />
+        <div className="h-3 bg-gray-200 rounded w-2/3" />
+      </div>
+
+      {/* Meta (JPL, Modul) */}
+      <div className="flex items-center gap-5 mb-6">
+        <div className="h-4 w-16 bg-gray-200 rounded" />
+        <div className="h-4 w-16 bg-gray-200 rounded" />
+      </div>
+
+      {/* Action button */}
+      <div className="w-full h-10 bg-gray-200 rounded-md mt-auto" />
+    </div>
+  </div>
+);
+
 /* ── Main Catalog Section ────────────────────────────── */
 const CatalogContent = ({ onNavigate }) => {
   const { t } = useLanguage();
@@ -311,21 +361,20 @@ const CatalogContent = ({ onNavigate }) => {
   };
 
   const [categories, setCategories] = useState([
-    { value: 'Semua Kategori', label: t('catalog.allCategories') },
-    { value: 'Manajemen ASN', label: t('catalog.catAsn') },
-    { value: 'Teknologi Informasi', label: t('catalog.catIt') },
-    { value: 'Pengembangan Kompetensi', label: 'Pengembangan Kompetensi' },
-    { value: 'Pelayanan Publik', label: t('catalog.catPublic') }
+    { value: 'Semua Kategori', label: t('catalog.allCategories') }
   ]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        setCategoriesLoading(true);
         const res = await api.get('/kategori-kursus');
-        if (res.data?.data && res.data.data.length > 0) {
+        if (res.data?.data && Array.isArray(res.data.data)) {
           const dynamicCats = [
             { value: 'Semua Kategori', label: t('catalog.allCategories') },
             ...res.data.data.map(cat => ({
+              id: cat.kategori_id,
               value: cat.nama_kategori,
               label: cat.nama_kategori
             }))
@@ -334,6 +383,8 @@ const CatalogContent = ({ onNavigate }) => {
         }
       } catch (err) {
         console.error('Error fetching categories in catalog:', err);
+      } finally {
+        setCategoriesLoading(false);
       }
     };
     fetchCategories();
@@ -376,14 +427,18 @@ const CatalogContent = ({ onNavigate }) => {
 
           <h3 className="font-bold text-xl text-[#1D315F] mb-4 pb-4 border-b border-gray-100">{t('catalog.category')}</h3>
           <div className="space-y-4">
-            {categories.map((c, idx) => (
-              <label key={idx} className="flex items-center gap-3 cursor-pointer" onClick={() => { setCategory(c.value); setCurrentPage(1); }}>
-                <div className={`w-5 h-5 rounded flex items-center justify-center border ${category === c.value ? 'bg-[#006A63] border-[#006A63]' : 'bg-white border-gray-300'}`}>
-                  {category === c.value && <Check className="w-3.5 h-3.5 text-white" />}
-                </div>
-                <span className="text-[14px] font-semibold text-[#1D315F]">{c.label}</span>
-              </label>
-            ))}
+            {categoriesLoading ? (
+              <CategoryFilterSkeleton />
+            ) : (
+              categories.map((c, idx) => (
+                <label key={idx} className="flex items-center gap-3 cursor-pointer group" onClick={() => { setCategory(c.value); setCurrentPage(1); }}>
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${category === c.value ? 'bg-[#006A63] border-[#006A63]' : 'bg-white border-gray-300 group-hover:border-[#006A63]'}`}>
+                    {category === c.value && <Check className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                  <span className={`text-[14px] transition-colors ${category === c.value ? 'font-bold text-[#006A63]' : 'font-semibold text-[#1D315F] group-hover:text-[#006A63]'}`}>{c.label}</span>
+                </label>
+              ))
+            )}
           </div>
         </div>
       </aside>
@@ -427,7 +482,11 @@ const CatalogContent = ({ onNavigate }) => {
         </div>
 
         {loading ? (
-          <div className="py-20 text-center text-gray-500 font-bold">{t('catalog.loading')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {[...Array(6)].map((_, i) => (
+              <CourseCardSkeleton key={i} />
+            ))}
+          </div>
         ) : !hasJoinedCommunity ? (
           <div className="bg-white border border-[#BBC9C7] rounded-xl p-8 sm:p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto shadow-sm my-6">
             <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center text-[#006A63] mb-4">

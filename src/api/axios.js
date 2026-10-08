@@ -51,7 +51,8 @@ api.interceptors.response.use(
             if (
                 error.config?.url !== '/login' &&
                 !error.config?.url?.endsWith('/login') &&
-                !error.config?.url?.includes('/sertifikat/validasi')
+                !error.config?.url?.includes('/sertifikat/validasi') &&
+                !error.config?.url?.includes('/kategori-kursus')
             ) {
                 clearAuth();
                 window.location.href = '/';
