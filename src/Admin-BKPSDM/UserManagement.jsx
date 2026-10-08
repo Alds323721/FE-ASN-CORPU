@@ -712,7 +712,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap</label>
-                    <input required type="text" value={formData.nama_lengkap} onChange={e => setFormData({ ...formData, nama_lengkap: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Gelar, Nama Lengkap, Gelar" />
+                    <input required type="text" maxLength={200} value={formData.nama_lengkap} onChange={e => setFormData({ ...formData, nama_lengkap: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Gelar, Nama Lengkap, Gelar" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
@@ -806,7 +806,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Unit Kerja</label>
-                    <input type="text" value={formData.unit_kerja} onChange={e => setFormData({ ...formData, unit_kerja: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Dinas Komunikasi dan Informatika" />
+                    <input type="text" maxLength={200} value={formData.unit_kerja} onChange={e => setFormData({ ...formData, unit_kerja: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Dinas Komunikasi dan Informatika" />
                   </div>
                   <div className="pt-4 flex justify-end gap-2">
                     <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Batal</button>
