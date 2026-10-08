@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
 import { logout } from '../utils/auth';
-import { 
+import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Download, TrendingUp, Award, CheckCircle,
   Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
@@ -24,7 +24,7 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
   return (
     <>
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
@@ -38,7 +38,7 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -50,11 +50,10 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
                   if (onNavigate) onNavigate(item.id);
                   if (window.innerWidth < 1024) setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'bg-teal-700 text-white shadow-md' 
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
+                    ? 'bg-teal-700 text-white shadow-md'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-gray-400'}`} />
                 <span className="text-left truncate leading-tight">{item.label}</span>
@@ -67,7 +66,7 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
             Bantuan Teknis
           </button>
-          <button 
+          <button
             onClick={() => {
               if (typeof onLogout === 'function') {
                 onLogout();
@@ -136,9 +135,27 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [activeTabReport, setActiveTabReport] = useState('peserta'); // 'peserta' | 'ulasan' | 'validasi'
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [komunitasList, setKomunitasList] = useState([]);
   const [selectedKomunitas, setSelectedKomunitas] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pagination Peserta State (10 data per halaman)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationMeta, setPaginationMeta] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 20,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
+  const [pesertaStats, setPesertaStats] = useState({
+    total_peserta: 0,
+    progres_rata_rata: 0,
+    sertifikat_terbit: 0,
+    tingkat_kelulusan: 0,
+  });
 
   // Ulasan State
   const [ulasanList, setUlasanList] = useState([]);
@@ -174,12 +191,15 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const fetchReports = async () => {
+  const fetchReports = async (page = currentPage) => {
     try {
-      setLoading(true);
-      const params = {};
+      setTableLoading(true);
+      const params = {
+        page: page,
+        per_page: 10,
+      };
       if (selectedKomunitas) params.komunitas_id = selectedKomunitas;
-      if (searchTerm) params.search = searchTerm;
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
 
       const response = await api.get('/admin-bkpsdm/laporan/peserta', { params });
       const rawData = response.data.data || [];
@@ -198,10 +218,19 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         certificateUrl: user.sertifikat?.download_url,
         ulasan: user.ulasan || null
       })));
+
+      if (response.data?.meta) {
+        setPaginationMeta(response.data.meta);
+      }
+      if (response.data?.stats) {
+        setPesertaStats(response.data.stats);
+      }
     } catch (error) {
       console.error('Failed to fetch reports:', error);
+      setReports([]);
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -260,9 +289,21 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     fetchValidasiReports(1);
   }, []);
 
+  // Fetch data saat currentPage berubah
   useEffect(() => {
     if (activeTabReport === 'peserta') {
-      fetchReports();
+      fetchReports(currentPage);
+    }
+  }, [currentPage]);
+
+  // Fetch data saat tab atau filter komunitas berganti
+  useEffect(() => {
+    if (activeTabReport === 'peserta') {
+      if (currentPage === 1) {
+        fetchReports(1);
+      } else {
+        setCurrentPage(1);
+      }
     } else if (activeTabReport === 'ulasan') {
       fetchUlasanReports();
     } else if (activeTabReport === 'validasi') {
@@ -279,12 +320,45 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (activeTabReport === 'peserta') {
-      fetchReports();
+      if (currentPage === 1) {
+        fetchReports(1);
+      } else {
+        setCurrentPage(1);
+      }
     } else if (activeTabReport === 'ulasan') {
       fetchUlasanReports();
     } else if (activeTabReport === 'validasi') {
       fetchValidasiReports(1);
     }
+  };
+
+  const getPageNumbers = () => {
+    const totalPages = paginationMeta.last_page || 1;
+    const current = currentPage;
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
   };
 
   const handleExport = async () => {
@@ -293,9 +367,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       if (selectedKomunitas) params.komunitas_id = selectedKomunitas;
       if (searchTerm) params.search = searchTerm;
 
-      const response = await api.get('/admin-bkpsdm/laporan/peserta/export', { 
+      const response = await api.get('/admin-bkpsdm/laporan/peserta/export', {
         params,
-        responseType: 'blob' 
+        responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -370,26 +444,26 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   };
 
   // Dynamic calculations
-  const totalPesertaAktif = reports.length;
-  const avgProgres = reports.length > 0
-    ? `${Math.round(reports.reduce((acc, r) => acc + (r.progress || 0), 0) / reports.length)}%`
-    : '0%';
-  const sertifikatTerbitCount = reports.filter(r => r.hasCertificate).length;
-  const tingkatKelulusan = reports.length > 0
-    ? `${Math.round((reports.filter(r => r.status === 'Lulus').length / reports.length) * 100)}%`
-    : '0%';
+  const totalPesertaAktif = (pesertaStats.total_peserta ?? paginationMeta.total) || reports.length;
+  const avgProgres = pesertaStats.progres_rata_rata !== undefined
+    ? `${pesertaStats.progres_rata_rata}%`
+    : (reports.length > 0 ? `${Math.round(reports.reduce((acc, r) => acc + (r.progress || 0), 0) / reports.length)}%` : '0%');
+  const sertifikatTerbitCount = pesertaStats.sertifikat_terbit ?? reports.filter(r => r.hasCertificate).length;
+  const tingkatKelulusan = pesertaStats.tingkat_kelulusan !== undefined
+    ? `${pesertaStats.tingkat_kelulusan}%`
+    : (reports.length > 0 ? `${Math.round((reports.filter(r => r.status === 'Lulus').length / reports.length) * 100)}%` : '0%');
 
   if (loading && reports.length === 0) return <AdminLoadingSkeleton />;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       <AdminSidebar activeMenu="monitoring-reports" onNavigate={onNavigate} onLogout={onLogout} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      
+
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <AdminHeader setIsOpen={setIsSidebarOpen} onNavigate={onNavigate} />
-        
+
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
-          
+
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-[#1D315F] mb-2">Monitoring & Laporan</h1>
             <p className="text-sm text-gray-500">Pantau aktivitas belajar, progres peserta, evaluasi mutu, dan ulasan kepuasan pelatihan ASN.</p>
@@ -399,11 +473,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
           <div className="flex border-b border-gray-200 mb-6 gap-4 sm:gap-6 overflow-x-auto">
             <button
               onClick={() => setActiveTabReport('peserta')}
-              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTabReport === 'peserta'
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTabReport === 'peserta'
                   ? 'text-teal-700 border-b-2 border-teal-700'
                   : 'text-gray-500 hover:text-gray-800'
-              }`}
+                }`}
             >
               <Users className="w-4 h-4" />
               <span>Laporan Progres Peserta</span>
@@ -413,11 +486,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </button>
             <button
               onClick={() => setActiveTabReport('ulasan')}
-              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTabReport === 'ulasan'
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTabReport === 'ulasan'
                   ? 'text-teal-700 border-b-2 border-teal-700'
                   : 'text-gray-500 hover:text-gray-800'
-              }`}
+                }`}
             >
               <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
               <span>Ulasan & Evaluasi Mutu Pelatihan</span>
@@ -427,11 +499,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </button>
             <button
               onClick={() => setActiveTabReport('validasi')}
-              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                activeTabReport === 'validasi'
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTabReport === 'validasi'
                   ? 'text-teal-700 border-b-2 border-teal-700'
                   : 'text-gray-500 hover:text-gray-800'
-              }`}
+                }`}
             >
               <QrCode className="w-4 h-4 text-emerald-600" />
               <span>Audit Validasi & Scan QR</span>
@@ -440,34 +511,34 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               </span>
             </button>
           </div>
-          
+
           {/* Stat Cards - Peserta Tab */}
           {activeTabReport === 'peserta' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <StatCard 
-                title="TOTAL PESERTA AKTIF" 
-                value={totalPesertaAktif} 
+              <StatCard
+                title="TOTAL PESERTA AKTIF"
+                value={totalPesertaAktif}
                 icon={Users}
                 colorClass="bg-blue-50"
                 iconColorClass="text-blue-500"
               />
-              <StatCard 
-                title="PROGRES RATA-RATA" 
-                value={avgProgres} 
+              <StatCard
+                title="PROGRES RATA-RATA"
+                value={avgProgres}
                 icon={TrendingUp}
                 colorClass="bg-orange-50"
                 iconColorClass="text-orange-500"
               />
-              <StatCard 
-                title="SERTIFIKAT TERBIT" 
-                value={sertifikatTerbitCount} 
+              <StatCard
+                title="SERTIFIKAT TERBIT"
+                value={sertifikatTerbitCount}
                 icon={Award}
                 colorClass="bg-green-50"
                 iconColorClass="text-green-500"
               />
-              <StatCard 
-                title="TINGKAT KELULUSAN (%)" 
-                value={tingkatKelulusan} 
+              <StatCard
+                title="TINGKAT KELULUSAN (%)"
+                value={tingkatKelulusan}
                 icon={CheckCircle}
                 colorClass="bg-teal-50"
                 iconColorClass="text-teal-600"
@@ -478,30 +549,30 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
           {/* Stat Cards - Ulasan Tab */}
           {activeTabReport === 'ulasan' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <StatCard 
-                title="TOTAL ULASAN MASUK" 
-                value={ulasanStats.total_ulasan} 
+              <StatCard
+                title="TOTAL ULASAN MASUK"
+                value={ulasanStats.total_ulasan}
                 icon={MessageSquare}
                 colorClass="bg-amber-50"
                 iconColorClass="text-amber-500"
               />
-              <StatCard 
-                title="RATA-RATA KEPUASAN" 
-                value={ulasanStats.rata_rata_rating ? `⭐ ${ulasanStats.rata_rata_rating}` : '0.0'} 
+              <StatCard
+                title="RATA-RATA KEPUASAN"
+                value={ulasanStats.rata_rata_rating ? `⭐ ${ulasanStats.rata_rata_rating}` : '0.0'}
                 icon={Star}
                 colorClass="bg-yellow-50"
                 iconColorClass="text-yellow-600"
               />
-              <StatCard 
-                title="INDEKS PUAS (>= 4★)" 
-                value={`${ulasanStats.persen_puas || 0}%`} 
+              <StatCard
+                title="INDEKS PUAS (>= 4★)"
+                value={`${ulasanStats.persen_puas || 0}%`}
                 icon={ThumbsUp}
                 colorClass="bg-green-50"
                 iconColorClass="text-green-600"
               />
-              <StatCard 
-                title="PELATIHAN TERULAS" 
-                value={new Set(ulasanList.map(u => u.pembelajaran?.pembelajaran_id)).size} 
+              <StatCard
+                title="PELATIHAN TERULAS"
+                value={new Set(ulasanList.map(u => u.pembelajaran?.pembelajaran_id)).size}
                 icon={BookOpen}
                 colorClass="bg-teal-50"
                 iconColorClass="text-teal-600"
@@ -512,30 +583,30 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
           {/* Stat Cards - Validasi Tab */}
           {activeTabReport === 'validasi' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <StatCard 
-                title="TOTAL PEMINDAIAN (SCAN)" 
-                value={validasiStats.total_validasi} 
+              <StatCard
+                title="TOTAL PEMINDAIAN (SCAN)"
+                value={validasiStats.total_validasi}
                 icon={QrCode}
                 colorClass="bg-blue-50"
                 iconColorClass="text-blue-600"
               />
-              <StatCard 
-                title="SERTIFIKAT TERVALIDASI" 
-                value={validasiStats.sertifikat_unik} 
+              <StatCard
+                title="SERTIFIKAT TERVALIDASI"
+                value={validasiStats.sertifikat_unik}
                 icon={ShieldCheck}
                 colorClass="bg-green-50"
                 iconColorClass="text-green-600"
               />
-              <StatCard 
-                title="VERIFIKASI HARI INI" 
-                value={validasiStats.validasi_hari_ini} 
+              <StatCard
+                title="VERIFIKASI HARI INI"
+                value={validasiStats.validasi_hari_ini}
                 icon={Calendar}
                 colorClass="bg-amber-50"
                 iconColorClass="text-amber-600"
               />
-              <StatCard 
-                title="STATUS ARSIP" 
-                value="100% Otentik" 
+              <StatCard
+                title="STATUS ARSIP"
+                value="100% Otentik"
                 icon={CheckCircle}
                 colorClass="bg-teal-50"
                 iconColorClass="text-teal-600"
@@ -548,7 +619,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
                 {activeTabReport !== 'validasi' && (
-                  <select 
+                  <select
                     value={selectedKomunitas}
                     onChange={(e) => setSelectedKomunitas(e.target.value)}
                     className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
@@ -561,7 +632,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 )}
 
                 {activeTabReport === 'ulasan' && (
-                  <select 
+                  <select
                     value={selectedRatingFilter}
                     onChange={(e) => setSelectedRatingFilter(e.target.value)}
                     className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
@@ -584,8 +655,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       activeTabReport === 'peserta'
                         ? "Cari Nama / NIP..."
                         : activeTabReport === 'ulasan'
-                        ? "Cari Peserta / Pelatihan / Kata Kunci..."
-                        : "Cari No. Sertifikat / Nama / NIP / IP..."
+                          ? "Cari Peserta / Pelatihan / Kata Kunci..."
+                          : "Cari No. Sertifikat / Nama / NIP / IP..."
                     }
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
@@ -605,10 +676,18 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </button>
               )}
             </div>
-            
+
             {/* Table: Laporan Peserta */}
             {activeTabReport === 'peserta' && (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto relative">
+                {tableLoading && (
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 transition-opacity">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md border border-gray-200 text-sm font-medium text-teal-700">
+                      <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                      Memuat data...
+                    </div>
+                  </div>
+                )}
                 <table className="w-full text-left border-collapse min-w-[1100px]">
                   <thead>
                     <tr className="bg-white border-b border-gray-100">
@@ -647,7 +726,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                         </td>
                         <td className="px-6 py-4">
                           {report.hasCertificate ? (
-                            <button 
+                            <button
                               onClick={() => handleViewCertificate(report)}
                               className="text-teal-700 hover:text-teal-800 font-bold text-sm flex items-center gap-1.5 transition-colors"
                             >
@@ -682,12 +761,59 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     {reports.length === 0 && (
                       <tr>
                         <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                          Tidak ada laporan peserta.
+                          {searchTerm ? 'Tidak ada laporan peserta yang sesuai dengan pencarian.' : 'Tidak ada laporan peserta.'}
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+
+                {/* Pagination Controls */}
+                {paginationMeta.total > 0 && (
+                  <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50">
+                    <div className="text-sm text-gray-500 text-center md:text-left">
+                      Menampilkan <span className="font-semibold text-gray-700">{paginationMeta.from || 0}</span> - <span className="font-semibold text-gray-700">{paginationMeta.to || 0}</span> dari <span className="font-semibold text-gray-700">{paginationMeta.total?.toLocaleString('id-ID') || 0}</span> data peserta
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage <= 1 || tableLoading}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">Sebelumnya</span>
+                      </button>
+
+                      {getPageNumbers().map((pageItem, idx) => (
+                        pageItem === '...' ? (
+                          <span key={`dots-${idx}`} className="px-2 py-1 text-gray-400 text-sm select-none">...</span>
+                        ) : (
+                          <button
+                            key={pageItem}
+                            onClick={() => setCurrentPage(pageItem)}
+                            disabled={tableLoading}
+                            className={`min-w-8 h-8 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${currentPage === pageItem
+                                ? 'bg-teal-700 text-white shadow-sm'
+                                : 'text-gray-600 hover:bg-white hover:text-teal-700 border border-gray-200'
+                              }`}
+                          >
+                            {pageItem}
+                          </button>
+                        )
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, paginationMeta.last_page))}
+                        disabled={currentPage >= paginationMeta.last_page || tableLoading}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Berikutnya</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -746,11 +872,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                               {[1, 2, 3, 4, 5].map((s) => (
                                 <Star
                                   key={s}
-                                  className={`w-3.5 h-3.5 ${
-                                    s <= rev.skor_rating
+                                  className={`w-3.5 h-3.5 ${s <= rev.skor_rating
                                       ? 'fill-amber-400 text-amber-400'
                                       : 'text-gray-300'
-                                  }`}
+                                    }`}
                                 />
                               ))}
                               <span className="text-xs font-bold text-amber-900 ml-1">
@@ -766,10 +891,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                           <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
                             {rev.dikirim_pada
                               ? new Date(rev.dikirim_pada).toLocaleDateString('id-ID', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })
                               : '-'}
                           </td>
                         </tr>
@@ -868,9 +993,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                                 ) : (
                                   <Laptop className="w-3.5 h-3.5 text-gray-600" />
                                 )}
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  isMobile ? 'bg-blue-50 text-blue-700' : isTablet ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'
-                                }`}>
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isMobile ? 'bg-blue-50 text-blue-700' : isTablet ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'
+                                  }`}>
                                   {log.perangkat || 'Desktop'}
                                 </span>
                               </div>
