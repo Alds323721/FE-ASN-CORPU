@@ -27,6 +27,7 @@ export default function AuthModal({
   const [nip, setNip] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loginErrorType, setLoginErrorType] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -54,6 +55,9 @@ export default function AuthModal({
   const loginRecaptchaRef = useRef(null);
   const [resetCaptchaToken, setResetCaptchaToken] = useState('');
   const resetRecaptchaRef = useRef(null);
+  const [nipCheckLoading, setNipCheckLoading] = useState(false);
+  const [nipInfo, setNipInfo] = useState(null);
+  const [nipLookupError, setNipLookupError] = useState('');
 
   useEffect(() => {
     const savedLockoutUntil = sessionStorage.getItem('bkpsdm_login_lockout_until');
@@ -125,6 +129,65 @@ export default function AuthModal({
     return () => clearTimeout(timer);
   }, [resendCountdown]);
 
+  const fetchNipData = async (targetNip) => {
+    const cleanedNip = (targetNip || '').trim();
+    if (!cleanedNip || cleanedNip.length < 5) {
+      setNipInfo(null);
+      setNipLookupError('');
+      return;
+    }
+
+    setNipCheckLoading(true);
+    setNipLookupError('');
+    try {
+      const res = await api.post('/forgot-password/check-nip', { nip: cleanedNip });
+      if (res.data?.status === 'success') {
+        setNipInfo({
+          nip: res.data.nip,
+          nama_lengkap: res.data.nama_lengkap,
+          has_email: Boolean(res.data.has_email),
+          masked_email: res.data.masked_email,
+        });
+        setNipLookupError('');
+      }
+    } catch (err) {
+      setNipInfo(null);
+      const resData = err.response?.data;
+      if (err.response?.status === 404) {
+        setNipLookupError(resData?.message || 'NIP tidak terdaftar dalam pangkalan data pengguna.');
+      } else if (err.response?.status === 403) {
+        setNipLookupError(resData?.message || 'Akun dengan NIP ini sedang dinonaktifkan.');
+      } else {
+        setNipLookupError(resData?.message || 'Gagal memverifikasi NIP.');
+      }
+    } finally {
+      setNipCheckLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const trimmed = resetNip.trim();
+    if (!showForgotPassword || resetStep !== 'email') {
+      return;
+    }
+
+    if (trimmed.length < 5) {
+      setNipInfo(null);
+      setNipLookupError('');
+      return;
+    }
+
+    if (nipInfo && nipInfo.nip === trimmed) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchNipData(trimmed);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [resetNip, showForgotPassword, resetStep]);
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (lockoutCountdown > 0) return;
@@ -146,6 +209,7 @@ export default function AuthModal({
       return;
     }
     setError('');
+    setLoginErrorType('');
     setResetSuccess('');
     setLoading(true);
     try {
@@ -170,7 +234,13 @@ export default function AuthModal({
         sessionStorage.setItem('bkpsdm_login_lockout_until', String(Date.now() + retryAfter * 1000));
         setRemainingAttempts(0);
         setError(resData?.message || 'Terlalu banyak percobaan gagal (3 kali). Silakan tunggu sebelum mencoba kembali.');
+        setLoginErrorType('');
+      } else if (status === 403 || resData?.error_type === 'account_inactive') {
+        setRemainingAttempts(null);
+        setLoginErrorType('account_inactive');
+        setError(resData?.message || 'Akun Anda sedang dinonaktifkan oleh Administrator BKPSDM. Anda tidak dapat masuk ke sistem. Silakan hubungi BKPSDM Kabupaten Buleleng.');
       } else {
+        setLoginErrorType('');
         if (typeof resData?.remaining_attempts === 'number') {
           setRemainingAttempts(resData.remaining_attempts);
         }
@@ -301,32 +371,6 @@ export default function AuthModal({
               </div>
             )}
 
-            {error && !lockoutCountdown && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 sm:p-3 rounded-lg text-xs sm:text-sm mb-5">
-                <p className="font-medium">{error}</p>
-                {remainingAttempts === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (nip) setResetNip(nip);
-                      setShowForgotPassword(true);
-                      setResetStep('email');
-                      setError('');
-                      setResetErrorType('');
-                      setResetSuccess('');
-                      setLoginCaptchaToken('');
-                      setResetCaptchaToken('');
-                      loginRecaptchaRef.current?.reset();
-                      resetRecaptchaRef.current?.reset();
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-[#1D315F] hover:underline bg-white px-2.5 py-1.5 rounded border border-red-200 shadow-sm cursor-pointer"
-                  >
-                    Buka Menu Lupa Kata Sandi &rarr;
-                  </button>
-                )}
-              </div>
-            )}
-
             {loading ? (
               <div className="space-y-4 sm:space-y-5">
                 <div>
@@ -376,27 +420,11 @@ export default function AuthModal({
 
                   return (
                     <>
-                      {resetError && (
-                        <div className={`p-3.5 rounded-xl text-xs sm:text-sm mb-4 flex items-start gap-3 shadow-sm border transition-all animate-in fade-in duration-200 ${
-                          isEmailMismatch
-                            ? 'bg-rose-50/90 border-rose-300 text-rose-900'
-                            : 'bg-red-50 border-red-200 text-red-700'
-                        }`}>
-                          <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${isEmailMismatch ? 'text-rose-600' : 'text-red-600'}`} />
-                          <div className="flex-1">
-                            <p className={`font-bold ${isEmailMismatch ? 'text-rose-900 text-sm' : 'text-red-800'}`}>
-                              {isEmailMismatch ? 'Permintaan OTP Ditolak (Email Tidak Sesuai)' : 'Gagal Memproses Permintaan'}
-                            </p>
-                            <p className={`text-xs mt-1 leading-relaxed ${isEmailMismatch ? 'text-rose-700 font-medium' : 'text-red-700'}`}>
-                              {resetError}
-                            </p>
-                            {isEmailMismatch && (
-                              <div className="mt-2.5 p-2.5 rounded-lg bg-rose-100/80 border border-rose-200/80 text-[11px] text-rose-800 leading-relaxed">
-                                <span className="font-semibold block mb-0.5 text-rose-900">🛡️ Proteksi Keamanan Akun:</span>
-                                Akun dengan NIP ini sudah memiliki email resmi yang terdaftar dan terkunci. Sistem menolak pengiriman OTP ke alamat email lain guna mencegah pengambilalihan akun. Silakan masukkan email yang sebelumnya didaftarkan pada akun ini.
-                              </div>
-                            )}
-                          </div>
+                      {/* Tampilkan pesan error ringkas hanya untuk Step 2 (OTP) dan Step 3 (Password). Di Step 1 (NIP & Email), error sudah ditampilkan rapi dan presisi di bawah field masing-masing. */}
+                      {resetError && resetStep !== 'email' && (
+                        <div className="p-3 rounded-xl text-xs mb-4 flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 animate-in fade-in duration-200 shadow-sm">
+                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                          <p className="font-medium leading-relaxed">{resetError}</p>
                         </div>
                       )}
 
@@ -479,7 +507,7 @@ export default function AuthModal({
                           <div className="mb-4">
                             <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">NIP</label>
                             <div className="relative">
-                              <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${isNipError ? 'text-red-500' : 'text-gray-400'}`}>
+                              <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${isNipError || nipLookupError ? 'text-red-500' : 'text-gray-400'}`}>
                                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
                               </div>
                               <input
@@ -488,33 +516,117 @@ export default function AuthModal({
                                 autoComplete="username"
                                 value={resetNip}
                                 onChange={(e) => {
-                                  setResetNip(e.target.value);
+                                  const val = e.target.value;
+                                  setResetNip(val);
+                                  if (nipInfo && nipInfo.nip !== val.trim()) {
+                                    setNipInfo(null);
+                                  }
+                                  if (nipLookupError) {
+                                    setNipLookupError('');
+                                  }
                                   if (isNipError) {
                                     setResetError('');
                                     setResetErrorType('');
                                   }
                                 }}
+                                onBlur={() => {
+                                  const trimmed = resetNip.trim();
+                                  if (trimmed.length >= 5 && (!nipInfo || nipInfo.nip !== trimmed)) {
+                                    fetchNipData(trimmed);
+                                  }
+                                }}
                                 required
                                 disabled={resetLoading || otpLockoutCountdown > 0}
-                                className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
-                                  isNipError
+                                className={`w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
+                                  isNipError || nipLookupError
                                     ? 'border-red-400 focus:ring-red-300 focus:border-red-500 bg-red-50/20'
                                     : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
                                 }`}
                                 placeholder="Masukkan 18 digit NIP Anda"
                               />
+
+                              {/* Status Indikator di dalam Input */}
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                                {nipCheckLoading && (
+                                  <div className="flex items-center gap-1.5 text-xs text-teal-600 font-medium">
+                                    <Loader2 className="w-4 h-4 animate-spin text-[#3FCDC1]" />
+                                    <span className="text-[11px] hidden sm:inline">Mengecek...</span>
+                                  </div>
+                                )}
+                                {!nipCheckLoading && nipInfo && (
+                                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600" title="NIP Ditemukan">
+                                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {isNipError && (
+
+                            {/* Peringatan jika NIP tidak ditemukan */}
+                            {(nipLookupError || isNipError) && (
                               <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1 font-medium animate-in fade-in duration-150">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                <span>{resetError}</span>
+                                <span>{nipLookupError || resetError}</span>
                               </p>
+                            )}
+
+                            {/* Kartu Petunjuk Email Terdaftar Berdasarkan NIP */}
+                            {nipInfo && !nipCheckLoading && (
+                              <div className="mt-3 p-3.5 rounded-xl border transition-all animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm bg-gradient-to-br from-teal-50/80 via-blue-50/40 to-white border-teal-200">
+                                <div className="flex items-start gap-2.5">
+                                  <div className="p-1.5 bg-[#1D315F] text-white rounded-lg shadow-sm shrink-0 mt-0.5">
+                                    <ShieldCheck className="w-4 h-4 text-[#3FCDC1]" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <p className="text-xs font-bold text-[#1D315F] truncate">
+                                        {nipInfo.nama_lengkap}
+                                      </p>
+                                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300">
+                                        NIP Terverifikasi
+                                      </span>
+                                    </div>
+
+                                    {nipInfo.has_email && nipInfo.masked_email ? (
+                                      <div className="mt-2 space-y-1.5">
+                                        <p className="text-xs text-gray-700 font-medium leading-relaxed">
+                                          Petunjuk Email Terdaftar: Silakan masukkan email yang sesuai dengan petunjuk terenkripsi berikut untuk menerima kode OTP:
+                                        </p>
+                                        
+                                        <div className="p-2.5 bg-white rounded-lg border border-teal-300 shadow-xs flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 overflow-hidden">
+                                            <Mail className="w-4 h-4 text-teal-600 shrink-0" />
+                                            <span className="font-mono text-xs sm:text-sm font-bold text-gray-800 tracking-wide select-all truncate">
+                                              {nipInfo.masked_email}
+                                            </span>
+                                          </div>
+                                          <span className="text-[10px] uppercase font-bold tracking-wider text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0 flex items-center gap-1">
+                                            <span>*</span> Terenkripsi
+                                          </span>
+                                        </div>
+
+                                        <p className="text-[11px] text-gray-500 leading-normal">
+                                          Ketik alamat email lengkap yang sesuai dengan petunjuk sensor di atas pada kolom di bawah.
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="mt-2 p-2.5 bg-amber-50/90 rounded-lg border border-amber-200 text-amber-800 text-xs leading-relaxed">
+                                        <p className="font-semibold text-amber-900 mb-0.5">
+                                          Belum Ada Email Terdaftar
+                                        </p>
+                                        Akun ini belum memiliki email resmi di data kepegawaian. Silakan masukkan alamat email aktif Anda pada kolom di bawah untuk didaftarkan dan menerima kode OTP.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             )}
                           </div>
 
                           <div className="mb-5">
                             <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                              <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold">ALAMAT EMAIL</label>
+                              <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold">
+                                {nipInfo?.has_email ? 'MASUKKAN ALAMAT EMAIL LENGKAP' : 'ALAMAT EMAIL'}
+                              </label>
                               {isEmailMismatch && (
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-100/90 px-2 py-0.5 rounded border border-rose-300">
                                   Email Tidak Cocok
@@ -544,7 +656,7 @@ export default function AuthModal({
                                     ? 'border-rose-400 focus:ring-rose-300 focus:border-rose-500 bg-rose-50/30'
                                     : 'border-gray-300 focus:ring-[#3FCDC1] focus:border-[#3FCDC1]'
                                 }`}
-                                placeholder="contoh: user@bkpsdm.go.id"
+                                placeholder={nipInfo?.has_email ? "Ketik email lengkap Anda sesuai petunjuk di atas" : "contoh: user@bkpsdm.go.id"}
                               />
                             </div>
                             {isEmailError && (
@@ -579,6 +691,9 @@ export default function AuthModal({
                               setResetErrorType('');
                               setResetNip('');
                               setResetEmail('');
+                              setNipInfo(null);
+                              setNipLookupError('');
+                              setNipCheckLoading(false);
                               setResetCaptchaToken('');
                               setLoginCaptchaToken('');
                               resetRecaptchaRef.current?.reset();
@@ -753,6 +868,9 @@ export default function AuthModal({
                       setResetOtp('');
                       setNewPassword('');
                       setResetConfirmPassword('');
+                      setNipInfo(null);
+                      setNipLookupError('');
+                      setNipCheckLoading(false);
                       setNip(savedNip);
                       setPassword('');
                     } catch (err) {
@@ -851,7 +969,10 @@ export default function AuthModal({
                       name="nip"
                       autoComplete="username"
                       value={nip}
-                      onChange={(e) => setNip(e.target.value)}
+                      onChange={(e) => {
+                        setNip(e.target.value);
+                        if (error) { setError(''); setLoginErrorType(''); }
+                      }}
                       required
                       disabled={lockoutCountdown > 0}
                       className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -870,7 +991,10 @@ export default function AuthModal({
                       type={showPassword ? 'text' : 'password'}
                       name="password"
                       value={password || ''}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error) { setError(''); setLoginErrorType(''); }
+                      }}
                       autoComplete="current-password"
                       required
                       disabled={lockoutCountdown > 0}
@@ -900,7 +1024,13 @@ export default function AuthModal({
                   <button
                     type="button"
                     onClick={() => {
-                      if (nip) setResetNip(nip);
+                      if (nip) {
+                        setResetNip(nip);
+                        fetchNipData(nip);
+                      } else {
+                        setNipInfo(null);
+                        setNipLookupError('');
+                      }
                       setShowForgotPassword(true);
                       setResetStep('email');
                       setError('');
@@ -938,7 +1068,7 @@ export default function AuthModal({
                     </span>
                   </div>
                 ) : error ? (
-                  <div className="bg-red-50 text-red-600 p-2 rounded text-xs mb-4 text-center">
+                  <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 rounded-lg text-xs mb-4 text-center leading-relaxed font-medium">
                     {error}
                   </div>
                 ) : null}
@@ -986,6 +1116,7 @@ export default function AuthModal({
             onClick={() => {
               setShowAuth(false);
               setError('');
+              setLoginErrorType('');
               setResetSuccess('');
               setNip('');
               setPassword('');
@@ -997,6 +1128,9 @@ export default function AuthModal({
               setResetOtp('');
               setNewPassword('');
               setResetConfirmPassword('');
+              setNipInfo(null);
+              setNipLookupError('');
+              setNipCheckLoading(false);
             }}
             className="mt-3 sm:mt-4 text-xs font-semibold text-gray-400 hover:text-gray-600 text-center transition-colors cursor-pointer"
           >

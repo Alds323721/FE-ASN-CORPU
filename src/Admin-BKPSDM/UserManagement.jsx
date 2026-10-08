@@ -21,7 +21,7 @@ import {
   TrendingUp, TrendingDown, ArrowRight, LayoutDashboard,
   ShieldCheck, BarChart3, HelpCircle, LogOut, Bell, Settings,
   Search, ChevronRight, Clock, Book, Menu, X, Plus,
-  ClipboardList, Edit, Download, ChevronLeft, Trash2, Key, Layers
+  ClipboardList, Edit, Download, ChevronLeft, Key, Layers
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -335,54 +335,35 @@ const UserManagement = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleResetPassword = async (user) => {
+    const userName = user?.nama_lengkap || 'pengguna';
     const result = await Swal.fire({
-      title: 'Apakah Anda yakin?',
-      text: "Ingin menghapus pengguna ini?",
+      title: 'Reset Kata Sandi Pengguna?',
+      html: `<div class="text-left text-sm text-gray-600 space-y-2">
+        <p>Kata sandi akun <b>${userName}</b> (${user?.nip}) akan direset menggunakan <b>karakter acak sistem</b>.</p>
+        <div class="text-amber-900 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs leading-relaxed">
+          ⚠️ <b>Catatan Keamanan:</b>
+          <ul class="list-disc ml-4 mt-1 space-y-0.5">
+            <li>Pengguna tidak dapat login menggunakan kata sandi lama atau 8 digit NIP.</li>
+            <li>Seluruh sesi login aktif pengguna akan dicabut.</li>
+            <li>Pengguna wajib mengatur kata sandi baru melalui menu <b>"Lupa Kata Sandi"</b> menggunakan kode OTP email.</li>
+          </ul>
+        </div>
+      </div>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#0f766e',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya, Hapus!',
+      confirmButtonText: 'Ya, Reset Sandi',
       cancelButtonText: 'Batal'
     });
 
     if (result.isConfirmed) {
       try {
-        await api.delete(`/admin-bkpsdm/pengguna/${id}`);
-        fetchUsers();
+        const res = await api.post(`/admin-bkpsdm/pengguna/${user.pengguna_id}/reset-password`);
         Toast.fire({
           icon: 'success',
-          title: 'Pengguna berhasil dihapus'
-        });
-      } catch (error) {
-        console.error('Failed to delete user:', error);
-        Toast.fire({
-          icon: 'error',
-          title: error.response?.data?.message || 'Gagal menghapus pengguna'
-        });
-      }
-    }
-  };
-
-  const handleResetPassword = async (id) => {
-    const result = await Swal.fire({
-      title: 'Apakah Anda yakin?',
-      text: "Kata sandi lama pengguna akan dinonaktifkan dan semua sesi loginnya dihapus. Pengguna harus memakai Lupa Kata Sandi untuk membuat kata sandi baru. Lanjutkan?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#0f766e',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya, Lanjutkan!',
-      cancelButtonText: 'Batal'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await api.post(`/admin-bkpsdm/pengguna/${id}/reset-password`);
-        Toast.fire({
-          icon: 'success',
-          title: 'Kata sandi dinonaktifkan. Minta pengguna memakai Lupa Kata Sandi.'
+          title: res.data?.message || 'Kata sandi pengguna berhasil direset secara acak. Pengguna harus membuat sandi baru via Lupa Kata Sandi.'
         });
         fetchUsers();
       } catch (error) {
@@ -606,7 +587,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end gap-2">
                         <button
-                          onClick={() => handleResetPassword(user.pengguna_id)}
+                          onClick={() => handleResetPassword(user)}
                           title="Reset Kata Sandi"
                           className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
                         >
@@ -624,13 +605,6 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.pengguna_id)}
-                          title="Hapus Pengguna"
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
