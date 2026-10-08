@@ -5,6 +5,7 @@ import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
+import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
 import {
   ChevronDown,
@@ -61,12 +62,12 @@ const DashboardNavbar = ({ onLogout, onNavigate }) => {
         <a href="#" className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.dashboard')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.community')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.catalog')}</a>
-         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.myCourses')}</a>
-         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.certificates')}</a>
-         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.helpCenter')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.myCourses')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.certificates')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.helpCenter')}</a>
 
-         {/* Right icons */}
-         <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
+        {/* Right icons */}
+        <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
           <LanguageDropdown />
           <ProfileDropdown onLogout={onLogout} />
         </div>
@@ -214,7 +215,7 @@ const CurrentCourseSection = ({ onNavigate, currentCourse, activitiesData }) => 
   const defaultActivities = [
     { icon: CheckCircle2, color: '#10B981', title: t('dashboard.noActivity'), time: '' }
   ];
-  
+
   const activities = activitiesData?.length > 0 ? activitiesData.map(a => ({
     icon: a.type === 'selesai' || a.type === 'lulus' ? CheckCircle2 : PlayCircle,
     color: a.type === 'selesai' || a.type === 'lulus' ? '#10B981' : '#3FCDC1',
@@ -382,55 +383,6 @@ const Recommendations = ({ onNavigate, coursesData }) => {
   );
 };
 
-/* ── Footer ─────────────────────────────────────────── */
-const Footer = ({ onNavigate }) => {
-  const { t } = useLanguage();
-  return (
-  <footer className="bg-[#EAEFF4] pt-16 pb-8 border-t border-gray-200">
-    <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
-      <div className="md:col-span-5 pr-8">
-        <div className="flex items-center gap-2.5 sm:gap-3 mb-6">
-          <img src={logoImg} alt="Logo BKPSDM" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
-          <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
-          <span className="font-semibold text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
-        </div>
-        <p className="text-[13px] text-gray-600 leading-relaxed mb-6">
-          {t('footer.tagline')}
-        </p>
-        <p className="text-[11px] text-gray-500">
-          {t('footer.copyright')}
-        </p>
-      </div>
-      <div className="md:col-span-3">
-        <h4 className="font-bold text-[#1D315F] text-[14px] mb-6">{t('footer.quickLinks')}</h4>
-        <ul className="text-[13px] text-gray-600 space-y-3 font-medium">
-          <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('catalog'); }} className="hover:text-[#006A63] transition-colors">{t('footer.courses')}</a></li>
-          <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('community'); }} className="hover:text-[#006A63] transition-colors">{t('footer.community')}</a></li>
-          <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate?.('help-center'); }} className="hover:text-[#006A63] transition-colors">{t('footer.help')}</a></li>
-        </ul>
-      </div>
-      <div className="md:col-span-4">
-        <h4 className="font-bold text-[#1D315F] text-[14px] mb-6">{t('footer.contactUs')}</h4>
-        <ul className="text-[13px] text-gray-600 space-y-4">
-          <li className="flex items-start gap-3">
-            <Mail className="w-4 h-4 text-[#3FCDC1] mt-0.5 flex-shrink-0" />
-            <span className="font-medium">support@bkpsdm-pintar.go.id</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <Phone className="w-4 h-4 text-[#3FCDC1] mt-0.5 flex-shrink-0" />
-            <span className="font-medium">(021) 123-4567 (Jam Kerja)</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <MapPin className="w-4 h-4 text-[#3FCDC1] mt-0.5 flex-shrink-0" />
-            <span className="font-medium leading-relaxed">Gedung Kepegawaian Lt. 3, Jl. Protokol<br/>No. 1, Jakarta</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </footer>
-  );
-};
-
 /* ── Main Export ─────────────────────────────────────── */
 export default function UserDashboard({ onLogout, onNavigate }) {
   const [dashboardData, setDashboardData] = useState(null);
@@ -469,10 +421,10 @@ export default function UserDashboard({ onLogout, onNavigate }) {
       <main className="flex-grow bg-[#F9FAFB]">
         <DashboardHeader />
         <WelcomeSection statsData={dashboardData?.stats} userData={dashboardData?.user} />
-        <CurrentCourseSection 
-           onNavigate={onNavigate} 
-           currentCourse={dashboardData?.current_course} 
-           activitiesData={dashboardData?.activities} 
+        <CurrentCourseSection
+          onNavigate={onNavigate}
+          currentCourse={dashboardData?.current_course}
+          activitiesData={dashboardData?.activities}
         />
         <Recommendations onNavigate={onNavigate} coursesData={dashboardData?.rekomendasi} />
       </main>

@@ -18,6 +18,7 @@ const translations = {
     'footer.community': 'Komunitas',
     'footer.help': 'Bantuan',
     'footer.contactUs': 'Kontak Kami',
+    'footer.socialMedia': 'Media Sosial',
 
     // Profile Dropdown
     'profile.changePhoto': 'Ganti Foto Profil',
@@ -163,6 +164,7 @@ const translations = {
     'footer.community': 'Community',
     'footer.help': 'Help',
     'footer.contactUs': 'Contact Us',
+    'footer.socialMedia': 'Social Media',
 
     // Profile Dropdown
     'profile.changePhoto': 'Change Profile Photo',
