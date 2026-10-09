@@ -64,8 +64,8 @@ const MaterialModal = ({
                 type="button"
                 onClick={() => setForm({ ...form, tipe_materi: 'pdf' })}
                 className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all ${form.tipe_materi === 'pdf'
-                    ? 'bg-teal-50 border-[#0F766E] text-[#0F766E]'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  ? 'bg-teal-50 border-[#0F766E] text-[#0F766E]'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
               >
                 Dokumen PDF
@@ -74,8 +74,8 @@ const MaterialModal = ({
                 type="button"
                 onClick={() => setForm({ ...form, tipe_materi: 'video_embed' })}
                 className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${form.tipe_materi === 'video_embed'
-                    ? 'bg-teal-50 border-[#0F766E] text-[#0F766E]'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  ? 'bg-teal-50 border-[#0F766E] text-[#0F766E]'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
               >
                 <Video className="w-3.5 h-3.5" />
@@ -85,8 +85,8 @@ const MaterialModal = ({
                 type="button"
                 onClick={() => setForm({ ...form, tipe_materi: 'h5p' })}
                 className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${form.tipe_materi === 'h5p'
-                    ? 'bg-purple-50 border-purple-600 text-purple-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  ? 'bg-purple-50 border-purple-600 text-purple-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-purple-500" />
@@ -96,8 +96,8 @@ const MaterialModal = ({
                 type="button"
                 onClick={() => setForm({ ...form, tipe_materi: 'scorm' })}
                 className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${form.tipe_materi === 'scorm'
-                    ? 'bg-amber-50 border-amber-600 text-amber-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  ? 'bg-amber-50 border-amber-600 text-amber-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
               >
                 <Package className="w-3.5 h-3.5 text-amber-500" />
@@ -114,6 +114,7 @@ const MaterialModal = ({
               {isEdit && editingMaterial?.tautan_atau_berkas && (
                 <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600 flex items-center justify-between">
                   <span className="truncate max-w-xs">
+
                     Berkas saat ini: {editingMaterial.tautan_atau_berkas.split('/').pop()}
                   </span>
                   <a
@@ -153,8 +154,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, h5p_mode: 'file' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all flex items-center justify-center gap-1.5 ${(form.h5p_mode || 'file') === 'file'
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   <Package className="w-3.5 h-3.5" />
@@ -164,8 +165,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, h5p_mode: 'link' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all flex items-center justify-center gap-1.5 ${form.h5p_mode === 'link'
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   <Link2 className="w-3.5 h-3.5" />
@@ -246,8 +247,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, scorm_mode: 'zip' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${form.scorm_mode === 'zip'
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   📦 Unggah Paket ZIP
@@ -256,8 +257,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, scorm_mode: 'link' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all ${form.scorm_mode === 'link'
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   🔗 Tautan Eksternal
@@ -333,8 +334,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, video_mode: 'file' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all flex items-center justify-center gap-1.5 ${(form.video_mode || 'file') === 'file'
-                      ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   <Video className="w-3.5 h-3.5" />
@@ -344,8 +345,8 @@ const MaterialModal = ({
                   type="button"
                   onClick={() => setForm({ ...form, video_mode: 'link' })}
                   className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-md border transition-all flex items-center justify-center gap-1.5 ${form.video_mode === 'link'
-                      ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   <PlayCircle className="w-3.5 h-3.5" />
