@@ -90,7 +90,7 @@ const ModuleModal = ({
                 type="number"
                 step="0.01"
                 min="0"
-                max="99.99"
+                max="999.99"
                 value={moduleForm.jp_modul ?? ''}
                 onChange={(e) => setModuleForm({ ...moduleForm, jp_modul: e.target.value })}
                 placeholder="Contoh: 2 atau 1.5"
