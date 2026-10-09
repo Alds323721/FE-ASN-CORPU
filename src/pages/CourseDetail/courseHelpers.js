@@ -12,17 +12,9 @@ export const extractYouTubeId = (url) => {
   return match ? match[1] : null;
 };
 
-export const getDocumentUrl = (path) => {
-  if (!path) return '';
-  const trimmed = String(path).trim();
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
-    return trimmed;
-  }
-  const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-  const origin = apiBase.replace(/\/api\/?$/, '');
-  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${origin}${cleanPath}`;
-};
+import { getStorageUrl } from '../../utils/url';
+
+export const getDocumentUrl = getStorageUrl;
 
 export const isMateriVideo = (materi) => {
   if (!materi) return false;

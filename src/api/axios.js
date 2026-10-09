@@ -1,11 +1,27 @@
 import axios from 'axios';
 import { clearAuth } from '../utils/auth';
 
+const getApiBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+    const isBrowser = typeof window !== 'undefined' && Boolean(window.location);
+    const isLocal = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    if (envUrl) {
+        if (isBrowser && !isLocal && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+            return `${window.location.origin}/api`;
+        }
+        return envUrl;
+    }
+
+    if (isBrowser && !isLocal) {
+        return `${window.location.origin}/api`;
+    }
+
+    return 'http://localhost:8000/api';
+};
+
 const api = axios.create({
-    baseURL:
-        import.meta.env.VITE_API_URL ||
-        import.meta.env.VITE_API_BASE_URL ||
-        'http://localhost:8000/api',
+    baseURL: getApiBaseUrl(),
 
     headers: {
         'Accept': 'application/json',

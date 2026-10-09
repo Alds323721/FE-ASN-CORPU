@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Plus, BookOpen, ChevronDown, Edit, Edit2, Trash2, FileText, Sparkles, Package, Video, Eye
 } from 'lucide-react';
+import { getStorageUrl } from '../../../utils/url';
 
 const CourseSyllabusSection = ({
   modules,
@@ -270,11 +271,7 @@ const CourseSyllabusSection = ({
                                 )}
 
                                 <a
-                                  href={
-                                    mat.tautan_atau_berkas.startsWith('http')
-                                      ? mat.tautan_atau_berkas
-                                      : `http://localhost:8000${mat.tautan_atau_berkas}`
-                                  }
+                                  href={getStorageUrl(mat.tautan_atau_berkas)}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50 rounded transition-colors"

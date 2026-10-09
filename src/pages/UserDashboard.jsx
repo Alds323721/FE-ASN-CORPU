@@ -7,6 +7,7 @@ import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
 import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
+import { getStorageUrl } from '../utils/url';
 import {
   ChevronDown,
   Clock,
@@ -33,15 +34,7 @@ import {
 
 const getCourseImage = (url) => {
   if (!url) return 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop';
-  // Jika URL mengarah ke localhost tanpa port 8000
-  if (url.startsWith('http://localhost/storage') || url.startsWith('http://127.0.0.1/storage')) {
-    return url.replace(/http:\/\/(localhost|127\.0\.0\.1)\/storage/, 'http://localhost:8000/storage');
-  }
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-  const origin = apiBase.replace(/\/api\/?$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${origin}${cleanPath}`;
+  return getStorageUrl(url);
 };
 
 /* ── Navbar ─────────────────────────────────────────── */

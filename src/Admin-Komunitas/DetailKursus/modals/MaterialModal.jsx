@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Sparkles, Package, Clock, Video, Link2, PlayCircle } from 'lucide-react';
+import { getStorageUrl } from '../../../utils/url';
 
 const MaterialModal = ({
   isOpen,
@@ -116,11 +117,7 @@ const MaterialModal = ({
                     Berkas saat ini: {editingMaterial.tautan_atau_berkas.split('/').pop()}
                   </span>
                   <a
-                    href={
-                      editingMaterial.tautan_atau_berkas.startsWith('http')
-                        ? editingMaterial.tautan_atau_berkas
-                        : `http://localhost:8000${editingMaterial.tautan_atau_berkas}`
-                    }
+                    href={getStorageUrl(editingMaterial.tautan_atau_berkas)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-teal-700 font-semibold hover:underline"
@@ -185,11 +182,7 @@ const MaterialModal = ({
                       : editingMaterial.tautan_atau_berkas}
                   </span>
                   <a
-                    href={
-                      editingMaterial.tautan_atau_berkas.startsWith('http')
-                        ? editingMaterial.tautan_atau_berkas
-                        : `http://localhost:8000${editingMaterial.tautan_atau_berkas}`
-                    }
+                    href={getStorageUrl(editingMaterial.tautan_atau_berkas)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-purple-700 font-bold hover:underline shrink-0 ml-2"
@@ -277,11 +270,7 @@ const MaterialModal = ({
                     Materi SCORM saat ini: {editingMaterial.tautan_atau_berkas}
                   </span>
                   <a
-                    href={
-                      editingMaterial.tautan_atau_berkas.startsWith('http')
-                        ? editingMaterial.tautan_atau_berkas
-                        : `http://localhost:8000${editingMaterial.tautan_atau_berkas}`
-                    }
+                    href={getStorageUrl(editingMaterial.tautan_atau_berkas)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-amber-700 font-bold hover:underline shrink-0 ml-2"
@@ -373,11 +362,7 @@ const MaterialModal = ({
                       : editingMaterial.tautan_atau_berkas}
                   </span>
                   <a
-                    href={
-                      editingMaterial.tautan_atau_berkas.startsWith('http')
-                        ? editingMaterial.tautan_atau_berkas
-                        : `http://localhost:8000${editingMaterial.tautan_atau_berkas}`
-                    }
+                    href={getStorageUrl(editingMaterial.tautan_atau_berkas)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-teal-700 font-bold hover:underline shrink-0 ml-2"

@@ -15,6 +15,7 @@ const Toast = Swal.mixin({
 });
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
 import { logout } from '../utils/auth';
+import { getStorageUrl } from '../utils/url';
 import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, ArrowLeft, BookOpen, FileText, HelpCircle,
@@ -382,7 +383,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                 </div>
 
                 <a
-                  href={course.surat_pernyataan_url ? (course.surat_pernyataan_url.startsWith('/storage/') ? `http://localhost:8000${course.surat_pernyataan_url}` : course.surat_pernyataan_url) : '#'}
+                  href={course.surat_pernyataan_url ? getStorageUrl(course.surat_pernyataan_url) : '#'}
                   target={course.surat_pernyataan_url ? "_blank" : "_self"}
                   rel="noreferrer"
                   className={`w-full bg-white border border-gray-300 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${course.surat_pernyataan_url ? 'hover:bg-gray-50 text-gray-700' : 'text-gray-400 cursor-not-allowed opacity-50'}`}
@@ -551,7 +552,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                                           <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" /> {materi.tipe_materi === 'h5p' ? 'VIDEO INTERAKTIF (H5P)' : materi.tipe_materi === 'scorm' ? 'VIDEO INTERAKTIF (SCORM)' : (materi.tipe_materi || '').replace('_', ' ').toUpperCase()}</span>
                                         </div>
                                       </div>
-                                      <a href={materi.tautan_atau_berkas?.startsWith('/storage/') ? `http://localhost:8000${materi.tautan_atau_berkas}` : materi.tautan_atau_berkas} target="_blank" rel="noreferrer" className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shrink-0">
+                                      <a href={getStorageUrl(materi.tautan_atau_berkas)} target="_blank" rel="noreferrer" className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shrink-0">
                                         <Eye className="w-4 h-4" /> Lihat
                                       </a>
                                     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Eye, Trash2, Upload } from 'lucide-react';
+import { getStorageUrl } from '../../../utils/url';
 
 const SuratPernyataanCard = ({
   course,
@@ -52,11 +53,7 @@ const SuratPernyataanCard = ({
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <a
-                href={
-                  course.surat_pernyataan_url.startsWith('http')
-                    ? course.surat_pernyataan_url
-                    : `http://localhost:8000${course.surat_pernyataan_url}`
-                }
+                href={getStorageUrl(course.surat_pernyataan_url)}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900 px-3 py-1.5 rounded-md bg-white border border-teal-200"
