@@ -63,7 +63,7 @@ export default function CoursePlayer({
               <iframe
                 id="h5p-interactive-player"
                 className="w-full h-full border-0"
-                src={activeMateri.tautan}
+                src={getDocumentUrl(activeMateri.tautan)}
                 title={activeMateri.judul || 'Video Interaktif H5P'}
                 allow="autoplay; fullscreen; geolocation; microphone; camera; midi; encrypted-media"
                 allowFullScreen

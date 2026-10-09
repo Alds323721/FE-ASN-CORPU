@@ -62,7 +62,9 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     tautan_atau_berkas_embed: '',
     file_pdf: null,
     file_scorm: null,
-    scorm_mode: 'zip' // 'zip' | 'link'
+    file_video: null,
+    scorm_mode: 'zip', // 'zip' | 'link'
+    video_mode: 'file' // 'file' | 'link'
   });
 
   // Modal State: Edit Materi
@@ -75,7 +77,9 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     tautan_atau_berkas_embed: '',
     file_pdf: null,
     file_scorm: null,
+    file_video: null,
     scorm_mode: 'zip',
+    video_mode: 'file',
     apakah_wajib: true
   });
 
@@ -548,7 +552,11 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       tautan_atau_berkas_embed: '',
       file_pdf: null,
       file_scorm: null,
-      scorm_mode: 'zip'
+      file_h5p: null,
+      file_video: null,
+      scorm_mode: 'zip',
+      video_mode: 'file',
+      h5p_mode: 'file'
     });
     setShowAddMaterialModal(true);
   };
@@ -606,18 +614,76 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           }
           formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
         }
+      } else if (materialForm.tipe_materi === 'h5p') {
+        if ((materialForm.h5p_mode || 'file') === 'file') {
+          if (!materialForm.file_h5p) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Berkas H5P Belum Dipilih',
+              text: 'Silakan pilih berkas video interaktif H5P (.h5p) yang ingin diunggah.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('file_h5p', materialForm.file_h5p);
+        } else {
+          if (!materialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan H5P Diperlukan',
+              text: 'Silakan masukkan tautan atau embed H5P.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
+        }
+      } else if (materialForm.tipe_materi === 'video_embed') {
+        if ((materialForm.video_mode || 'file') === 'file') {
+          if (!materialForm.file_video) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Berkas Video Belum Dipilih',
+              text: 'Silakan pilih berkas video MP4 yang ingin diunggah.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('file_video', materialForm.file_video);
+        } else {
+          if (!materialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan Video Diperlukan',
+              text: 'Silakan masukkan tautan video YouTube.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
+        }
       } else {
         if (!materialForm.tautan_atau_berkas_embed.trim()) {
           Swal.fire({
             icon: 'warning',
-            title: materialForm.tipe_materi === 'h5p' ? 'Tautan H5P Diperlukan' : 'Tautan Video Diperlukan',
-            text: materialForm.tipe_materi === 'h5p' ? 'Silakan masukkan tautan atau embed H5P.' : 'Silakan masukkan tautan video YouTube.',
+            title: 'Tautan Materi Diperlukan',
+            text: 'Silakan lengkapi tautan materi.',
             confirmButtonColor: '#0F766E'
           });
           return;
         }
         formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
       }
+
+      Swal.fire({
+        title: 'Mengunggah Materi...',
+        text: 'Sedang mengunggah berkas materi ke server, mohon tunggu...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
 
       await api.post(`/admin-komunitas/modul/${targetModuleId}/materi`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -635,10 +701,14 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       fetchCourseData();
     } catch (error) {
       console.error('Error creating material:', error);
+      const errorMsg =
+        error.response?.data?.message ||
+        (error.response?.data?.errors && Object.values(error.response.data.errors).flat().join('\n')) ||
+        'Terjadi kesalahan saat mengunggah materi.';
       Swal.fire({
         icon: 'error',
         title: 'Gagal Mengunggah Materi',
-        text: error.response?.data?.message || 'Terjadi kesalahan saat mengunggah materi.',
+        text: errorMsg,
         confirmButtonColor: '#0F766E'
       });
     }
@@ -684,14 +754,20 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     setTargetModuleId(modulId);
     setEditingMaterial(materi);
     const isScormZip = materi.tipe_materi === 'scorm' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/scorm/');
+    const isVideoFile = materi.tipe_materi === 'video_embed' && materi.tautan_atau_berkas && (materi.tautan_atau_berkas.includes('/storage/materi_video/') || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(materi.tautan_atau_berkas));
+    const isH5pFile = materi.tipe_materi === 'h5p' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/h5p/');
     setEditMaterialForm({
       judul_materi: materi.judul_materi || '',
       tipe_materi: materi.tipe_materi || 'pdf',
       durasi_menit: materi.durasi_menit || 15,
-      tautan_atau_berkas_embed: (materi.tipe_materi !== 'pdf' && !isScormZip) ? (materi.tautan_atau_berkas || '') : '',
+      tautan_atau_berkas_embed: (materi.tipe_materi !== 'pdf' && !isScormZip && !isVideoFile && !isH5pFile) ? (materi.tautan_atau_berkas || '') : '',
       file_pdf: null,
       file_scorm: null,
+      file_h5p: null,
+      file_video: null,
       scorm_mode: isScormZip ? 'zip' : (materi.tipe_materi === 'scorm' ? 'link' : 'zip'),
+      video_mode: isVideoFile ? 'file' : 'link',
+      h5p_mode: isH5pFile ? 'file' : 'link',
       apakah_wajib: materi.apakah_wajib !== undefined ? Boolean(materi.apakah_wajib) : true
     });
     setShowEditMaterialModal(true);
@@ -760,18 +836,62 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           }
           formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
         }
+      } else if (editMaterialForm.tipe_materi === 'h5p') {
+        if ((editMaterialForm.h5p_mode || 'file') === 'file') {
+          if (editMaterialForm.file_h5p) {
+            formData.append('file_h5p', editMaterialForm.file_h5p);
+          }
+        } else {
+          if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan H5P Diperlukan',
+              text: 'Silakan masukkan tautan atau embed H5P.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
+        }
+      } else if (editMaterialForm.tipe_materi === 'video_embed') {
+        if ((editMaterialForm.video_mode || 'file') === 'file') {
+          if (editMaterialForm.file_video) {
+            formData.append('file_video', editMaterialForm.file_video);
+          }
+        } else {
+          if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Tautan Video Diperlukan',
+              text: 'Silakan masukkan tautan video YouTube.',
+              confirmButtonColor: '#0F766E'
+            });
+            return;
+          }
+          formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
+        }
       } else {
         if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
           Swal.fire({
             icon: 'warning',
-            title: editMaterialForm.tipe_materi === 'h5p' ? 'Tautan H5P Diperlukan' : 'Tautan Video Diperlukan',
-            text: editMaterialForm.tipe_materi === 'h5p' ? 'Silakan masukkan tautan atau embed H5P.' : 'Silakan masukkan tautan video YouTube.',
+            title: 'Tautan H5P Diperlukan',
+            text: 'Silakan masukkan tautan atau embed H5P.',
             confirmButtonColor: '#0F766E'
           });
           return;
         }
         formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
       }
+
+      Swal.fire({
+        title: 'Menyimpan Materi...',
+        text: 'Sedang memproses dan mengunggah berkas materi ke server, mohon tunggu...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
 
       await api.post(`/admin-komunitas/materi/${editingMaterial.materi_id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -796,10 +916,14 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       fetchCourseData();
     } catch (error) {
       console.error('Error updating material:', error);
+      const errorMsg =
+        error.response?.data?.message ||
+        (error.response?.data?.errors && Object.values(error.response.data.errors).flat().join('\n')) ||
+        'Terjadi kesalahan saat memperbarui materi.';
       Swal.fire({
         icon: 'error',
         title: 'Gagal Memperbarui Materi',
-        text: error.response?.data?.message || 'Terjadi kesalahan saat memperbarui materi.',
+        text: errorMsg,
         confirmButtonColor: '#0F766E'
       });
     }
