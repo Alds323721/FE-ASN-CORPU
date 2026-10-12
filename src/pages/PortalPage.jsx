@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Target, 
-  UserCheck, 
-  MonitorPlay, 
-  ChevronRight, 
-  BarChart3, 
-  FileText, 
-  BookOpen 
+import {
+  Target,
+  UserCheck,
+  MonitorPlay,
+  ChevronRight,
+  BarChart3,
+  FileText,
+  BookOpen
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import portalBannerImg from '../assets/LANDING PAGE BKPSDM.jpg.jpeg';
@@ -32,7 +32,7 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
             </div>
           </div>
           <p class="text-xs text-gray-500 leading-relaxed">
-            Layanan ini akan segera tersedia untuk memfasilitasi pemetaan dan perencanaan kebutuhan pengembangan kompetensi ASN Kabupaten Buleleng secara terpadu.
+            Layanan ini akan segera tersedia untuk memfasilitasi pemetaan dan perencanaan kebutuhan pengembangan kompetensi ASN Kabupaten Buleleng secara terpadu - testing.
           </p>
         </div>
       `,
@@ -61,15 +61,15 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
 
           {/* LOGO DI POJOK KIRI ATAS BANNER (Tepat di atas tulisan "Selamat Datang di", tidak menutupi tulisan) */}
           <div className="absolute top-1 sm:top-1.5 md:top-2.5 lg:top-3.5 xl:top-4 left-2.5 sm:left-3.5 md:left-5 lg:left-6 xl:left-8 z-30 flex items-center gap-1 sm:gap-1.5 lg:gap-2">
-            <img 
-              src={logoBkpsdm} 
-              alt="Logo BKPSDM" 
-              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform" 
+            <img
+              src={logoBkpsdm}
+              alt="Logo BKPSDM"
+              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform"
             />
-            <img 
-              src={asnCorpuLogo} 
-              alt="Logo ASN Corpu" 
-              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform" 
+            <img
+              src={asnCorpuLogo}
+              alt="Logo ASN Corpu"
+              className="h-3.5 sm:h-5 md:h-6 lg:h-7 xl:h-8 w-auto object-contain drop-shadow-xs hover:scale-105 transition-transform"
             />
           </div>
 
@@ -77,7 +77,7 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
           <div className="hidden lg:block absolute left-0 right-0 z-20 px-6 lg:px-8 bottom-[19%] lg:bottom-[20%] xl:bottom-[21%] 2xl:bottom-[22%]">
             <div className="w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto">
               <div className="grid grid-cols-3 gap-3.5 lg:gap-5 xl:gap-6">
-                
+
                 {/* TOMBOL 1: HCDP (Biru) */}
                 <button
                   type="button"
