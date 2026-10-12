@@ -13,6 +13,7 @@ import { extractYouTubeId, getDocumentUrl, isMateriVideo } from './courseHelpers
 
 export default function CoursePlayer({
   activeMateri,
+  courseData,
   onMarkAsRead,
   onNavigate,
   onNextMateri,
@@ -27,7 +28,7 @@ export default function CoursePlayer({
   }
 
   if (activeMateri.is_locked) {
-    return <PreTestLockedCard activeMateri={activeMateri} onNavigate={onNavigate} />;
+    return <PreTestLockedCard activeMateri={activeMateri} courseData={courseData} onNavigate={onNavigate} />;
   }
 
   const isH5P = activeMateri?.tipe === 'h5p';

@@ -12,6 +12,7 @@ import {
 
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
+import DashboardRequestAksesCard from './DashboardRequestAksesCard';
 
 const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, colorClass }) => (
   <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col relative overflow-hidden">
@@ -111,7 +112,8 @@ const AdminKomunitasDashboard = ({ onNavigate, onLogout }) => {
     totalPeserta: 0,
     aktif: 0,
     rataProgres: 0,
-    sertifikat: 0
+    sertifikat: 0,
+    pendingRequests: 0,
   });
 
   useEffect(() => {
@@ -126,7 +128,8 @@ const AdminKomunitasDashboard = ({ onNavigate, onLogout }) => {
             totalPeserta: 0,
             aktif: 0,
             rataProgres: 0,
-            sertifikat: 0
+            sertifikat: 0,
+            pendingRequests: 0,
           });
           setCourses(data.kursus_terbaru || []);
           setActivities(data.aktivitas_terkini || []);
@@ -187,6 +190,37 @@ const AdminKomunitasDashboard = ({ onNavigate, onLogout }) => {
             />
           </div>
 
+          {stats.pendingRequests > 0 && (
+            <div className="mb-8 p-4 bg-gradient-to-r from-amber-50 via-orange-50/50 to-white border border-amber-200/90 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-amber-950">
+                    Ada {stats.pendingRequests} Permintaan Akses Peserta Menunggu Persetujuan
+                  </h3>
+                  <p className="text-xs text-amber-800/90 mt-0.5">
+                    Peserta memerlukan validasi akses Anda agar dapat mulai mengakses modul dan materi kursus.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('persetujuan-akses');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Tinjau di Bawah</span>
+                <span className="text-sm leading-none">↓</span>
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
             {/* Chart Section */}
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm lg:col-span-2">
@@ -228,6 +262,18 @@ const AdminKomunitasDashboard = ({ onNavigate, onLogout }) => {
                 Lihat Laporan Progress Lengkap
               </button>
             </div>
+          </div>
+
+          {/* Section: Persetujuan Permintaan Akses Peserta (Request Akses) */}
+          <div id="persetujuan-akses">
+            <DashboardRequestAksesCard
+              onStatsUpdated={(newCounts) => {
+                setStats(prev => ({
+                  ...prev,
+                  pendingRequests: newCounts?.menunggu ?? prev.pendingRequests
+                }));
+              }}
+            />
           </div>
 
           {/* Table Section */}

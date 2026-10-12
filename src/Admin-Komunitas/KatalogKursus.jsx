@@ -59,6 +59,16 @@ const CourseCard = ({ course, onNavigate }) => {
               Umum
             </span>
           )}
+          {course.butuh_persetujuan && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+              <Lock className="w-2.5 h-2.5" /> Request Akses
+            </span>
+          )}
+          {course.pending_request_count > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+              <Users className="w-2.5 h-2.5" /> {course.pending_request_count} Pending
+            </span>
+          )}
         </div>
 
         {/* Title */}

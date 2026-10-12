@@ -273,6 +273,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         data.append('kategori', course.kategori || 'Pengembangan Kompetensi');
         data.append('capaian_pembelajaran', course.capaian_pembelajaran || '');
         data.append('nilai_kelulusan', course.nilai_kelulusan ?? 70);
+        data.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
         data.append('komunitas_id', course.komunitas_id);
         data.append('thumbnail', courseThumbnailFile);
 
@@ -285,6 +286,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           kategori: course.kategori || 'Pengembangan Kompetensi',
           capaian_pembelajaran: course.capaian_pembelajaran || '',
           nilai_kelulusan: course.nilai_kelulusan ?? 70,
+          butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
           komunitas_id: course.komunitas_id
         };
         res = await api.put(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, payload);
@@ -1675,6 +1677,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         formData.append('kategori', course.kategori || 'Pengembangan Kompetensi');
         formData.append('capaian_pembelajaran', course.capaian_pembelajaran || '-');
         formData.append('nilai_kelulusan', course.nilai_kelulusan ?? 70);
+        formData.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
         formData.append('komunitas_id', course.komunitas_id);
         formData.append('thumbnail', courseThumbnailFile);
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, formData, {
@@ -1688,6 +1691,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           kategori: course.kategori || 'Pengembangan Kompetensi',
           capaian_pembelajaran: course.capaian_pembelajaran || '-',
           nilai_kelulusan: course.nilai_kelulusan,
+          butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
           komunitas_id: course.komunitas_id
         });
       }
