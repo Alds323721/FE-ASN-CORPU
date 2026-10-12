@@ -32,7 +32,7 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
             </div>
           </div>
           <p class="text-xs text-gray-500 leading-relaxed">
-            Layanan ini akan segera tersedia untuk memfasilitasi pemetaan dan perencanaan kebutuhan pengembangan kompetensi ASN Kabupaten Buleleng secara terpadu - testing.
+            Layanan ini akan segera tersedia untuk memfasilitasi pemetaan dan perencanaan kebutuhan pengembangan kompetensi ASN Kabupaten Buleleng secara terpadu.
           </p>
         </div>
       `,
