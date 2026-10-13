@@ -9,7 +9,7 @@ import {
   FileText, RotateCcw, ChevronDown, CheckCircle2,
   PlayCircle, Edit, Filter, ChevronLeft, ChevronRight, MoreHorizontal, Clock,
   BarChart2, Book, HelpCircle, GraduationCap, HeadphonesIcon, Plus, MoreVertical, Trash2,
-  Upload, Image as ImageIcon
+  Upload, Image as ImageIcon, Lock, Key, UserCheck
 } from 'lucide-react';
 
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
@@ -32,7 +32,8 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
     kategori_id: '',
     kategori: 'Pengembangan Kompetensi',
     capaian_pembelajaran: '',
-    nilai_kelulusan: 70
+    nilai_kelulusan: 70,
+    butuh_persetujuan: false
   });
   const [courseThumbnailFile, setCourseThumbnailFile] = useState(null);
   const [courseThumbnailPreview, setCourseThumbnailPreview] = useState('');
@@ -125,6 +126,7 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
       data.append('kategori', formData.kategori);
       data.append('capaian_pembelajaran', formData.capaian_pembelajaran);
       data.append('nilai_kelulusan', formData.nilai_kelulusan);
+      data.append('butuh_persetujuan', formData.butuh_persetujuan ? 1 : 0);
       data.append('deskripsi', '');
       if (courseThumbnailFile) {
         data.append('thumbnail', courseThumbnailFile);
@@ -344,6 +346,16 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
                             Menunggu Approval
                           </span>
                         )}
+                        {course.butuh_persetujuan && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            <Lock className="w-2.5 h-2.5" /> Request Akses
+                          </span>
+                        )}
+                        {(course.pending_request_count > 0) && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                            <Users className="w-2.5 h-2.5" /> {course.pending_request_count} Request Baru
+                          </span>
+                        )}
                       </div>
 
                       {/* Course Info */}
@@ -548,6 +560,31 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
                   onChange={e => setFormData({...formData, nilai_kelulusan: e.target.value})}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
                 />
+              </div>
+
+              {/* Opsi Request Akses */}
+              <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4 transition-all">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <label htmlFor="butuh_persetujuan" className="text-sm font-bold text-gray-900 cursor-pointer flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-[#0F766E]" />
+                      Perlu Permintaan Akses (Request Akses)
+                    </label>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Jika diaktifkan, peserta harus meminta akses ke kursus ini terlebih dahulu. Anda (Admin Komunitas) yang akan memvalidasi dan menyetujui sebelum peserta dapat membuka materi kursus.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                    <input 
+                      id="butuh_persetujuan"
+                      type="checkbox" 
+                      checked={formData.butuh_persetujuan || false}
+                      onChange={e => setFormData({...formData, butuh_persetujuan: e.target.checked})}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
+                  </label>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">

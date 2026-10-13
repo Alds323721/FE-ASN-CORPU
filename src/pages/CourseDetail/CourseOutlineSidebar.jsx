@@ -98,7 +98,7 @@ export default function CourseOutlineSidebar({ courseData, activeMateri, onSelec
                       Swal.fire({
                         icon: 'info',
                         title: 'Materi Masih Terkunci',
-                        text: 'Selesaikan materi sebelumnya sesuai urutan silabus terlebih dahulu.',
+                        text: courseData?.lock_reason || 'Selesaikan materi sebelumnya sesuai urutan silabus terlebih dahulu.',
                         confirmButtonColor: '#006A63'
                       });
                       return;
@@ -124,7 +124,7 @@ export default function CourseOutlineSidebar({ courseData, activeMateri, onSelec
                     Swal.fire({
                       icon: 'info',
                       title: 'Kuis Masih Terkunci',
-                      text: 'Selesaikan seluruh materi pada modul ini terlebih dahulu sebelum mengerjakan kuis.',
+                      text: courseData?.lock_reason || 'Selesaikan seluruh materi pada modul ini terlebih dahulu sebelum mengerjakan kuis.',
                       confirmButtonColor: '#006A63'
                     });
                     return;
@@ -151,7 +151,7 @@ export default function CourseOutlineSidebar({ courseData, activeMateri, onSelec
                     Swal.fire({
                       icon: 'info',
                       title: 'Kuis Masih Terkunci',
-                      text: 'Selesaikan seluruh materi pada modul ini terlebih dahulu sebelum mengerjakan asesmen.',
+                      text: courseData?.lock_reason || 'Selesaikan seluruh materi pada modul ini terlebih dahulu sebelum mengerjakan asesmen.',
                       confirmButtonColor: '#006A63'
                     });
                     return;
@@ -182,7 +182,7 @@ export default function CourseOutlineSidebar({ courseData, activeMateri, onSelec
                 Swal.fire({
                   icon: 'info',
                   title: 'Post Test Masih Terkunci',
-                  text: 'Selesaikan seluruh modul dan kuis evaluasi terlebih dahulu sebelum membuka Post Test.',
+                  text: courseData?.lock_reason || 'Selesaikan seluruh modul dan kuis evaluasi terlebih dahulu sebelum membuka Post Test.',
                   confirmButtonColor: '#006A63'
                 });
                 return;

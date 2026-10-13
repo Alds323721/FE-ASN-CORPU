@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, AlertCircle, Upload, ChevronDown } from 'lucide-react';
+import { Eye, AlertCircle, Upload, ChevronDown, Lock, Users } from 'lucide-react';
 
 const CourseBasicInfoCard = ({
   course,
@@ -208,6 +208,44 @@ const CourseBasicInfoCard = ({
               onChange={(e) => setCourse({ ...course, deskripsi: e.target.value })}
               placeholder="Tuliskan deskripsi lengkap mengenai tujuan dan target pelatihan ini..."
             ></textarea>
+          </div>
+
+          {/* Pengaturan Request Akses Peserta */}
+          <div className="bg-teal-50/60 border border-teal-200/90 rounded-xl p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-teal-100 text-[#0F766E] flex items-center justify-center shrink-0 mt-0.5">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Perlu Permintaan Akses (Request Akses Peserta)</h4>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                    Jika diaktifkan, peserta harus meminta akses terlebih dahulu. Anda (Admin Komunitas) yang akan memvalidasi dan menyetujui sebelum peserta dapat membuka katalog modul dan materi kursus ini.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${course.butuh_persetujuan ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                      {course.butuh_persetujuan ? '🔒 Mode: Butuh Persetujuan Admin' : '🌐 Mode: Terbuka Langsung'}
+                    </span>
+                    {course.pending_request_count > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                        {course.pending_request_count} Permintaan Akses Menunggu
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {!isReadOnly && (
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(course.butuh_persetujuan)}
+                    onChange={(e) => setCourse({ ...course, butuh_persetujuan: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
+                </label>
+              )}
+            </div>
           </div>
 
           {/* Tombol Simpan Cepat untuk Informasi Dasar & Thumbnail */}

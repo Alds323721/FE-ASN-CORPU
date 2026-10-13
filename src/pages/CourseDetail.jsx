@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
-import { Lock } from 'lucide-react';
+import { Lock, Clock, AlertCircle } from 'lucide-react';
 import CourseDetailNavbar from './CourseDetail/CourseDetailNavbar';
 import CourseHeader from './CourseDetail/CourseHeader';
 import CourseOutlineSidebar from './CourseDetail/CourseOutlineSidebar';
@@ -496,7 +496,39 @@ export default function CourseDetail({ onNavigate, onBack }) {
 
       <main className="flex-grow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-6 md:py-8">
-          {courseData?.is_locked_review && (
+          {courseData?.status_persetujuan === 'menunggu' ? (
+            <div className="mb-6 p-4.5 bg-amber-50/90 border border-amber-300 rounded-xl flex items-start gap-3.5 shadow-xs">
+              <div className="p-2.5 bg-amber-100 text-amber-800 rounded-lg shrink-0 mt-0.5">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-amber-900 mb-1 flex items-center gap-2">
+                  <span>Permintaan Akses Menunggu Persetujuan Admin Komunitas</span>
+                  <span className="text-[10px] bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Menunggu Persetujuan</span>
+                </h3>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Permintaan akses Anda untuk pelatihan ini telah dikirimkan dan saat ini sedang ditinjau oleh Admin Komunitas. Seluruh materi, kuis, dan evaluasi akan terbuka secara otomatis segera setelah disetujui.
+                </p>
+              </div>
+            </div>
+          ) : courseData?.status_persetujuan === 'ditolak' ? (
+            <div className="mb-6 p-4.5 bg-red-50/90 border border-red-300 rounded-xl flex items-start gap-3.5 shadow-xs">
+              <div className="p-2.5 bg-red-100 text-red-800 rounded-lg shrink-0 mt-0.5">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-red-900 mb-1 flex items-center gap-2">
+                  <span>Permintaan Akses Ditolak oleh Admin Komunitas</span>
+                  <span className="text-[10px] bg-red-200 text-red-900 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Ditolak</span>
+                </h3>
+                <p className="text-xs text-red-800 leading-relaxed">
+                  {courseData.catatan_persetujuan
+                    ? `Catatan Admin Komunitas: "${courseData.catatan_persetujuan}". Anda dapat mengajukan permohonan kembali melalui katalog pelatihan.`
+                    : 'Permintaan akses Anda ditolak. Anda dapat mengajukan permohonan kembali melalui katalog pelatihan.'}
+                </p>
+              </div>
+            </div>
+          ) : courseData?.is_locked_review ? (
             <div className="mb-6 p-4.5 bg-amber-50/90 border border-amber-300 rounded-xl flex items-start gap-3.5 shadow-xs">
               <div className="p-2.5 bg-amber-100 text-amber-800 rounded-lg shrink-0 mt-0.5">
                 <Lock className="w-5 h-5" />
@@ -511,12 +543,13 @@ export default function CourseDetail({ onNavigate, onBack }) {
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
             <div className="lg:col-span-8 order-2 lg:order-1">
               <CoursePlayer
                 activeMateri={activeMateri}
+                courseData={courseData}
                 onMarkAsRead={handleMarkAsRead}
                 onNavigate={onNavigate}
                 onNextMateri={handleGoNext}

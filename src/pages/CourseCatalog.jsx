@@ -22,7 +22,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
-  Lock
+  Lock,
+  UserCheck,
+  Key,
+  AlertCircle
 } from 'lucide-react';
 
 /* ── Navbar ─────────────────────────────────────────── */
@@ -91,7 +94,24 @@ const CatalogHeader = () => {
 };
 
 /* ── Catalog Course Card ────────────────────────── */
-const CatalogCard = ({ id, image, category, title, description, jpl, modules, isEnrolled, onEnroll, onNavigate, nama_komunitas, is_locked_review }) => {
+const CatalogCard = ({
+  id,
+  image,
+  category,
+  title,
+  description,
+  jpl,
+  modules,
+  isEnrolled,
+  butuh_persetujuan,
+  request_status,
+  catatan_persetujuan,
+  onEnroll,
+  onRequestAccess,
+  onNavigate,
+  nama_komunitas,
+  is_locked_review
+}) => {
   const { t } = useLanguage();
 
   const handleShowLockedAlert = () => {
@@ -114,6 +134,29 @@ const CatalogCard = ({ id, image, category, title, description, jpl, modules, is
     });
   };
 
+  const handleShowPendingAlert = () => {
+    Swal.fire({
+      icon: 'info',
+      title: 'Menunggu Persetujuan Admin',
+      html: `
+        <div class="text-left text-sm text-gray-600 space-y-3">
+          <p>Permintaan akses Anda untuk pelatihan <b>"${title}"</b> telah dikirimkan dan saat ini sedang dalam peninjauan oleh <b>Admin Komunitas</b>.</p>
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-semibold flex items-center gap-2">
+            <span class="text-base">⏳</span> Status Permintaan: <b>Menunggu Persetujuan</b>
+          </div>
+          <p class="text-xs text-gray-500">
+            Anda akan dapat mengakses seluruh modul dan materi pembelajaran segera setelah Admin Komunitas menyetujui permohonan Anda. Silakan cek kembali secara berkala.
+          </p>
+        </div>
+      `,
+      confirmButtonColor: '#006A63',
+      confirmButtonText: 'Saya Mengerti'
+    });
+  };
+
+  const isPending = request_status === 'menunggu';
+  const isRejected = request_status === 'ditolak';
+
   return (
     <div className={`bg-white border rounded-lg overflow-hidden flex flex-col transition-all relative ${
       is_locked_review 
@@ -131,13 +174,18 @@ const CatalogCard = ({ id, image, category, title, description, jpl, modules, is
           {category}
         </div>
 
-        {/* Lock Badge seperti pada Komunitas beda jabatan */}
-        {is_locked_review && (
+        {/* Lock Badge saat ditinjau BKPSDM */}
+        {is_locked_review ? (
           <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-gray-200 text-[10px] font-semibold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5 text-amber-400" />
             <span>Sedang Ditinjau BKPSDM</span>
           </div>
-        )}
+        ) : butuh_persetujuan && !isEnrolled ? (
+          <div className="absolute top-3 right-3 bg-purple-900/85 backdrop-blur-sm text-purple-100 text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5 border border-purple-400/30">
+            <Lock className="w-3 h-3 text-purple-300" />
+            <span>Perlu Request Akses</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="p-6 flex-1 flex flex-col">
@@ -184,6 +232,46 @@ const CatalogCard = ({ id, image, category, title, description, jpl, modules, is
             className="w-full py-2.5 border-2 border-[#006A63] text-[#006A63] bg-white rounded-md text-[13px] font-bold hover:bg-[#EFF5F3] transition-colors cursor-pointer"
           >
             {t('catalog.viewCurriculum')}
+          </button>
+        ) : isPending ? (
+          <div>
+            <button
+              type="button"
+              onClick={handleShowPendingAlert}
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md text-[13px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              title="Klik untuk melihat detail permohonan akses"
+            >
+              <Clock className="w-4 h-4" />
+              <span>Menunggu Persetujuan Admin</span>
+            </button>
+            <p className="text-[11px] text-amber-700 text-center mt-1.5 font-medium">
+              Permintaan sedang ditinjau oleh Admin Komunitas
+            </p>
+          </div>
+        ) : isRejected ? (
+          <div>
+            <button
+              type="button"
+              onClick={onRequestAccess}
+              className="w-full py-2.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 rounded-md text-[13px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+              title="Klik untuk melihat catatan dan mengajukan ulang"
+            >
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <span>Akses Ditolak (Ajukan Ulang)</span>
+            </button>
+            {catatan_persetujuan && (
+              <p className="text-[11px] text-red-600 text-center mt-1 truncate" title={catatan_persetujuan}>
+                Alasan: {catatan_persetujuan}
+              </p>
+            )}
+          </div>
+        ) : butuh_persetujuan ? (
+          <button
+            onClick={onRequestAccess}
+            className="w-full py-2.5 bg-[#006A63] hover:bg-[#00534D] text-white rounded-md text-[13px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Minta Akses Pelatihan</span>
           </button>
         ) : (
           <button
@@ -360,6 +448,73 @@ const CatalogContent = ({ onNavigate }) => {
     }
   };
 
+  const handleRequestAccess = async (courseItem) => {
+    const isReapply = courseItem.request_status === 'ditolak';
+
+    const result = await Swal.fire({
+      title: isReapply ? 'Ajukan Ulang Akses Pelatihan?' : 'Minta Akses Pelatihan?',
+      html: `
+        <div class="text-left text-sm text-gray-600 space-y-3">
+          <p>Pelatihan <b>"${courseItem.title || courseItem.judul}"</b> memerlukan persetujuan dari <b>Admin Komunitas</b> sebelum Anda dapat membuka materi pembelajaran.</p>
+          ${isReapply && courseItem.catatan_persetujuan ? `
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs">
+              <span class="font-bold">Catatan Penolakan Sebelumnya:</span>
+              <p class="mt-1 italic">"${courseItem.catatan_persetujuan}"</p>
+            </div>
+          ` : ''}
+          <p class="text-xs text-gray-500">
+            Kirim permintaan akses ke Admin Komunitas sekarang?
+          </p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonColor: '#006A63',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: isReapply ? 'Ya, Kirim Pengajuan Ulang' : 'Ya, Kirim Permintaan Akses',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setEnrolling(true);
+      const res = await api.post(`/user/katalog/${courseItem.id}/enroll`);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Permintaan Berhasil Dikirim!',
+        text: res.data?.message || 'Permintaan akses Anda telah dikirim dan menunggu persetujuan Admin Komunitas.',
+        confirmButtonColor: '#006A63'
+      });
+      fetchKatalog();
+    } catch (error) {
+      if (error.response?.status === 403) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Perlu Bergabung Komunitas',
+          text: error.response?.data?.message || 'Anda harus bergabung ke komunitas penyelenggara terlebih dahulu sebelum meminta akses pelatihan ini.',
+          showCancelButton: true,
+          confirmButtonText: 'Buka Menu Komunitas',
+          cancelButtonText: 'Tutup',
+          confirmButtonColor: '#006A63'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            onNavigate('community');
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Mengirim Permintaan',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat mengirim permintaan akses.',
+          confirmButtonColor: '#006A63'
+        });
+      }
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
   const [categories, setCategories] = useState([
     { value: 'Semua Kategori', label: t('catalog.allCategories') }
   ]);
@@ -512,6 +667,7 @@ const CatalogContent = ({ onNavigate }) => {
                 key={c.id}
                 {...c}
                 onEnroll={() => handleEnroll(c.id)}
+                onRequestAccess={() => handleRequestAccess(c)}
                 onNavigate={onNavigate}
               />
             ))}
