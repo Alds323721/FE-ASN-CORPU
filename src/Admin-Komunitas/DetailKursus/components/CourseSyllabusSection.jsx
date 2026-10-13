@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Plus, BookOpen, ChevronDown, Edit, Edit2, Trash2, FileText, Sparkles, Package, Video, Eye
+  Plus, BookOpen, ChevronDown, Edit, Edit2, Trash2, FileText, Sparkles, Package, Video, Eye, Globe
 } from 'lucide-react';
 import { getStorageUrl } from '../../../utils/url';
 
@@ -184,6 +184,8 @@ const CourseSyllabusSection = ({
                                       ? 'bg-purple-50 text-purple-600'
                                       : mat.tipe_materi === 'scorm'
                                       ? 'bg-amber-50 text-amber-600'
+                                      : mat.tipe_materi === 'tautan_web'
+                                      ? 'bg-sky-50 text-sky-600'
                                       : 'bg-blue-50 text-blue-600'
                                   }`}
                                 >
@@ -193,6 +195,8 @@ const CourseSyllabusSection = ({
                                     <Sparkles className="w-4 h-4" />
                                   ) : mat.tipe_materi === 'scorm' ? (
                                     <Package className="w-4 h-4" />
+                                  ) : mat.tipe_materi === 'tautan_web' ? (
+                                    <Globe className="w-4 h-4" />
                                   ) : (
                                     <Video className="w-4 h-4" />
                                   )}
@@ -214,6 +218,12 @@ const CourseSyllabusSection = ({
                                         SCORM Interaktif
                                       </span>
                                     )}
+                                    {mat.tipe_materi === 'tautan_web' && (
+                                      <span className="px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold rounded-full flex items-center gap-1">
+                                        <Globe className="w-3 h-3 text-sky-500" />
+                                        Webview / Tautan Web
+                                      </span>
+                                    )}
                                     {mat.pre_test ? (
                                       <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-full">
                                         Pre-test Aktif ({mat.pre_test.durasi_menit || 15}m)
@@ -231,6 +241,8 @@ const CourseSyllabusSection = ({
                                       ? 'Video Interaktif (H5P)'
                                       : mat.tipe_materi === 'scorm'
                                       ? 'Video Interaktif (SCORM)'
+                                      : mat.tipe_materi === 'tautan_web'
+                                      ? 'Materi Web (Webview)'
                                       : 'Video Pembelajaran'}{' '}
                                     • {mat.durasi_menit} Menit
                                   </p>

@@ -662,6 +662,21 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           }
           formData.append('tautan_atau_berkas_embed', materialForm.tautan_atau_berkas_embed);
         }
+      } else if (materialForm.tipe_materi === 'tautan_web') {
+        if (!materialForm.tautan_atau_berkas_embed.trim()) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Tautan Materi Web Diperlukan',
+            text: 'Silakan masukkan tautan web / artikel materi.',
+            confirmButtonColor: '#0F766E'
+          });
+          return;
+        }
+        let urlWeb = materialForm.tautan_atau_berkas_embed.trim();
+        if (!/^https?:\/\//i.test(urlWeb)) {
+          urlWeb = `https://${urlWeb}`;
+        }
+        formData.append('tautan_atau_berkas_embed', urlWeb);
       } else {
         if (!materialForm.tautan_atau_berkas_embed.trim()) {
           Swal.fire({
@@ -870,6 +885,21 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           }
           formData.append('tautan_atau_berkas_embed', editMaterialForm.tautan_atau_berkas_embed);
         }
+      } else if (editMaterialForm.tipe_materi === 'tautan_web') {
+        if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Tautan Materi Web Diperlukan',
+            text: 'Silakan masukkan tautan web / artikel materi.',
+            confirmButtonColor: '#0F766E'
+          });
+          return;
+        }
+        let urlWeb = editMaterialForm.tautan_atau_berkas_embed.trim();
+        if (!/^https?:\/\//i.test(urlWeb)) {
+          urlWeb = `https://${urlWeb}`;
+        }
+        formData.append('tautan_atau_berkas_embed', urlWeb);
       } else {
         if (!editMaterialForm.tautan_atau_berkas_embed.trim()) {
           Swal.fire({

@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Sparkles, Package, Clock, Video, Link2, PlayCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Sparkles, Package, Clock, Video, Link2, PlayCircle, Globe, ExternalLink, Eye } from 'lucide-react';
 import { getStorageUrl } from '../../../utils/url';
 
 const MaterialModal = ({
@@ -12,11 +12,13 @@ const MaterialModal = ({
   courseStatus,
   editingMaterial = null
 }) => {
+  const [showLivePreview, setShowLivePreview] = useState(false);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-gray-100 space-y-4 max-h-[92vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-gray-100 space-y-4 max-h-[92vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b border-gray-100 pb-3">
           <div>
             <h3 className="font-bold text-gray-900 text-base">
@@ -50,7 +52,7 @@ const MaterialModal = ({
               required
               value={form.judul_materi || ''}
               onChange={(e) => setForm({ ...form, judul_materi: e.target.value })}
-              placeholder="Contoh: Modul Bacaan Bab 1 (PDF)"
+              placeholder="Contoh: Modul Bacaan Bab 1 (PDF) atau Artikel Kebijakan ASN"
               className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
             />
           </div>
@@ -59,7 +61,7 @@ const MaterialModal = ({
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
               Tipe Materi
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <button
                 type="button"
                 onClick={() => setForm({ ...form, tipe_materi: 'pdf' })}
@@ -102,6 +104,17 @@ const MaterialModal = ({
               >
                 <Package className="w-3.5 h-3.5 text-amber-500" />
                 <span>SCORM Interaktif</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, tipe_materi: 'tautan_web' })}
+                className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-all flex items-center justify-center gap-1 ${form.tipe_materi === 'tautan_web'
+                  ? 'bg-sky-50 border-sky-600 text-sky-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+              >
+                <Globe className="w-3.5 h-3.5 text-sky-600" />
+                <span>Web / Webview</span>
               </button>
             </div>
           </div>
@@ -315,6 +328,107 @@ const MaterialModal = ({
                   <p className="text-[11px] text-gray-500 mt-1">
                     💡 Masukkan URL player SCORM Cloud atau URL hosting web eksternal.
                   </p>
+                </div>
+              )}
+            </div>
+          ) : form.tipe_materi === 'tautan_web' ? (
+            <div className="space-y-3 bg-sky-50/40 p-3.5 rounded-lg border border-sky-200/70">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-sky-600" />
+                  Materi Halaman Web / Webview
+                </label>
+                <span className="text-[10px] text-sky-700 font-semibold bg-sky-100/70 px-2 py-0.5 rounded">
+                  Scroll-down Webview
+                </span>
+              </div>
+
+              {isEdit && editingMaterial?.tipe_materi === 'tautan_web' && editingMaterial?.tautan_atau_berkas && (
+                <div className="p-2 bg-white border border-sky-200 rounded text-xs text-sky-900 flex items-center justify-between">
+                  <span className="truncate max-w-xs font-medium">
+                    Tautan saat ini: {editingMaterial.tautan_atau_berkas}
+                  </span>
+                  <a
+                    href={editingMaterial.tautan_atau_berkas}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-700 font-bold hover:underline shrink-0 ml-2 flex items-center gap-1"
+                  >
+                    <span>Buka</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Tautan / URL Web Materi
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.tautan_atau_berkas_embed || ''}
+                  onChange={(e) => setForm({ ...form, tautan_atau_berkas_embed: e.target.value })}
+                  onBlur={(e) => {
+                    const val = (e.target.value || '').trim();
+                    if (val && !/^https?:\/\//i.test(val)) {
+                      setForm({ ...form, tautan_atau_berkas_embed: `https://${val}` });
+                    }
+                  }}
+                  placeholder="https://contoh-portal.id/modul-pembelajaran"
+                  className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+                <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  💡 Masukkan URL lengkap artikel / website materi (otomatis menggunakan <b>https://</b>). Konten akan ditampilkan di card preview peserta yang dapat digulir ke bawah (*scroll down*).
+                </p>
+              </div>
+
+              {/* Live Preview Tester */}
+              {form.tautan_atau_berkas_embed && (
+                <div className="pt-1 border-t border-sky-100">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowLivePreview(!showLivePreview)}
+                      className="text-xs font-semibold text-sky-700 hover:text-sky-900 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{showLivePreview ? 'Tutup Uji Tampilan' : 'Uji Tampilan Webview (Live Test)'}</span>
+                    </button>
+                    <a
+                      href={form.tautan_atau_berkas_embed}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-gray-500 hover:text-sky-700 flex items-center gap-1"
+                    >
+                      <span>Buka di Tab Baru</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {showLivePreview && (
+                    <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                      <div className="bg-sky-50 px-2.5 py-1.5 border-b border-sky-100 flex items-center justify-between text-[11px] text-sky-900 font-medium">
+                        <span className="truncate max-w-[260px] text-[10px]">
+                          Pratinjau: {form.tautan_atau_berkas_embed}
+                        </span>
+                        <span className="text-[10px] text-sky-600 bg-white px-1.5 py-0.2 rounded border border-sky-200">
+                          Scrollable
+                        </span>
+                      </div>
+                      <div className="h-44 overflow-y-auto w-full bg-gray-50 relative">
+                        <iframe
+                          src={`${getStorageUrl('/api/webview-proxy')}?url=${encodeURIComponent(form.tautan_atau_berkas_embed)}`}
+                          title="Pratinjau Webview"
+                          className="w-full h-full border-0"
+                          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-500 p-2 bg-gray-50/70 border-t border-gray-100 leading-normal">
+                        *Catatan: Jika halaman tidak muncul, situs target memblokir penyematan (kebijakan X-Frame-Options). Peserta tetap dapat mengakses materi via card interaktif fallback di ruang belajar.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -84,7 +84,7 @@ export default function CourseOutlineSidebar({ courseData, activeMateri, onSelec
                   key={mat.materi_id}
                   index={i + 1}
                   title={mat.judul}
-                  subtitle={`Tipe: ${mat.tipe === 'h5p' ? 'H5P Interaktif' : mat.tipe === 'scorm' ? 'SCORM Interaktif' : isMateriVideo(mat) ? 'Video' : 'Materi Bacaan'}`}
+                  subtitle={`Tipe: ${mat.tipe === 'h5p' ? 'H5P Interaktif' : mat.tipe === 'scorm' ? 'SCORM Interaktif' : mat.tipe === 'tautan_web' ? 'Materi Web (Webview)' : isMateriVideo(mat) ? 'Video' : 'Materi Bacaan'}`}
                   duration={mat.durasi}
                   status={status}
                   badge={badge}

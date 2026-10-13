@@ -18,11 +18,26 @@ export const getDocumentUrl = getStorageUrl;
 
 export const isMateriVideo = (materi) => {
   if (!materi) return false;
-  if (materi.tipe === 'h5p' || materi.tipe === 'scorm') return false;
+  if (materi.tipe === 'h5p' || materi.tipe === 'scorm' || materi.tipe === 'tautan_web') return false;
   if (materi.tipe === 'video' || materi.tipe === 'video_embed') return true;
   if (extractYouTubeId(materi.tautan)) return true;
   if (materi.tautan && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(materi.tautan)) return true;
   return false;
+};
+
+export const isMateriWeb = (materi) => {
+  if (!materi) return false;
+  return materi.tipe === 'tautan_web';
+};
+
+export const getHostFromUrl = (url) => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.hostname.replace(/^www\./i, '');
+  } catch (e) {
+    return url;
+  }
 };
 
 export const getQuizBadges = (tipeSoalList = []) => {
