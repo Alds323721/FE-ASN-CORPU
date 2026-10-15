@@ -14,7 +14,7 @@ export default function LandingNavbar({ onLoginClick, onNavigatePortal }) {
         <img src={logoImg} alt="Logo BKPSDM" className="w-7 sm:w-9 h-7 sm:h-9 object-contain group-hover:scale-105 transition-transform shrink-0" />
         <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-7 sm:w-9 h-7 sm:h-9 object-contain group-hover:scale-105 transition-transform shrink-0" />
         <span className="font-bold text-sm sm:text-xl text-[#1D315F] tracking-wide group-hover:text-[#0099FF] transition-colors truncate">
-          Buleleng ASN Corpu
+          SI-BIJAK PATEN
         </span>
       </div>
       <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">

@@ -148,8 +148,8 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
                       <MonitorPlay className="w-5 h-5 lg:w-6 lg:h-6 text-white stroke-[2.2]" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-base sm:text-lg lg:text-xl xl:text-2xl font-black text-white tracking-wide leading-tight drop-shadow-xs">
-                        LMS
+                      <div className="text-sm sm:text-base lg:text-sm xl:text-base 2xl:text-lg font-black text-white tracking-wide leading-tight drop-shadow-xs whitespace-nowrap">
+                        LMS SI-BIJAK PATEN
                       </div>
                       <div className="text-[10px] sm:text-xs lg:text-xs text-emerald-100 font-medium truncate drop-shadow-xs">
                         Learning Management System
@@ -232,7 +232,7 @@ export default function PortalPage({ onNavigateLMS, onNavigate }) {
                   <MonitorPlay className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm sm:text-lg font-black text-white leading-none">LMS</div>
+                  <div className="text-sm sm:text-base font-black text-white leading-none">LMS - SI-BIJAK PATEN</div>
                   <div className="text-[10px] sm:text-xs text-emerald-100 font-medium mt-0.5 sm:mt-1">Learning Management System</div>
                 </div>
               </div>

@@ -300,7 +300,7 @@ export default function AuthModal({
             <div className="flex items-center gap-2.5 mb-8">
               <img src={logoImg} alt="Logo BKPSDM" className="w-7 sm:w-8 h-7 sm:h-8 object-contain" />
               <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-7 sm:w-8 h-7 sm:h-8 object-contain" />
-              <span className="font-semibold text-sm sm:text-base">Buleleng ASN Corpu</span>
+              <span className="font-semibold text-sm sm:text-base">SI-BIJAK PATEN</span>
             </div>
 
             <div className="mb-6">
