@@ -284,6 +284,19 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
                 </div>
               </div>
 
+              {/* Banner Kolaborasi KPK jika Kursus KPK */}
+              {certData.is_kpk && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-200/80 flex items-center gap-3.5 shadow-sm">
+                  <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-10 h-10 object-contain shrink-0 drop-shadow-sm" />
+                  <div>
+                    <div className="text-xs font-bold text-red-950 uppercase tracking-wider">Program Pembelajaran Kolaborasi KPK RI</div>
+                    <div className="text-xs text-red-800 mt-0.5 leading-relaxed">
+                      Sertifikat ini diterbitkan secara sah atas kerjasama <strong>Komisi Pemberantasan Korupsi (KPK) Republik Indonesia</strong> dan <strong>BKPSDM Pemerintah Kabupaten Buleleng</strong>.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Pejabat Penandatangan */}
               <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>

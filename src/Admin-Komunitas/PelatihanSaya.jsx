@@ -530,6 +530,7 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
                   ) : (
                     <>
                       <option value="Pengembangan Kompetensi">Pengembangan Kompetensi</option>
+                      <option value="Pendidikan Antikorupsi (KPK)">Pendidikan Antikorupsi (KPK)</option>
                       <option value="Manajemen ASN">Manajemen ASN</option>
                       <option value="Teknologi Informasi">Teknologi Informasi</option>
                       <option value="Pelayanan Publik">Pelayanan Publik</option>

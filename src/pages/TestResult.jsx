@@ -130,9 +130,16 @@ const CertificatePreview = ({ sertifikat }) => {
     
     <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">HALAMAN KELULUSAN</p>
     
-    <h2 className="text-2xl md:text-3xl font-semibold text-[#1D315F] mb-6 md:mb-8">
+    <h2 className="text-2xl md:text-3xl font-semibold text-[#1D315F] mb-4 md:mb-6">
       {sertifikat?.judul_pembelajaran || 'Pelatihan'}
     </h2>
+
+    {sertifikat?.is_kpk && (
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold mb-6 shadow-sm">
+        <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-5 h-5 object-contain" />
+        <span>Program Kolaborasi Resmi KPK RI</span>
+      </div>
+    )}
     
     <div className="mb-6 md:mb-8">
       <p className="text-sm md:text-base text-gray-600 font-semibold mb-2">Diberikan Kepada:</p>
