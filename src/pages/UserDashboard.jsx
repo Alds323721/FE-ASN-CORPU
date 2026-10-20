@@ -62,14 +62,14 @@ const DashboardNavbar = ({ onLogout, onNavigate }) => {
         {/* Right icons */}
         <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
           <LanguageDropdown />
-          <ProfileDropdown onLogout={onLogout} />
+          <ProfileDropdown onLogout={onLogout} onNavigate={onNavigate} />
         </div>
       </div>
 
       {/* Mobile toggle */}
       <div className="md:hidden flex items-center gap-3">
         <LanguageDropdown />
-        <ProfileDropdown onLogout={onLogout} />
+        <ProfileDropdown onLogout={onLogout} onNavigate={onNavigate} />
         <button onClick={() => setMobileOpen(!mobileOpen)} className="text-[#1D315F] hover:text-[#006A63] focus:outline-none">
           {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>

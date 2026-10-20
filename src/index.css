@@ -40,3 +40,40 @@
     transform: scale(1);
   }
 }
+
+/* SweetAlert2 Admin-System UI Theme Enhancements */
+.system-swal-container.swal2-container {
+  backdrop-filter: blur(4px) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+  z-index: 99999 !important;
+}
+
+.system-swal-popup.swal2-popup {
+  border-radius: 1.25rem !important;
+  border: 1px solid #f1f5f9 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  padding: 1.75rem !important;
+}
+
+.system-swal-popup .swal2-icon {
+  margin: 0.5rem 0 1rem 0 !important;
+  transform: scale(0.85);
+  border-width: 3px !important;
+}
+
+.system-swal-popup .swal2-icon.swal2-question {
+  border-color: #0f766e !important;
+  color: #0f766e !important;
+}
+
+.system-swal-toast.swal2-popup.swal2-toast {
+  border-radius: 0.875rem !important;
+  border: 1px solid #f1f5f9 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15) !important;
+  padding: 0.75rem 1rem !important;
+  z-index: 999999 !important;
+}
+
+.system-swal-toast .swal2-timer-progress-bar {
+  background: #0f766e !important;
+}

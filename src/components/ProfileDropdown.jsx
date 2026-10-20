@@ -6,7 +6,7 @@ import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchR
 import { useLanguage } from '../context/LanguageContext';
 import { PasswordRequirementsList, validatePasswordStrict } from './PasswordRequirements';
 
-const ProfileDropdown = ({ onLogout }) => {
+const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const { t } = useLanguage();
    const [isOpen, setIsOpen] = useState(false);
    const [profileImage, setProfileImage] = useState(userImg);
@@ -24,6 +24,7 @@ const ProfileDropdown = ({ onLogout }) => {
    const currentActiveRole = getActiveRole();
 
    const roleLabels = {
+     root: { label: 'Admin System (Root)', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
      admin_bkpsdm: { label: 'Admin BKPSDM', badge: 'bg-red-50 text-red-700 border-red-200' },
      admin_komunitas: { label: 'Admin Komunitas', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
      peserta: { label: 'Peserta Pembelajaran', badge: 'bg-blue-50 text-blue-700 border-blue-200' }
@@ -45,12 +46,30 @@ const ProfileDropdown = ({ onLogout }) => {
        setActiveRole(targetRole);
        setIsOpen(false);
 
-       if (targetRole === 'admin_bkpsdm') {
-         window.location.href = '/admin';
+       if (targetRole === 'root') {
+         if (typeof onNavigate === 'function') {
+           onNavigate('admin-system');
+         } else {
+           window.location.href = '/admin-system';
+         }
+       } else if (targetRole === 'admin_bkpsdm') {
+         if (typeof onNavigate === 'function') {
+           onNavigate('admin');
+         } else {
+           window.location.href = '/admin';
+         }
        } else if (targetRole === 'admin_komunitas') {
-         window.location.href = '/admin-komunitas';
+         if (typeof onNavigate === 'function') {
+           onNavigate('admin-komunitas');
+         } else {
+           window.location.href = '/admin-komunitas';
+         }
        } else {
-         window.location.href = '/';
+         if (typeof onNavigate === 'function') {
+           onNavigate('dashboard');
+         } else {
+           window.location.href = '/';
+         }
        }
      } catch (err) {
        console.error('Gagal beralih peran:', err);

@@ -14,6 +14,7 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
   const currentActiveRole = getActiveRole() || 'admin_bkpsdm';
 
   const roleLabels = {
+    root: { label: 'Admin System (Root)', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     admin_bkpsdm: { label: 'Admin BKPSDM', badge: 'bg-red-50 text-red-700 border-red-200' },
     admin_komunitas: { label: 'Admin Komunitas', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     peserta: { label: 'Peserta Pembelajaran', badge: 'bg-blue-50 text-blue-700 border-blue-200' }
@@ -45,7 +46,13 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
       setActiveRole(targetRole);
       setIsOpen(false);
 
-      if (targetRole === 'admin_bkpsdm') {
+      if (targetRole === 'root') {
+        if (typeof onNavigate === 'function') {
+          onNavigate('admin-system');
+        } else {
+          window.location.href = '/admin-system';
+        }
+      } else if (targetRole === 'admin_bkpsdm') {
         if (typeof onNavigate === 'function') {
           onNavigate('admin');
         } else {

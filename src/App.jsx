@@ -31,6 +31,11 @@ import KatalogKursus from './Admin-Komunitas/KatalogKursus'
 import DetailKursus from './Admin-Komunitas/DetailKursus'
 import BankSoal from './Admin-Komunitas/BankSoal'
 import PusatBantuan from './Admin-Komunitas/PusatBantuan'
+import RootLayout from './Admin-System/components/RootLayout'
+import RootDashboard from './Admin-System/RootDashboard'
+import RootLogAktivitas from './Admin-System/RootLogAktivitas'
+import RootBackupDb from './Admin-System/RootBackupDb'
+import RootEFileManager from './Admin-System/RootEFileManager'
 import { isAuthenticated, getUserRole, getUserRoles, getActiveRole, setActiveRole, logout, clearAuth, checkNewTabTimeout } from './utils/auth'
 
 const routePaths = {
@@ -50,6 +55,10 @@ const routePaths = {
   'detail-kursus': '/admin-komunitas/detail-kursus',
   'bank-soal': '/admin-komunitas/bank-soal',
   'pusat-bantuan': '/admin-komunitas/pusat-bantuan',
+  'admin-system': '/admin-system',
+  'root-log-aktivitas': '/admin-system/log-aktivitas',
+  'root-backup-db': '/admin-system/backup-db',
+  'root-e-file': '/admin-system/e-file',
   'dashboard': '/dashboard',
   'catalog': '/catalog',
   'pelatihan': '/catalog',
@@ -101,17 +110,39 @@ function App() {
     // Rute LMS khusus (/LMS atau /lms) saat sudah login
     if (path.toLowerCase() === '/lms' || path.toLowerCase() === '/lms/') {
       let defaultRoute = 'dashboard';
-      if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) defaultRoute = 'admin';
+      if (activeRole === 'root' && userRoles.includes('root')) defaultRoute = 'admin-system';
+      else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) defaultRoute = 'admin';
       else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) defaultRoute = 'admin-komunitas';
       const targetPath = routePaths[defaultRoute] || '/dashboard';
       window.history.replaceState({ route: defaultRoute }, '', targetPath);
       return defaultRoute;
     }
 
+    // Rute khusus Admin System / Root (path /admin-system atau /admin-system/*)
+    if (path === '/admin-system' || path.startsWith('/admin-system/')) {
+      if (!userRoles.includes('root')) {
+        let fallbackRoute = 'dashboard';
+        if (userRoles.includes('admin_bkpsdm')) fallbackRoute = 'admin';
+        else if (userRoles.includes('admin_komunitas')) fallbackRoute = 'admin-komunitas';
+        const fallbackPath = routePaths[fallbackRoute] || '/dashboard';
+        window.history.replaceState({ route: fallbackRoute }, '', fallbackPath);
+        return fallbackRoute;
+      }
+      if (activeRole !== 'root') {
+        setActiveRole('root');
+      }
+      if (path === '/admin-system/log-aktivitas') return 'root-log-aktivitas';
+      if (path === '/admin-system/backup-db') return 'root-backup-db';
+      if (path === '/admin-system/e-file') return 'root-e-file';
+      return 'admin-system';
+    }
+
     // Rute khusus Admin Komunitas (path /admin-komunitas atau /admin-komunitas/*)
     if (path === '/admin-komunitas' || path.startsWith('/admin-komunitas/')) {
       if (!userRoles.includes('admin_komunitas')) {
-        const fallbackRoute = userRoles.includes('admin_bkpsdm') ? 'admin' : 'dashboard';
+        let fallbackRoute = 'dashboard';
+        if (userRoles.includes('root')) fallbackRoute = 'admin-system';
+        else if (userRoles.includes('admin_bkpsdm')) fallbackRoute = 'admin';
         const fallbackPath = routePaths[fallbackRoute] || '/dashboard';
         window.history.replaceState({ route: fallbackRoute }, '', fallbackPath);
         return fallbackRoute;
@@ -131,7 +162,9 @@ function App() {
     // Rute khusus Admin BKPSDM (path /admin atau /admin/*)
     if (path === '/admin' || path.startsWith('/admin/')) {
       if (!userRoles.includes('admin_bkpsdm')) {
-        const fallbackRoute = userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard';
+        let fallbackRoute = 'dashboard';
+        if (userRoles.includes('root')) fallbackRoute = 'admin-system';
+        else if (userRoles.includes('admin_komunitas')) fallbackRoute = 'admin-komunitas';
         const fallbackPath = routePaths[fallbackRoute] || '/dashboard';
         window.history.replaceState({ route: fallbackRoute }, '', fallbackPath);
         return fallbackRoute;
@@ -149,7 +182,12 @@ function App() {
     }
 
     // Rute peserta berdasarkan path URL
-    if (path === '/dashboard') return 'dashboard';
+    if (path === '/dashboard') {
+      if (activeRole === 'root' && userRoles.includes('root')) return 'admin-system';
+      if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) return 'admin';
+      if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) return 'admin-komunitas';
+      return 'dashboard';
+    }
     if (path === '/catalog' || path === '/pelatihan') return 'catalog';
     if (path === '/my-courses') return 'my-courses';
     if (path === '/certificates') return 'certificates';
@@ -161,17 +199,20 @@ function App() {
     if (path === '/help-center') return 'help-center';
 
     // Rute yang tersimpan di localStorage
+    const adminSystemRoutes = ['admin-system', 'root-log-aktivitas', 'root-backup-db', 'root-e-file'];
     const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
     const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
 
     const savedRoute = localStorage.getItem('current_route');
 
     if (savedRoute) {
+      if (adminSystemRoutes.includes(savedRoute) && userRoles.includes('root') && activeRole === 'root') return savedRoute;
       if (adminBkpsdmRoutes.includes(savedRoute) && userRoles.includes('admin_bkpsdm') && activeRole === 'admin_bkpsdm') return savedRoute;
       if (adminKomunitasRoutes.includes(savedRoute) && userRoles.includes('admin_komunitas') && activeRole === 'admin_komunitas') return savedRoute;
-      if (!adminBkpsdmRoutes.includes(savedRoute) && !adminKomunitasRoutes.includes(savedRoute) && savedRoute !== 'landing') return savedRoute;
+      if (!adminSystemRoutes.includes(savedRoute) && !adminBkpsdmRoutes.includes(savedRoute) && !adminKomunitasRoutes.includes(savedRoute) && savedRoute !== 'landing') return savedRoute;
     }
 
+    if (activeRole === 'root' && userRoles.includes('root')) return 'admin-system';
     if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) return 'admin';
     if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) return 'admin-komunitas';
     return 'dashboard';
@@ -181,6 +222,7 @@ function App() {
   const [showLoginSuccess, setShowLoginSuccess] = useState(false)
   const [sessionTimeoutAlert, setSessionTimeoutAlert] = useState(false)
 
+  const adminSystemRoutes = ['admin-system', 'root-log-aktivitas', 'root-backup-db', 'root-e-file'];
   const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
   const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
 
@@ -224,7 +266,9 @@ function App() {
         const userRoles = getUserRoles();
 
         let defaultRoute = 'dashboard';
-        if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+        if (activeRole === 'root' && userRoles.includes('root')) {
+          defaultRoute = 'admin-system';
+        } else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
           defaultRoute = 'admin';
         } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
           defaultRoute = 'admin-komunitas';
@@ -286,7 +330,9 @@ function App() {
     const userRoles = getUserRoles();
 
     let target = 'dashboard';
-    if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+    if (activeRole === 'root' && userRoles.includes('root')) {
+      target = 'admin-system';
+    } else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
       target = 'admin';
     } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
       target = 'admin-komunitas';
@@ -322,7 +368,8 @@ function App() {
     if (route === 'lms' || route === 'landing') {
       if (isAuthenticated()) {
         let defaultRoute = 'dashboard';
-        if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) defaultRoute = 'admin';
+        if (activeRole === 'root' && userRoles.includes('root')) defaultRoute = 'admin-system';
+        else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) defaultRoute = 'admin';
         else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) defaultRoute = 'admin-komunitas';
         targetRoute = defaultRoute;
       } else {
@@ -350,17 +397,31 @@ function App() {
     }
 
     // Proteksi rute berbasis peran (Role-Based Access Control)
-    if (adminBkpsdmRoutes.includes(route)) {
+    if (adminSystemRoutes.includes(route)) {
+      if (!userRoles.includes('root')) {
+        targetRoute = userRoles.includes('admin_bkpsdm') ? 'admin' : (userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard');
+      } else if (activeRole !== 'root') {
+        setActiveRole('root');
+      }
+    } else if (adminBkpsdmRoutes.includes(route)) {
       if (!userRoles.includes('admin_bkpsdm')) {
-        targetRoute = userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard';
+        targetRoute = userRoles.includes('root') ? 'admin-system' : (userRoles.includes('admin_komunitas') ? 'admin-komunitas' : 'dashboard');
       } else if (activeRole !== 'admin_bkpsdm') {
         setActiveRole('admin_bkpsdm');
       }
     } else if (adminKomunitasRoutes.includes(route)) {
       if (!userRoles.includes('admin_komunitas')) {
-        targetRoute = userRoles.includes('admin_bkpsdm') ? 'admin' : 'dashboard';
+        targetRoute = userRoles.includes('root') ? 'admin-system' : (userRoles.includes('admin_bkpsdm') ? 'admin' : 'dashboard');
       } else if (activeRole !== 'admin_komunitas') {
         setActiveRole('admin_komunitas');
+      }
+    } else if (route === 'dashboard') {
+      if (activeRole === 'root' && userRoles.includes('root')) {
+        targetRoute = 'admin-system';
+      } else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
+        targetRoute = 'admin';
+      } else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
+        targetRoute = 'admin-komunitas';
       }
     }
 
@@ -376,6 +437,9 @@ function App() {
   }
 
   if (isLoading || isTransitioning) {
+    if (adminSystemRoutes.includes(currentRoute)) {
+      return <AdminLoadingSkeleton />
+    }
     if (currentRoute === 'admin-komunitas' || currentRoute === 'pelatihan-saya' || currentRoute === 'laporan-progress' || currentRoute === 'katalog-kursus' || currentRoute === 'detail-kursus' || currentRoute === 'bank-soal' || currentRoute === 'pusat-bantuan') {
       return <AdminKomunitasSkeleton />
     }
@@ -406,7 +470,8 @@ function App() {
               const activeRole = getActiveRole();
               const userRoles = getUserRoles();
               let target = 'dashboard';
-              if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) target = 'admin';
+              if (activeRole === 'root' && userRoles.includes('root')) target = 'admin-system';
+              else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) target = 'admin';
               else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) target = 'admin-komunitas';
               handleNavigate(target);
             } else {
@@ -428,12 +493,24 @@ function App() {
 
     // KEAMANAN: Jika user sudah login dan mengakses rute 'lms' atau 'landing', langsung arahkan ke Dashboard
     if (isAuthenticated() && (currentRoute === 'lms' || currentRoute === 'landing')) {
+      if (activeRole === 'root' && userRoles.includes('root')) {
+        return (
+          <RootLayout currentRoute="admin-system" onNavigate={handleNavigate} onLogout={handleLogout}>
+            <RootDashboard onNavigate={handleNavigate} />
+          </RootLayout>
+        );
+      }
       if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) {
         return <AdminDashboard onNavigate={handleNavigate} onLogout={handleLogout} />;
       }
       if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) {
         return <AdminKomunitasDashboard onNavigate={handleNavigate} onLogout={handleLogout} />;
       }
+      return <UserDashboard onLogout={handleLogout} onNavigate={handleNavigate} />;
+    }
+
+    // Guard: Mencoba render rute Admin System tanpa wewenang sah root
+    if (adminSystemRoutes.includes(currentRoute) && !userRoles.includes('root')) {
       return <UserDashboard onLogout={handleLogout} onNavigate={handleNavigate} />;
     }
 
@@ -445,6 +522,18 @@ function App() {
     // Guard: Mencoba render rute Komunitas tanpa wewenang sah dari Admin-BKPSDM
     if (adminKomunitasRoutes.includes(currentRoute) && !userRoles.includes('admin_komunitas')) {
       return <UserDashboard onLogout={handleLogout} onNavigate={handleNavigate} />;
+    }
+
+    // Rute Admin System (Root)
+    if (adminSystemRoutes.includes(currentRoute)) {
+      return (
+        <RootLayout currentRoute={currentRoute} onNavigate={handleNavigate} onLogout={handleLogout}>
+          {currentRoute === 'admin-system' && <RootDashboard onNavigate={handleNavigate} />}
+          {currentRoute === 'root-log-aktivitas' && <RootLogAktivitas />}
+          {currentRoute === 'root-backup-db' && <RootBackupDb />}
+          {currentRoute === 'root-e-file' && <RootEFileManager />}
+        </RootLayout>
+      );
     }
 
     if (currentRoute === 'admin-komunitas') {
