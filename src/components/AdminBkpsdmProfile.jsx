@@ -12,6 +12,10 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
   const userRoles = getUserRoles();
   const hasMultipleRoles = canSwitchRole();
   const currentActiveRole = getActiveRole() || 'admin_bkpsdm';
+  const isRootRole = currentActiveRole === 'root';
+  const roleSubtitle = isRootRole
+    ? 'Admin Sistem'
+    : (currentActiveRole === 'admin_komunitas' ? 'Admin Komunitas' : (currentActiveRole === 'peserta' ? 'Peserta' : 'Super Admin'));
 
   const roleLabels = {
     root: { label: 'Admin System (Root)', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
@@ -92,23 +96,25 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/20 group cursor-pointer border border-gray-200 bg-white"
+          className={`flex items-center gap-2.5 p-1.5 pr-2.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 ${isRootRole ? 'focus:ring-indigo-500/20' : 'focus:ring-red-500/20'} group cursor-pointer border border-gray-200 bg-white`}
           title="Klik untuk melihat menu profil & beralih peran"
         >
-          <div className="w-8 h-8 rounded-full bg-red-100 border border-red-300 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-red-500 transition-colors">
+          <div className={`w-8 h-8 rounded-full ${isRootRole ? 'bg-indigo-100 border-indigo-300 group-hover:border-indigo-500' : 'bg-red-100 border-red-300 group-hover:border-red-500'} border flex items-center justify-center overflow-hidden shrink-0 transition-colors`}>
             <img
               src={avatarUrl}
-              alt="Admin BKPSDM"
+              alt="Admin"
               className="w-full h-full object-cover"
             />
           </div>
           <div className="hidden sm:flex flex-col items-start leading-tight text-left">
-            <span className="text-xs font-bold text-gray-800 truncate max-w-[120px] group-hover:text-red-700 transition-colors">
-              {user?.nama_lengkap || 'BKPSDM'}
+            <span className={`text-xs font-bold text-gray-800 truncate max-w-[120px] ${isRootRole ? 'group-hover:text-indigo-700' : 'group-hover:text-red-700'} transition-colors`}>
+              {user?.nama_lengkap || (isRootRole ? 'Admin Sistem' : 'BKPSDM')}
             </span>
-            <span className="text-[10px] text-red-600 font-semibold">Super Admin</span>
+            <span className={`text-[10px] ${isRootRole ? 'text-indigo-600' : 'text-red-600'} font-semibold`}>
+              {roleSubtitle}
+            </span>
           </div>
-          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-red-600' : 'group-hover:text-gray-600'}`} />
+          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? (isRootRole ? 'rotate-180 text-indigo-600' : 'rotate-180 text-red-600') : 'group-hover:text-gray-600'}`} />
         </button>
 
         {isOpen && (
@@ -116,10 +122,10 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
             {/* Header Identitas */}
             <div className="px-4 py-3 border-b border-gray-100">
               <p className="text-sm font-bold text-gray-800 truncate">
-                {user?.nama_lengkap || 'Admin BKPSDM'}
+                {user?.nama_lengkap || (isRootRole ? 'Admin Sistem' : 'Admin BKPSDM')}
               </p>
               <p className="text-xs text-gray-500 font-mono">
-                {user?.nip ? `NIP: ${user.nip}` : 'Super Admin Sistem'}
+                {user?.nip ? `NIP: ${user.nip}` : (isRootRole ? 'Admin Sistem Platform' : 'Super Admin Sistem')}
               </p>
               <div className="mt-2 flex flex-col gap-1">
                 <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border w-fit ${roleLabels[currentActiveRole]?.badge || 'bg-red-50 text-red-700 border-red-200'}`}>
@@ -127,16 +133,16 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
                   Peran Aktif: {roleLabels[currentActiveRole]?.label || currentActiveRole}
                 </span>
                 <span className="text-[11px] text-gray-500 truncate">
-                  🏛️ BKPSDM Kab. Buleleng
+                  {isRootRole ? '💻 Lingkup: Infrastruktur Sistem' : '🏛️ BKPSDM Kab. Buleleng'}
                 </span>
               </div>
             </div>
 
             {/* Opsi Beralih Peran */}
             {hasMultipleRoles ? (
-              <div className="px-3 py-2 border-b border-gray-100 bg-red-50/40">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-red-900 mb-1.5 px-1">
-                  <ArrowLeftRight className="w-3.5 h-3.5 text-red-700" />
+              <div className={`px-3 py-2 border-b border-gray-100 ${isRootRole ? 'bg-indigo-50/50' : 'bg-red-50/40'}`}>
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${isRootRole ? 'text-indigo-900' : 'text-red-900'} mb-1.5 px-1`}>
+                  <ArrowLeftRight className={`w-3.5 h-3.5 ${isRootRole ? 'text-indigo-700' : 'text-red-700'}`} />
                   <span>Beralih Peran:</span>
                 </div>
                 <div className="space-y-1">
@@ -149,7 +155,7 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
                         onClick={() => handleRoleSwitch(role)}
                         className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                           isActive
-                            ? 'bg-red-700 text-white shadow-xs'
+                            ? (role === 'root' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-red-700 text-white shadow-xs')
                             : 'text-gray-700 hover:bg-white hover:text-red-800'
                         }`}
                       >
@@ -190,27 +196,27 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 p-1.5 -m-1 rounded-xl hover:bg-gray-100/90 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-red-500/20 group cursor-pointer"
+        className={`w-full flex items-center justify-between gap-2 p-1.5 -m-1 rounded-xl hover:bg-gray-100/90 transition-colors text-left focus:outline-none focus:ring-2 ${isRootRole ? 'focus:ring-indigo-500/20' : 'focus:ring-red-500/20'} group cursor-pointer`}
         title="Klik untuk melihat menu profil & beralih peran"
       >
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-9 h-9 rounded-full bg-red-100 border border-red-300 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-red-500 transition-colors shadow-xs">
+          <div className={`w-9 h-9 rounded-full ${isRootRole ? 'bg-indigo-100 border-indigo-300 group-hover:border-indigo-500' : 'bg-red-100 border-red-300 group-hover:border-red-500'} border flex items-center justify-center overflow-hidden shrink-0 transition-colors shadow-xs`}>
             <img
               src={avatarUrl}
-              alt="Admin BKPSDM"
+              alt="Admin"
               className="w-full h-full object-cover"
             />
           </div>
           <div className="overflow-hidden">
-            <h2 className="font-bold text-gray-900 text-xs sm:text-sm truncate w-24 group-hover:text-red-700 transition-colors">
-              {user?.nama_lengkap || 'BKPSDM'}
+            <h2 className={`font-bold text-gray-900 text-xs sm:text-sm truncate w-24 ${isRootRole ? 'group-hover:text-indigo-700' : 'group-hover:text-red-700'} transition-colors`}>
+              {user?.nama_lengkap || (isRootRole ? 'Admin Sistem' : 'BKPSDM')}
             </h2>
-            <p className="text-[11px] text-red-600 font-semibold truncate w-24">
-              Super Admin
+            <p className={`text-[11px] ${isRootRole ? 'text-indigo-600' : 'text-red-600'} font-semibold truncate w-24`}>
+              {roleSubtitle}
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-red-600' : 'group-hover:text-gray-600'}`} />
+        <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? (isRootRole ? 'rotate-180 text-indigo-600' : 'rotate-180 text-red-600') : 'group-hover:text-gray-600'}`} />
       </button>
 
       {/* Dropdown Menu */}
@@ -219,10 +225,10 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
           {/* Header Identitas */}
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-bold text-gray-800 truncate">
-              {user?.nama_lengkap || 'Admin BKPSDM'}
+              {user?.nama_lengkap || (isRootRole ? 'Admin Sistem' : 'Admin BKPSDM')}
             </p>
             <p className="text-xs text-gray-500 font-mono">
-              {user?.nip ? `NIP: ${user.nip}` : 'Super Admin Sistem'}
+              {user?.nip ? `NIP: ${user.nip}` : (isRootRole ? 'Admin Sistem Platform' : 'Super Admin Sistem')}
             </p>
             <div className="mt-2 flex flex-col gap-1">
               <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border w-fit ${roleLabels[currentActiveRole]?.badge || 'bg-red-50 text-red-700 border-red-200'}`}>
@@ -230,16 +236,16 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
                 Peran Aktif: {roleLabels[currentActiveRole]?.label || currentActiveRole}
               </span>
               <span className="text-[11px] text-gray-500 truncate">
-                🏛️ BKPSDM Kab. Buleleng
+                {isRootRole ? '💻 Lingkup: Infrastruktur Sistem' : '🏛️ BKPSDM Kab. Buleleng'}
               </span>
             </div>
           </div>
 
           {/* OPSI BERALIH PERAN */}
           {hasMultipleRoles ? (
-            <div className="px-3 py-2 border-b border-gray-100 bg-red-50/40">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-red-900 mb-1.5 px-1">
-                <ArrowLeftRight className="w-3.5 h-3.5 text-red-700" />
+            <div className={`px-3 py-2 border-b border-gray-100 ${isRootRole ? 'bg-indigo-50/50' : 'bg-red-50/40'}`}>
+              <div className={`flex items-center gap-1.5 text-xs font-bold ${isRootRole ? 'text-indigo-900' : 'text-red-900'} mb-1.5 px-1`}>
+                <ArrowLeftRight className={`w-3.5 h-3.5 ${isRootRole ? 'text-indigo-700' : 'text-red-700'}`} />
                 <span>Beralih Peran:</span>
               </div>
               <div className="space-y-1">
@@ -252,7 +258,7 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
                       onClick={() => handleRoleSwitch(role)}
                       className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                         isActive
-                          ? 'bg-red-700 text-white shadow-xs'
+                          ? (role === 'root' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-red-700 text-white shadow-xs')
                           : 'text-gray-700 hover:bg-white hover:text-red-800'
                       }`}
                     >

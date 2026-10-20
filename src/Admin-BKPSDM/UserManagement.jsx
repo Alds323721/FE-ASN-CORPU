@@ -382,6 +382,8 @@ const UserManagement = ({ onNavigate, onLogout }) => {
       <div className="flex flex-wrap gap-1">
         {roles.map((role) => {
           switch (role) {
+            case 'root':
+              return <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">Admin Sistem</span>;
             case 'admin_bkpsdm':
               return <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">Admin BKPSDM</span>;
             case 'admin_komunitas':
@@ -462,7 +464,10 @@ const UserManagement = ({ onNavigate, onLogout }) => {
               <p className="text-sm text-gray-500">Kelola data, peran, dan status seluruh pengguna platform.</p>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                if (komunitasList.length === 0) fetchKomunitas();
+                setShowAddModal(true);
+              }}
               className="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center shrink-0"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -595,6 +600,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                         </button>
                         <button
                           onClick={() => {
+                            if (komunitasList.length === 0) fetchKomunitas();
                             const userRoles = Array.isArray(user.roles) && user.roles.length > 0
                               ? user.roles
                               : (user.peran ? [user.peran] : ['peserta']);
@@ -751,6 +757,24 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                           <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
                         </div>
                       </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.roles.includes('root')}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...formData.roles, 'root']
+                              : formData.roles.filter(r => r !== 'root');
+                            setFormData({ ...formData, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin Sistem (Root)</span>
+                          <span className="text-xs text-gray-500 block">Pengelolaan infrastruktur server, basis data & audit log sistem</span>
+                        </div>
+                      </label>
                     </div>
                   </div>
                   {formData.roles.includes('admin_komunitas') && (
@@ -758,11 +782,13 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={formData.komunitas_id} onChange={e => setFormData({ ...formData, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.filter(k => k.rumpun_jabatan !== 'UMUM').map(k => (
-                          <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
+                        {komunitasList.map(k => (
+                          <option key={k.komunitas_id} value={k.komunitas_id}>
+                            {k.nama_komunitas} {k.rumpun_jabatan ? `(${k.rumpun_jabatan === 'UMUM' ? 'Umum / Semua Rumpun' : `Rumpun ${k.rumpun_jabatan}`})` : ''}
+                          </option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-gray-500 mt-1">Admin Komunitas otomatis dapat mengelola Komunitas Umum.</p>
+                      <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
                   <div>
@@ -872,6 +898,25 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                           <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
                         </div>
                       </label>
+
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(selectedUser.roles || [selectedUser.peran]).includes('root')}
+                          onChange={(e) => {
+                            const current = selectedUser.roles || [selectedUser.peran];
+                            const newRoles = e.target.checked
+                              ? [...current, 'root']
+                              : current.filter(r => r !== 'root');
+                            setSelectedUser({ ...selectedUser, roles: newRoles });
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">Admin Sistem (Root)</span>
+                          <span className="text-xs text-gray-500 block">Pengelolaan infrastruktur server, basis data & audit log sistem</span>
+                        </div>
+                      </label>
                     </div>
                   </div>
                   {(selectedUser.roles || [selectedUser.peran]).includes('admin_komunitas') && (
@@ -879,11 +924,13 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
                       <select required value={selectedUser.komunitas_id || ''} onChange={e => setSelectedUser({ ...selectedUser, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.filter(k => k.rumpun_jabatan !== 'UMUM').map(k => (
-                          <option key={k.komunitas_id} value={k.komunitas_id}>{k.nama_komunitas}</option>
+                        {komunitasList.map(k => (
+                          <option key={k.komunitas_id} value={k.komunitas_id}>
+                            {k.nama_komunitas} {k.rumpun_jabatan ? `(${k.rumpun_jabatan === 'UMUM' ? 'Umum / Semua Rumpun' : `Rumpun ${k.rumpun_jabatan}`})` : ''}
+                          </option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-gray-500 mt-1">Admin Komunitas otomatis dapat mengelola Komunitas Umum.</p>
+                      <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
                   <div>
