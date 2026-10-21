@@ -76,7 +76,7 @@ const PageHeader = () => {
 };
 
 /* ── Community Card ───────────────────────────── */
-const CommunityCard = ({ id, image, thumbnail_url, category, title, description, members, courses, isJoined, canJoin = true, is_umum = false, onJoin, onNavigate }) => {
+const CommunityCard = ({ id, image, thumbnail_url, category, title, description, members, courses, isJoined, canJoin = true, is_umum = false, onJoin, onNavigate, nama_ketua }) => {
   const { t, language } = useLanguage();
   const isRestricted = !is_umum && (!isJoined && !canJoin);
 
@@ -109,13 +109,20 @@ const CommunityCard = ({ id, image, thumbnail_url, category, title, description,
       </div>
 
       <div className="p-6 flex-1 flex flex-col">
-        <h3 className={`font-bold text-[20px] leading-snug mb-3 ${isRestricted ? 'text-gray-700' : 'text-[#1D315F]'}`}>
+        <h3 className={`font-bold text-[20px] leading-snug mb-2 ${isRestricted ? 'text-gray-700' : 'text-[#1D315F]'}`}>
           {title}
         </h3>
+        
+        {nama_ketua && (
+          <p className="text-[12px] text-teal-800 font-semibold mb-3 flex items-center gap-1.5 bg-teal-50 px-2.5 py-1 rounded-md w-fit">
+            <span>Ketua:</span> {nama_ketua}
+          </p>
+        )}
+
         <p className="text-[13px] text-gray-500 leading-relaxed mb-5 flex-1 line-clamp-3">{description}</p>
 
         <div className="flex items-center gap-6 text-[13px] text-gray-600 font-semibold mb-6 border-t border-gray-100 pt-5">
-          <span className="flex items-center gap-2"><Users className="w-4 h-4 text-[#006A63]" /> {members.toLocaleString(language === 'EN' ? 'en-US' : 'id-ID')} {t('community.members')}</span>
+          <span className="flex items-center gap-2"><Users className="w-4 h-4 text-[#006A63]" /> {(members ?? 0).toLocaleString(language === 'EN' ? 'en-US' : 'id-ID')} {t('community.members')}</span>
           <span className="flex items-center gap-2"><BookOpen className="w-4 h-4 text-[#006A63]" /> {courses} {t('community.courses')}</span>
         </div>
 

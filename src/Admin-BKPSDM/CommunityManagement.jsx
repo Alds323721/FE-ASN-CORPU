@@ -9,17 +9,19 @@ const Toast = Swal.mixin({
   timer: 3000,
   timerProgressBar: true,
   didOpen: (toast) => {
-    toast.addEventListener('mouseenter', Swal.stopTimer)
-    toast.addEventListener('mouseleave', Swal.resumeTimer)
+    toast.addEventListener('mouseenter', Swal.stopTimer);
+    toast.addEventListener('mouseleave', Swal.resumeTimer);
   }
 });
+
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
 import { logout } from '../utils/auth';
 import { 
-  Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
-  Search, ChevronRight, Menu, X, Plus, CheckCircle, ClipboardList, 
-  Filter, ChevronLeft, Edit, Trash2, Upload, Image as ImageIcon, Layers
+  Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut,
+  Search, Menu, X, Plus, CheckCircle, ClipboardList, 
+  Edit, Trash2, Upload, Image as ImageIcon, Layers,
+  Check, Clock, Eye, AlertCircle, Award, UserCheck, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -119,7 +121,7 @@ const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm, onNavigate }) => {
             value={searchTerm || ''}
             onChange={(e) => setSearchTerm && setSearchTerm(e.target.value)}
             className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-full text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-gray-50"
-            placeholder="Cari komunitas..."
+            placeholder="Cari komunitas atau pengurus..."
           />
         </div>
       </div>
@@ -130,14 +132,21 @@ const AdminHeader = ({ setIsOpen, searchTerm, setSearchTerm, onNavigate }) => {
   );
 };
 
-const StatCard = ({ title, value, icon: Icon, colorClass, iconColorClass }) => (
-  <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-    <div className={`p-3 sm:p-4 rounded-full ${colorClass} flex items-center justify-center shrink-0`}>
-      <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${iconColorClass}`} />
+const StatCard = ({ title, value, icon: Icon, colorClass, iconColorClass, onClick, isActive }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white p-4 sm:p-5 rounded-xl border transition-all cursor-pointer ${
+      isActive 
+        ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-md' 
+        : 'border-gray-100 shadow-sm hover:border-gray-300'
+    } flex items-center gap-4`}
+  >
+    <div className={`p-3 sm:p-3.5 rounded-xl ${colorClass} flex items-center justify-center shrink-0`}>
+      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColorClass}`} />
     </div>
-    <div>
-      <h3 className="text-gray-500 text-xs sm:text-sm font-bold uppercase tracking-wider mb-1">{title}</h3>
-      <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">{value}</h2>
+    <div className="min-w-0 flex-1">
+      <h3 className="text-gray-500 text-[11px] sm:text-xs font-bold uppercase tracking-wider mb-0.5 truncate">{title}</h3>
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{value}</h2>
     </div>
   </div>
 );
@@ -147,14 +156,24 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'menunggu_persetujuan', 'aktif', 'nonaktif'
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
 
   const [formData, setFormData] = useState({
-    nama_komunitas: '', deskripsi: '', rumpun_jabatan: 'JP', status: 'aktif'
+    nama_komunitas: '',
+    nama_ketua: '',
+    nip_ketua: '',
+    nama_admin: '',
+    nip_admin: '',
+    rumpun_jabatan: 'JF',
+    jumlah_anggota: '10',
+    deskripsi: '',
+    status: 'aktif'
   });
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState('');
@@ -164,7 +183,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const fetchCommunities = async () => {
     try {
       const response = await api.get('/admin-bkpsdm/komunitas');
-      setCommunities(response.data.data);
+      setCommunities(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch communities:', error);
     } finally {
@@ -180,7 +199,6 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validasi ukuran max 2MB (2048 KB)
     if (file.size > 2 * 1024 * 1024) {
       Swal.fire({
         icon: 'warning',
@@ -203,7 +221,17 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   };
 
   const handleOpenAddModal = () => {
-    setFormData({ nama_komunitas: '', deskripsi: '', rumpun_jabatan: 'JP', status: 'aktif' });
+    setFormData({
+      nama_komunitas: '',
+      nama_ketua: '',
+      nip_ketua: '',
+      nama_admin: '',
+      nip_admin: '',
+      rumpun_jabatan: 'JF',
+      jumlah_anggota: '10',
+      deskripsi: '',
+      status: 'aktif'
+    });
     setThumbnailFile(null);
     setThumbnailPreview('');
     setShowAddModal(true);
@@ -216,13 +244,106 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
     setShowEditModal(true);
   };
 
+  const handleOpenDetailModal = (community) => {
+    setSelectedCommunity({ ...community });
+    setShowDetailModal(true);
+  };
+
+  const handleApprove = async (community) => {
+    const confirm = await Swal.fire({
+      title: 'Setujui Komunitas Ini?',
+      html: `
+        <div class="text-left text-sm text-gray-600 mt-2 space-y-2">
+          <p>Anda akan menyetujui (ACC) komunitas <b>"${community.nama_komunitas}"</b>.</p>
+          <div class="p-3 bg-teal-50 border border-teal-200 rounded-lg text-teal-900 text-xs">
+            <p>• Status komunitas akan berubah menjadi <b>Aktif</b>.</p>
+            <p>• Komunitas akan langsung tampil di halaman Komunitas User.</p>
+            ${community.nip_admin ? `<p>• NIP Admin <b>${community.nip_admin}</b> akan disinkronkan hak aksesnya.</p>` : ''}
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0f766e',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Setujui (ACC)',
+      cancelButtonText: 'Batal'
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        const res = await api.post(`/admin-bkpsdm/komunitas/${community.komunitas_id}/approve`);
+        Toast.fire({
+          icon: 'success',
+          title: res.data?.message || 'Komunitas berhasil disetujui (ACC)'
+        });
+        if (showDetailModal) setShowDetailModal(false);
+        fetchCommunities();
+      } catch (error) {
+        console.error('Failed to approve community:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Menyetujui',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat menyetujui komunitas.',
+          confirmButtonColor: '#0f766e'
+        });
+      }
+    }
+  };
+
+  const handleReject = async (community) => {
+    const { value: reason } = await Swal.fire({
+      title: 'Tolak Pendaftaran Komunitas',
+      input: 'textarea',
+      inputLabel: `Alasan penolakan untuk "${community.nama_komunitas}":`,
+      inputPlaceholder: 'Tuliskan catatan alasan penolakan atau revisi...',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Tolak Permohonan',
+      cancelButtonText: 'Batal',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Alasan penolakan wajib diisi.';
+        }
+      }
+    });
+
+    if (reason) {
+      try {
+        await api.post(`/admin-bkpsdm/komunitas/${community.komunitas_id}/reject`, {
+          alasan_penolakan: reason
+        });
+        Toast.fire({
+          icon: 'success',
+          title: 'Pendaftaran komunitas telah ditolak'
+        });
+        if (showDetailModal) setShowDetailModal(false);
+        fetchCommunities();
+      } catch (error) {
+        console.error('Failed to reject community:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Menolak',
+          text: error.response?.data?.message || 'Gagal menolak komunitas.',
+          confirmButtonColor: '#0f766e'
+        });
+      }
+    }
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {
       const data = new FormData();
       data.append('nama_komunitas', formData.nama_komunitas);
-      data.append('deskripsi', formData.deskripsi || '');
+      data.append('nama_ketua', formData.nama_ketua || '');
+      data.append('nip_ketua', formData.nip_ketua || '');
+      data.append('nama_admin', formData.nama_admin || '');
+      data.append('nip_admin', formData.nip_admin || '');
       data.append('rumpun_jabatan', formData.rumpun_jabatan);
+      data.append('jumlah_anggota', formData.jumlah_anggota || 0);
+      data.append('deskripsi', formData.deskripsi || '');
       data.append('status', formData.status);
       if (thumbnailFile) {
         data.append('thumbnail', thumbnailFile);
@@ -232,9 +353,6 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setShowAddModal(false);
-      setFormData({ nama_komunitas: '', deskripsi: '', rumpun_jabatan: 'JP', status: 'aktif' });
-      setThumbnailFile(null);
-      setThumbnailPreview('');
       fetchCommunities();
       Toast.fire({
         icon: 'success',
@@ -256,8 +374,13 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
     try {
       const data = new FormData();
       data.append('nama_komunitas', selectedCommunity.nama_komunitas);
-      data.append('deskripsi', selectedCommunity.deskripsi || '');
+      data.append('nama_ketua', selectedCommunity.nama_ketua || '');
+      data.append('nip_ketua', selectedCommunity.nip_ketua || '');
+      data.append('nama_admin', selectedCommunity.nama_admin || '');
+      data.append('nip_admin', selectedCommunity.nip_admin || '');
       data.append('rumpun_jabatan', selectedCommunity.rumpun_jabatan);
+      data.append('jumlah_anggota', selectedCommunity.jumlah_anggota || 0);
+      data.append('deskripsi', selectedCommunity.deskripsi || '');
       data.append('status', selectedCommunity.status);
       if (editThumbnailFile) {
         data.append('thumbnail', editThumbnailFile);
@@ -289,7 +412,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: 'Apakah Anda yakin?',
-      text: "Ingin menghapus komunitas ini?",
+      text: "Ingin menghapus komunitas ini secara permanen?",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#0f766e',
@@ -321,18 +444,62 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'aktif':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 capitalize">{status}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+            Aktif
+          </span>
+        );
+      case 'menunggu_persetujuan':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            Menunggu ACC
+          </span>
+        );
+      case 'ditolak':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+            Ditolak
+          </span>
+        );
       case 'nonaktif':
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 capitalize">{status}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+            Nonaktif
+          </span>
+        );
       default:
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 capitalize">{status || 'menunggu'}</span>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 capitalize">
+            {status}
+          </span>
+        );
     }
   };
 
-  const filteredCommunities = communities.filter(c => 
-    c.nama_komunitas.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (c.deskripsi && c.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const pendingCount = communities.filter(c => c.status === 'menunggu_persetujuan').length;
+  const activeCount = communities.filter(c => c.status === 'aktif').length;
+  const inactiveCount = communities.filter(c => c.status === 'nonaktif' || c.status === 'ditolak').length;
+
+  const filteredCommunities = communities.filter(c => {
+    const matchesSearch = 
+      c.nama_komunitas.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (c.deskripsi && c.deskripsi.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.nama_ketua && c.nama_ketua.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.nama_admin && c.nama_admin.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (c.nip_ketua && c.nip_ketua.includes(searchTerm)) ||
+      (c.nip_admin && c.nip_admin.includes(searchTerm));
+
+    if (!matchesSearch) return false;
+
+    if (statusFilter === 'menunggu_persetujuan') return c.status === 'menunggu_persetujuan';
+    if (statusFilter === 'aktif') return c.status === 'aktif';
+    if (statusFilter === 'nonaktif') return c.status === 'nonaktif' || c.status === 'ditolak';
+
+    return true;
+  });
 
   if (loading) return <AdminLoadingSkeleton />;
 
@@ -345,46 +512,119 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
         
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative">
           
+          {/* Header Title & Add Button */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-[#1D315F] mb-1">Manajemen Komunitas</h1>
-              <p className="text-sm text-gray-500">Kelola daftar komunitas belajar dan penetapan admin komunitas.</p>
+              <p className="text-sm text-gray-500">Kelola daftar komunitas belajar, verifikasi permohonan pendaftaran, dan penetapan admin komunitas.</p>
             </div>
             <button 
               onClick={handleOpenAddModal}
-              className="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center shrink-0"
+              className="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               Tambah Komunitas Baru
             </button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Stat Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6 sm:mb-8">
             <StatCard 
               title="TOTAL KOMUNITAS" 
               value={communities.length} 
               icon={Users}
               colorClass="bg-blue-50"
               iconColorClass="text-blue-500"
+              onClick={() => setStatusFilter('all')}
+              isActive={statusFilter === 'all'}
+            />
+            <StatCard 
+              title="MENUNGGU ACC" 
+              value={pendingCount} 
+              icon={Clock}
+              colorClass="bg-amber-50"
+              iconColorClass="text-amber-500"
+              onClick={() => setStatusFilter('menunggu_persetujuan')}
+              isActive={statusFilter === 'menunggu_persetujuan'}
             />
             <StatCard 
               title="KOMUNITAS AKTIF" 
-              value={communities.filter(c => c.status === 'aktif').length} 
+              value={activeCount} 
               icon={CheckCircle}
               colorClass="bg-green-50"
               iconColorClass="text-green-500"
+              onClick={() => setStatusFilter('aktif')}
+              isActive={statusFilter === 'aktif'}
             />
             <StatCard 
-              title="KOMUNITAS NONAKTIF" 
-              value={communities.filter(c => c.status === 'nonaktif').length} 
+              title="NONAKTIF / DITOLAK" 
+              value={inactiveCount} 
               icon={ClipboardList}
-              colorClass="bg-orange-50"
-              iconColorClass="text-orange-500"
+              colorClass="bg-gray-100"
+              iconColorClass="text-gray-500"
+              onClick={() => setStatusFilter('nonaktif')}
+              isActive={statusFilter === 'nonaktif'}
             />
           </div>
 
+          {/* Table Container */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+            
+            {/* Filter Tabs & Search */}
             <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              
+              {/* Status Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                    statusFilter === 'all' 
+                      ? 'bg-teal-700 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Semua ({communities.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter('menunggu_persetujuan')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    statusFilter === 'menunggu_persetujuan' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  }`}
+                >
+                  <span>Menunggu ACC</span>
+                  {pendingCount > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      statusFilter === 'menunggu_persetujuan' ? 'bg-white text-amber-700' : 'bg-amber-600 text-white'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setStatusFilter('aktif')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                    statusFilter === 'aktif' 
+                      ? 'bg-teal-700 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Aktif ({activeCount})
+                </button>
+                <button
+                  onClick={() => setStatusFilter('nonaktif')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                    statusFilter === 'nonaktif' 
+                      ? 'bg-teal-700 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Nonaktif ({inactiveCount})
+                </button>
+              </div>
+
+              {/* Search input in table */}
               <div className="relative w-full md:w-80">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-4 w-4 text-gray-400" />
@@ -393,88 +633,189 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-gray-50"
-                  placeholder="Cari komunitas..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-gray-50"
+                  placeholder="Cari komunitas atau pengurus..."
                 />
               </div>
             </div>
             
+            {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px]">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
-                  <tr className="bg-white border-b border-gray-100">
-                    <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">KOMUNITAS</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">DESKRIPSI SINGKAT</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">RUMPUN JABATAN</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">STATUS</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">AKSI</th>
+                  <tr className="bg-gray-50/70 border-b border-gray-100">
+                    <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">KOMUNITAS</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">PENGURUS (KETUA & ADMIN)</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">RUMPUN & ANGGOTA</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">STATUS</th>
+                    <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">AKSI</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredCommunities.map((community) => (
-                    <tr key={community.komunitas_id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={community.thumbnail_url || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop'} 
-                            alt={community.nama_komunitas} 
-                            className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0" 
-                          />
-                          <div>
-                            <p className="font-bold text-gray-800 leading-snug">{community.nama_komunitas}</p>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {filteredCommunities.map((community) => {
+                    const isPending = community.status === 'menunggu_persetujuan';
+
+                    return (
+                      <tr 
+                        key={community.komunitas_id} 
+                        className={`transition-colors ${isPending ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-gray-50/50'}`}
+                      >
+                        {/* Komunitas Info */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-start gap-3">
+                            <img 
+                              src={community.thumbnail_url || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop'} 
+                              alt={community.nama_komunitas} 
+                              className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0 mt-0.5" 
+                            />
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-800 leading-snug">{community.nama_komunitas}</p>
+                              {community.deskripsi && (
+                                <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{community.deskripsi}</p>
+                              )}
+                              <p className="text-[11px] text-gray-400 mt-1">
+                                ID: #{community.komunitas_id} {community.dibuat_pada && `• ${new Date(community.dibuat_pada).toLocaleDateString('id-ID')}`}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600">{community.deskripsi}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        {community.rumpun_jabatan === 'UMUM' ? (
-                          <span className="text-xs font-bold text-teal-800 bg-teal-100 px-2.5 py-1 rounded-full border border-teal-300">
-                            UMUM (Semua Rumpun)
-                          </span>
-                        ) : (
-                          <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full">
-                            {community.rumpun_jabatan}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(community.status)}
-                      </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-2">
-                        <button 
-                          onClick={() => handleOpenEditModal(community)}
-                          className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
-                          title="Edit Komunitas"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {community.rumpun_jabatan === 'UMUM' ? (
-                          <button 
-                            type="button"
-                            disabled
-                            className="p-1.5 text-gray-300 cursor-not-allowed rounded-md"
-                            title="Komunitas Umum tidak dapat dihapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => handleDelete(community.komunitas_id)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Hapus Komunitas"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+
+                        {/* Pengurus Info */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center gap-1.5 text-gray-700">
+                              <Award className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span className="font-bold text-gray-800">Ketua:</span>
+                              <span className="truncate">{community.nama_ketua || '-'}</span>
+                              {community.nip_ketua && (
+                                <span className="text-[11px] text-gray-400 font-mono">({community.nip_ketua})</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-gray-700">
+                              <UserCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                              <span className="font-bold text-gray-800">Admin:</span>
+                              <span className="truncate">{community.nama_admin || '-'}</span>
+                              {community.nip_admin && (
+                                <span className="text-[11px] text-gray-400 font-mono">({community.nip_admin})</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Rumpun & Anggota */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div>
+                              {community.rumpun_jabatan === 'UMUM' ? (
+                                <span className="text-[11px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full border border-teal-300">
+                                  UMUM (Semua Rumpun)
+                                </span>
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
+                                  {community.rumpun_jabatan}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-1">
+                              <Users className="w-3 h-3 text-gray-400" />
+                              <span>{community.jumlah_anggota || 0} Anggota</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          {getStatusBadge(community.status)}
+                          {community.status === 'ditolak' && community.alasan_penolakan && (
+                            <p className="text-[11px] text-red-500 mt-1 line-clamp-1 italic">
+                              "{community.alasan_penolakan}"
+                            </p>
+                          )}
+                        </td>
+
+                        {/* Aksi */}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            
+                            {/* Tombol Khusus Komunitas Menunggu ACC */}
+                            {isPending && (
+                              <>
+                                <button
+                                  onClick={() => handleApprove(community)}
+                                  className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                                  title="Setujui (ACC) Komunitas"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>ACC</span>
+                                </button>
+                                <button
+                                  onClick={() => handleReject(community)}
+                                  className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Tolak Permohonan"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Tolak</span>
+                                </button>
+                              </>
+                            )}
+
+                            {/* Tombol Detail Preview */}
+                            <button
+                              onClick={() => handleOpenDetailModal(community)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                              title="Lihat Detail Permohonan"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {/* Tombol Edit */}
+                            <button 
+                              onClick={() => handleOpenEditModal(community)}
+                              className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors cursor-pointer"
+                              title="Edit Komunitas"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            {/* Tombol Hapus */}
+                            {community.rumpun_jabatan === 'UMUM' ? (
+                              <button 
+                                type="button"
+                                disabled
+                                className="p-1.5 text-gray-300 cursor-not-allowed rounded-md"
+                                title="Komunitas Umum tidak dapat dihapus"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleDelete(community.komunitas_id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                                title="Hapus Komunitas"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
                   {filteredCommunities.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                        {searchTerm ? 'Tidak ada komunitas yang sesuai dengan pencarian.' : 'Belum ada komunitas.'}
+                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                        <div className="max-w-xs mx-auto text-center space-y-2">
+                          <Users className="w-10 h-10 mx-auto text-gray-300" />
+                          <p className="font-semibold text-gray-600">
+                            {searchTerm 
+                              ? 'Tidak ada komunitas yang cocok dengan kata kunci pencarian.' 
+                              : statusFilter === 'menunggu_persetujuan' 
+                              ? 'Tidak ada permohonan komunitas yang menunggu persetujuan.' 
+                              : 'Belum ada data komunitas.'}
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -483,13 +824,108 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
             </div>
           </div>
 
-          {/* Add Community Modal */}
+          {/* ================= MODAL DETAIL KOMUNITAS ================= */}
+          {showDetailModal && selectedCommunity && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-gray-800">Detail Permohonan Komunitas</h2>
+                    {getStatusBadge(selectedCommunity.status)}
+                  </div>
+                  <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Thumbnail Preview */}
+                  <div className="w-full h-44 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                    <img 
+                      src={selectedCommunity.thumbnail_url || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop'} 
+                      alt={selectedCommunity.nama_komunitas}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Info Basic */}
+                  <div>
+                    <h3 className="text-xl font-bold text-[#1D315F]">{selectedCommunity.nama_komunitas}</h3>
+                    <p className="text-xs text-gray-500 mt-1">{selectedCommunity.deskripsi || 'Tidak ada deskripsi.'}</p>
+                  </div>
+
+                  {/* Grid 2 Kolom */}
+                  <div className="grid grid-cols-2 gap-3 p-3.5 bg-gray-50 rounded-xl text-xs">
+                    <div>
+                      <span className="text-gray-400 block mb-0.5">Rumpun Jabatan</span>
+                      <span className="font-bold text-gray-800">{selectedCommunity.rumpun_jabatan}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block mb-0.5">Jumlah Anggota</span>
+                      <span className="font-bold text-gray-800">{selectedCommunity.jumlah_anggota || 0} Orang</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block mb-0.5">Ketua Komunitas</span>
+                      <span className="font-bold text-gray-800 block">{selectedCommunity.nama_ketua || '-'}</span>
+                      <span className="text-gray-500 font-mono text-[11px]">NIP: {selectedCommunity.nip_ketua || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block mb-0.5">Admin Komunitas</span>
+                      <span className="font-bold text-gray-800 block">{selectedCommunity.nama_admin || '-'}</span>
+                      <span className="text-gray-500 font-mono text-[11px]">NIP: {selectedCommunity.nip_admin || '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Catatan Penolakan jika ada */}
+                  {selectedCommunity.status === 'ditolak' && selectedCommunity.alasan_penolakan && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+                      <span className="font-bold block mb-1">Alasan Penolakan:</span>
+                      <p>{selectedCommunity.alasan_penolakan}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Modal */}
+                <div className="pt-5 mt-5 border-t border-gray-100 flex justify-end gap-2">
+                  {selectedCommunity.status === 'menunggu_persetujuan' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleReject(selectedCommunity)}
+                        className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Tolak
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(selectedCommunity)}
+                        className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Check className="w-4 h-4" />
+                        Setujui & Publikasikan (ACC)
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowDetailModal(false)}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-xs font-semibold cursor-pointer"
+                    >
+                      Tutup
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= MODAL TAMBAH KOMUNITAS BARU ================= */}
           {showAddModal && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Tambah Komunitas Baru</h2>
-                  <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -532,40 +968,134 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                       </div>
                     </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Komunitas</label>
-                    <input required type="text" value={formData.nama_komunitas} onChange={e => setFormData({...formData, nama_komunitas: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Masukkan nama komunitas" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Komunitas *</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.nama_komunitas} 
+                      onChange={e => setFormData({...formData, nama_komunitas: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      placeholder="Masukkan nama komunitas" 
+                    />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Ketua</label>
+                      <input 
+                        type="text" 
+                        value={formData.nama_ketua} 
+                        onChange={e => setFormData({...formData, nama_ketua: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                        placeholder="Nama ketua" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">NIP Ketua</label>
+                      <input 
+                        type="text" 
+                        maxLength="18"
+                        value={formData.nip_ketua} 
+                        onChange={e => setFormData({...formData, nip_ketua: e.target.value.replace(/\D/g, '')})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                        placeholder="18 digit NIP" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Admin Komunitas</label>
+                      <input 
+                        type="text" 
+                        value={formData.nama_admin} 
+                        onChange={e => setFormData({...formData, nama_admin: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                        placeholder="Nama admin" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">NIP Admin Komunitas</label>
+                      <input 
+                        type="text" 
+                        maxLength="18"
+                        value={formData.nip_admin} 
+                        onChange={e => setFormData({...formData, nip_admin: e.target.value.replace(/\D/g, '')})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                        placeholder="18 digit NIP" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan *</label>
+                      <select 
+                        value={formData.rumpun_jabatan} 
+                        onChange={e => setFormData({...formData, rumpun_jabatan: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      >
+                        <option value="JPT">JPT</option>
+                        <option value="JA">JA</option>
+                        <option value="JF">JF</option>
+                        <option value="JP">JP (Pelaksana)</option>
+                        <option value="UMUM">Umum (Semua Rumpun)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Jumlah Anggota</label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={formData.jumlah_anggota} 
+                        onChange={e => setFormData({...formData, jumlah_anggota: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label>
-                    <textarea value={formData.deskripsi} onChange={e => setFormData({...formData, deskripsi: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Deskripsi singkat komunitas"></textarea>
+                    <textarea 
+                      rows="2"
+                      value={formData.deskripsi} 
+                      onChange={e => setFormData({...formData, deskripsi: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      placeholder="Deskripsi singkat komunitas"
+                    ></textarea>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
-                    <select value={formData.rumpun_jabatan} onChange={e => setFormData({...formData, rumpun_jabatan: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                      <option value="JPT">JPT</option>
-                      <option value="JA">JA</option>
-                      <option value="JF">JF</option>
-                      <option value="JP">JP (Pelaksana)</option>
-                      <option value="UMUM">Umum (Semua Rumpun)</option>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Status Awal</label>
+                    <select 
+                      value={formData.status} 
+                      onChange={e => setFormData({...formData, status: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    >
+                      <option value="aktif">Aktif</option>
+                      <option value="menunggu_persetujuan">Menunggu Persetujuan</option>
+                      <option value="nonaktif">Nonaktif</option>
                     </select>
                   </div>
-                  <div className="pt-4 flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Batal</button>
-                    <button type="submit" className="px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800">Simpan</button>
+
+                  <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
+                    <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Batal</button>
+                    <button type="submit" className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 text-sm font-semibold">Simpan</button>
                   </div>
                 </form>
               </div>
             </div>
           )}
 
-          {/* Edit Community Modal */}
+          {/* ================= MODAL EDIT KOMUNITAS ================= */}
           {showEditModal && selectedCommunity && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Edit Komunitas</h2>
-                  <button onClick={() => {setShowEditModal(false); setSelectedCommunity(null);}} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => {setShowEditModal(false); setSelectedCommunity(null);}} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -613,50 +1143,118 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                       </div>
                     </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Komunitas</label>
-                    <input required type="text" value={selectedCommunity.nama_komunitas} onChange={e => setSelectedCommunity({...selectedCommunity, nama_komunitas: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Komunitas *</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={selectedCommunity.nama_komunitas} 
+                      onChange={e => setSelectedCommunity({...selectedCommunity, nama_komunitas: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                    />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Ketua</label>
+                      <input 
+                        type="text" 
+                        value={selectedCommunity.nama_ketua || ''} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, nama_ketua: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">NIP Ketua</label>
+                      <input 
+                        type="text" 
+                        maxLength="18"
+                        value={selectedCommunity.nip_ketua || ''} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, nip_ketua: e.target.value.replace(/\D/g, '')})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Admin</label>
+                      <input 
+                        type="text" 
+                        value={selectedCommunity.nama_admin || ''} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, nama_admin: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">NIP Admin</label>
+                      <input 
+                        type="text" 
+                        maxLength="18"
+                        value={selectedCommunity.nip_admin || ''} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, nip_admin: e.target.value.replace(/\D/g, '')})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
+                      <select 
+                        disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
+                        value={selectedCommunity.rumpun_jabatan} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, rumpun_jabatan: e.target.value})} 
+                        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="JPT">JPT</option>
+                        <option value="JA">JA</option>
+                        <option value="JF">JF</option>
+                        <option value="JP">JP (Pelaksana)</option>
+                        <option value="UMUM">Umum (Semua Rumpun)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Jumlah Anggota</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={selectedCommunity.jumlah_anggota || 0} 
+                        onChange={e => setSelectedCommunity({...selectedCommunity, jumlah_anggota: e.target.value})} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" 
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label>
-                    <textarea value={selectedCommunity.deskripsi || ''} onChange={e => setSelectedCommunity({...selectedCommunity, deskripsi: e.target.value})} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"></textarea>
+                    <textarea 
+                      rows="2"
+                      value={selectedCommunity.deskripsi || ''} 
+                      onChange={e => setSelectedCommunity({...selectedCommunity, deskripsi: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    ></textarea>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
-                    <select 
-                      disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
-                      value={selectedCommunity.rumpun_jabatan} 
-                      onChange={e => setSelectedCommunity({...selectedCommunity, rumpun_jabatan: e.target.value})} 
-                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-                    >
-                      <option value="JPT">JPT</option>
-                      <option value="JA">JA</option>
-                      <option value="JF">JF</option>
-                      <option value="JP">JP (Pelaksana)</option>
-                      <option value="UMUM">Umum (Semua Rumpun)</option>
-                    </select>
-                    {selectedCommunity.rumpun_jabatan === 'UMUM' && (
-                      <p className="text-[11px] text-amber-600 mt-1">Rumpun jabatan Komunitas Umum tidak dapat diubah.</p>
-                    )}
-                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                     <select 
                       disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
                       value={selectedCommunity.status} 
                       onChange={e => setSelectedCommunity({...selectedCommunity, status: e.target.value})} 
-                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                     >
                       <option value="aktif">Aktif</option>
+                      <option value="menunggu_persetujuan">Menunggu Persetujuan</option>
                       <option value="nonaktif">Nonaktif</option>
+                      <option value="ditolak">Ditolak</option>
                     </select>
-                    {selectedCommunity.rumpun_jabatan === 'UMUM' && (
-                      <p className="text-[11px] text-amber-600 mt-1">Status Komunitas Umum harus selalu aktif.</p>
-                    )}
                   </div>
-                  <div className="pt-4 flex justify-end gap-2">
-                    <button type="button" onClick={() => {setShowEditModal(false); setSelectedCommunity(null);}} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Batal</button>
-                    <button type="submit" className="px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800">Update</button>
+
+                  <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
+                    <button type="button" onClick={() => {setShowEditModal(false); setSelectedCommunity(null);}} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Batal</button>
+                    <button type="submit" className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 text-sm font-semibold">Update</button>
                   </div>
                 </form>
               </div>

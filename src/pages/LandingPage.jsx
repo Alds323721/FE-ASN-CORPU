@@ -3,7 +3,7 @@ import LandingNavbar from './LandingPage/LandingNavbar';
 import HeroSection from './LandingPage/HeroSection';
 import AuthModal from './LandingPage/AuthModal';
 import CategoriesSection from './LandingPage/CategoriesSection';
-import PopularCoursesSection from './LandingPage/PopularCoursesSection';
+import CommunityRegistrationSection from './LandingPage/CommunityRegistrationSection';
 import NewsSection from './LandingPage/NewsSection';
 import HowItWorksSection from './LandingPage/HowItWorksSection';
 import LandingFooter from './LandingPage/LandingFooter';
@@ -27,7 +27,7 @@ export default function LandingPage({ onLogin, onNavigate }) {
       <main className="flex-grow pt-14 sm:pt-16">
         <HeroSection onAuthClick={() => handleAuthClick('dashboard')} />
         <CategoriesSection />
-        <PopularCoursesSection />
+        <CommunityRegistrationSection />
         <NewsSection />
         <HowItWorksSection />
       </main>
