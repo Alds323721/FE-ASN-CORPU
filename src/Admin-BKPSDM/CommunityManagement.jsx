@@ -21,7 +21,8 @@ import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut,
   Search, Menu, X, Plus, CheckCircle, ClipboardList, 
   Edit, Trash2, Upload, Image as ImageIcon, Layers,
-  Check, Clock, Eye, AlertCircle, Award, UserCheck, CheckCircle2, AlertTriangle
+  Check, Clock, Eye, AlertCircle, Award, UserCheck, CheckCircle2, AlertTriangle,
+  FileText, FileSpreadsheet, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -155,8 +156,26 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'menunggu_persetujuan', 'aktif', 'nonaktif'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationMeta, setPaginationMeta] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
+  const [stats, setStats] = useState({
+    total: 0,
+    menunggu_persetujuan: 0,
+    aktif: 0,
+    nonaktif: 0,
+  });
+  const [exportLoading, setExportLoading] = useState({ pdf: false, excel: false });
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -180,20 +199,166 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   const [editThumbnailFile, setEditThumbnailFile] = useState(null);
   const [editThumbnailPreview, setEditThumbnailPreview] = useState('');
 
-  const fetchCommunities = async () => {
+  // Debounce search agar responsif dan tidak membebani server
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const fetchCommunities = async (page = currentPage, status = statusFilter, search = debouncedSearch) => {
     try {
-      const response = await api.get('/admin-bkpsdm/komunitas');
-      setCommunities(response.data.data || []);
+      setTableLoading(true);
+      const params = {
+        page: page,
+        per_page: 10,
+      };
+      if (status && status !== 'all') {
+        params.status = status;
+      }
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
+
+      const response = await api.get('/admin-bkpsdm/komunitas', { params });
+      const res = response.data;
+      const resData = res?.data;
+      setCommunities(Array.isArray(resData) ? resData : []);
+
+      if (res?.meta) {
+        setPaginationMeta(res.meta);
+      }
+      if (res?.stats) {
+        setStats(res.stats);
+      }
     } catch (error) {
       console.error('Failed to fetch communities:', error);
+      setCommunities([]);
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCommunities();
-  }, []);
+    fetchCommunities(currentPage, statusFilter, debouncedSearch);
+  }, [currentPage, statusFilter, debouncedSearch]);
+
+  const handleStatusFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setCurrentPage(1);
+  };
+
+  const getPageNumbers = () => {
+    const totalPages = paginationMeta.last_page || 1;
+    const current = currentPage;
+    const pages = [];
+
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (current <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (current >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', current - 1, current, current + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      setExportLoading(prev => ({ ...prev, pdf: true }));
+      Toast.fire({
+        icon: 'info',
+        title: 'Menyiapkan dokumen PDF...'
+      });
+
+      const params = {};
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      if (debouncedSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim();
+
+      const response = await api.get('/admin-bkpsdm/komunitas/export/pdf', {
+        params,
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.setAttribute('download', `Laporan_Komunitas_BKPSDM_${dateStr}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      Toast.fire({
+        icon: 'success',
+        title: 'Dokumen PDF berhasil diunduh'
+      });
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengekspor PDF',
+        text: 'Terjadi kesalahan saat membuat dokumen PDF.',
+        confirmButtonColor: '#0f766e'
+      });
+    } finally {
+      setExportLoading(prev => ({ ...prev, pdf: false }));
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExportLoading(prev => ({ ...prev, excel: true }));
+      Toast.fire({
+        icon: 'info',
+        title: 'Menyiapkan file spreadsheet...'
+      });
+
+      const params = {};
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      if (debouncedSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim();
+
+      const response = await api.get('/admin-bkpsdm/komunitas/export/excel', {
+        params,
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.setAttribute('download', `Laporan_Komunitas_BKPSDM_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      Toast.fire({
+        icon: 'success',
+        title: 'Data Excel berhasil diekspor'
+      });
+    } catch (error) {
+      console.error('Failed to export Excel:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Mengekspor Excel',
+        text: 'Terjadi kesalahan saat mengekspor data ke Excel.',
+        confirmButtonColor: '#0f766e'
+      });
+    } finally {
+      setExportLoading(prev => ({ ...prev, excel: false }));
+    }
+  };
 
   const handleThumbnailChange = (e, isEdit = false) => {
     const file = e.target.files?.[0];
@@ -479,27 +644,10 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const pendingCount = communities.filter(c => c.status === 'menunggu_persetujuan').length;
-  const activeCount = communities.filter(c => c.status === 'aktif').length;
-  const inactiveCount = communities.filter(c => c.status === 'nonaktif' || c.status === 'ditolak').length;
-
-  const filteredCommunities = communities.filter(c => {
-    const matchesSearch = 
-      c.nama_komunitas.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.deskripsi && c.deskripsi.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.nama_ketua && c.nama_ketua.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.nama_admin && c.nama_admin.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.nip_ketua && c.nip_ketua.includes(searchTerm)) ||
-      (c.nip_admin && c.nip_admin.includes(searchTerm));
-
-    if (!matchesSearch) return false;
-
-    if (statusFilter === 'menunggu_persetujuan') return c.status === 'menunggu_persetujuan';
-    if (statusFilter === 'aktif') return c.status === 'aktif';
-    if (statusFilter === 'nonaktif') return c.status === 'nonaktif' || c.status === 'ditolak';
-
-    return true;
-  });
+  const totalCount = stats.total || paginationMeta.total || communities.length;
+  const pendingCount = stats.menunggu_persetujuan || 0;
+  const activeCount = stats.aktif || 0;
+  const inactiveCount = stats.nonaktif || 0;
 
   if (loading) return <AdminLoadingSkeleton />;
 
@@ -531,11 +679,11 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6 sm:mb-8">
             <StatCard 
               title="TOTAL KOMUNITAS" 
-              value={communities.length} 
+              value={totalCount} 
               icon={Users}
               colorClass="bg-blue-50"
               iconColorClass="text-blue-500"
-              onClick={() => setStatusFilter('all')}
+              onClick={() => handleStatusFilterChange('all')}
               isActive={statusFilter === 'all'}
             />
             <StatCard 
@@ -544,7 +692,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
               icon={Clock}
               colorClass="bg-amber-50"
               iconColorClass="text-amber-500"
-              onClick={() => setStatusFilter('menunggu_persetujuan')}
+              onClick={() => handleStatusFilterChange('menunggu_persetujuan')}
               isActive={statusFilter === 'menunggu_persetujuan'}
             />
             <StatCard 
@@ -553,7 +701,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
               icon={CheckCircle}
               colorClass="bg-green-50"
               iconColorClass="text-green-500"
-              onClick={() => setStatusFilter('aktif')}
+              onClick={() => handleStatusFilterChange('aktif')}
               isActive={statusFilter === 'aktif'}
             />
             <StatCard 
@@ -562,7 +710,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
               icon={ClipboardList}
               colorClass="bg-gray-100"
               iconColorClass="text-gray-500"
-              onClick={() => setStatusFilter('nonaktif')}
+              onClick={() => handleStatusFilterChange('nonaktif')}
               isActive={statusFilter === 'nonaktif'}
             />
           </div>
@@ -570,23 +718,23 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
           {/* Table Container */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
             
-            {/* Filter Tabs & Search */}
-            <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            {/* Filter Tabs, Search & Export Actions */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
               
               {/* Status Tabs */}
-              <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+              <div className="flex items-center gap-2 overflow-x-auto w-full xl:w-auto pb-2 xl:pb-0">
                 <button
-                  onClick={() => setStatusFilter('all')}
+                  onClick={() => handleStatusFilterChange('all')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                     statusFilter === 'all' 
                       ? 'bg-teal-700 text-white' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Semua ({communities.length})
+                  Semua ({totalCount})
                 </button>
                 <button
-                  onClick={() => setStatusFilter('menunggu_persetujuan')}
+                  onClick={() => handleStatusFilterChange('menunggu_persetujuan')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     statusFilter === 'menunggu_persetujuan' 
                       ? 'bg-amber-500 text-white' 
@@ -603,7 +751,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                   )}
                 </button>
                 <button
-                  onClick={() => setStatusFilter('aktif')}
+                  onClick={() => handleStatusFilterChange('aktif')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                     statusFilter === 'aktif' 
                       ? 'bg-teal-700 text-white' 
@@ -613,7 +761,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                   Aktif ({activeCount})
                 </button>
                 <button
-                  onClick={() => setStatusFilter('nonaktif')}
+                  onClick={() => handleStatusFilterChange('nonaktif')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                     statusFilter === 'nonaktif' 
                       ? 'bg-teal-700 text-white' 
@@ -624,23 +772,56 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                 </button>
               </div>
 
-              {/* Search input in table */}
-              <div className="relative w-full md:w-80">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
+              {/* Action Cluster: Search & Export Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
+                {/* Search input in table */}
+                <div className="relative flex-1 sm:w-64 min-w-[200px]">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-gray-50"
+                    placeholder="Cari komunitas atau pengurus..."
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-gray-50"
-                  placeholder="Cari komunitas atau pengurus..."
-                />
+
+                {/* Tombol Ekspor Excel */}
+                <button
+                  onClick={handleExportExcel}
+                  disabled={exportLoading.excel || exportLoading.pdf}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  title="Ekspor seluruh data komunitas terfilter ke file Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>{exportLoading.excel ? 'Mengekspor...' : 'Ekspor Excel'}</span>
+                </button>
+
+                {/* Tombol Ekspor PDF */}
+                <button
+                  onClick={handleExportPdf}
+                  disabled={exportLoading.pdf || exportLoading.excel}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  title="Ekspor seluruh data komunitas terfilter ke dokumen PDF resmi BKPSDM"
+                >
+                  <FileText className="w-4 h-4 text-rose-600" />
+                  <span>{exportLoading.pdf ? 'Mengekspor...' : 'Ekspor PDF'}</span>
+                </button>
               </div>
             </div>
             
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Table with Loading Overlay */}
+            <div className="overflow-x-auto relative">
+              {tableLoading && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 transition-opacity">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md border border-gray-200 text-sm font-medium text-teal-700">
+                    <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                    Memuat data...
+                  </div>
+                </div>
+              )}
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-gray-50/70 border-b border-gray-100">
@@ -652,7 +833,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {filteredCommunities.map((community) => {
+                  {communities.map((community) => {
                     const isPending = community.status === 'menunggu_persetujuan';
 
                     return (
@@ -803,7 +984,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                     );
                   })}
 
-                  {filteredCommunities.length === 0 && (
+                  {communities.length === 0 && (
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                         <div className="max-w-xs mx-auto text-center space-y-2">
@@ -822,6 +1003,54 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls (10 data per halaman/tab) */}
+            {paginationMeta.total > 0 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50">
+                <div className="text-xs sm:text-sm text-gray-500 text-center md:text-left">
+                  Menampilkan <span className="font-semibold text-gray-700">{paginationMeta.from || 0}</span> - <span className="font-semibold text-gray-700">{paginationMeta.to || 0}</span> dari <span className="font-semibold text-gray-700">{paginationMeta.total?.toLocaleString('id-ID') || 0}</span> komunitas
+                </div>
+                
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage <= 1 || tableLoading}
+                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors bg-white shadow-xs cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sebelumnya</span>
+                  </button>
+
+                  {getPageNumbers().map((pageItem, idx) => (
+                    pageItem === '...' ? (
+                      <span key={`dots-${idx}`} className="px-2 py-1 text-gray-400 text-xs sm:text-sm select-none">...</span>
+                    ) : (
+                      <button
+                        key={pageItem}
+                        onClick={() => setCurrentPage(pageItem)}
+                        disabled={tableLoading}
+                        className={`min-w-8 h-8 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+                          currentPage === pageItem
+                            ? 'bg-teal-700 text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-white hover:text-teal-700 border border-gray-200 bg-white'
+                        }`}
+                      >
+                        {pageItem}
+                      </button>
+                    )
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, paginationMeta.last_page || 1))}
+                    disabled={currentPage >= (paginationMeta.last_page || 1) || tableLoading}
+                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors bg-white shadow-xs cursor-pointer"
+                  >
+                    <span className="hidden sm:inline">Selanjutnya</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ================= MODAL DETAIL KOMUNITAS ================= */}
