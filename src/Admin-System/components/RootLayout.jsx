@@ -14,7 +14,7 @@ const RootLayout = ({ currentRoute, onNavigate, onLogout, onRefresh, children })
         isOpen={isOpen}
         setIsOpen={setIsOpen}
       />
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-hidden">
         <RootHeader 
           currentRoute={currentRoute} 
           onRefresh={onRefresh} 
