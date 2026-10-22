@@ -38,20 +38,22 @@ export const systemToast = ({ icon = 'success', title = '', text = '', timer = 3
 /**
  * Base custom modal configuration with Admin System design tokens
  */
+const baseModalCustomClass = {
+  container: 'system-swal-container backdrop-blur-xs font-sans',
+  popup: 'system-swal-popup rounded-2xl border border-gray-100 shadow-2xl p-6 sm:p-7 max-w-lg w-full text-left',
+  title: 'text-lg sm:text-xl font-bold text-gray-800 text-left pt-2 pb-1',
+  htmlContainer: 'text-sm text-gray-600 text-left mt-2 leading-relaxed',
+  actions: 'flex items-center justify-end gap-2.5 mt-6 w-full',
+  confirmButton: 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
+  cancelButton: 'inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300',
+  loader: 'border-teal-600',
+};
+
 const BaseSystemSwal = Swal.mixin({
   buttonsStyling: false,
   background: '#ffffff',
   color: '#1f2937',
-  customClass: {
-    container: 'system-swal-container backdrop-blur-xs font-sans',
-    popup: 'system-swal-popup rounded-2xl border border-gray-100 shadow-2xl p-6 sm:p-7 max-w-lg w-full text-left',
-    title: 'text-lg sm:text-xl font-bold text-gray-800 text-left pt-2 pb-1',
-    htmlContainer: 'text-sm text-gray-600 text-left mt-2 leading-relaxed',
-    actions: 'flex items-center justify-end gap-2.5 mt-6 w-full',
-    confirmButton: 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
-    cancelButton: 'inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300',
-    loader: 'border-teal-600',
-  },
+  customClass: baseModalCustomClass,
 });
 
 /**
@@ -80,8 +82,8 @@ export const confirmAction = async ({
     cancelButtonText: cancelText,
     reverseButtons: true,
     customClass: {
-      ...BaseSystemSwal.params.customClass,
-      confirmButton: `${BaseSystemSwal.params.customClass.confirmButton} ${confirmBtnClasses}`,
+      ...baseModalCustomClass,
+      confirmButton: `${baseModalCustomClass.confirmButton} ${confirmBtnClasses}`,
     },
   });
 };
@@ -203,7 +205,7 @@ export const confirmDeleteFile = async (file) => {
       </div>
 
       <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-relaxed">
-        ⚠️ Berkas fisik akan langsung dihapus dari disk penyimpanan server dan tautan terkait tidak akan berfungsi lagi.
+         Berkas fisik akan langsung dihapus dari disk penyimpanan server dan tautan terkait tidak akan berfungsi lagi.
       </div>
     </div>
   `;
@@ -328,8 +330,8 @@ export const showSuccessAlert = ({ title = 'Berhasil!', text = '', html = null }
     icon: 'success',
     confirmButtonText: 'Selesai',
     customClass: {
-      ...BaseSystemSwal.params.customClass,
-      confirmButton: `${BaseSystemSwal.params.customClass.confirmButton} bg-teal-700 hover:bg-teal-800 text-white focus:ring-teal-500`,
+      ...baseModalCustomClass,
+      confirmButton: `${baseModalCustomClass.confirmButton} bg-teal-700 hover:bg-teal-800 text-white focus:ring-teal-500`,
     },
   });
 };
@@ -350,8 +352,8 @@ export const showErrorAlert = ({ title = 'Terjadi Kesalahan', text = '', html = 
     icon: 'error',
     confirmButtonText: 'Tutup',
     customClass: {
-      ...BaseSystemSwal.params.customClass,
-      confirmButton: `${BaseSystemSwal.params.customClass.confirmButton} bg-gray-800 hover:bg-gray-900 text-white focus:ring-gray-700`,
+      ...baseModalCustomClass,
+      confirmButton: `${baseModalCustomClass.confirmButton} bg-gray-800 hover:bg-gray-900 text-white focus:ring-gray-700`,
     },
   });
 };
