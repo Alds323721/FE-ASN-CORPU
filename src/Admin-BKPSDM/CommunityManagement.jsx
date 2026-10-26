@@ -959,12 +959,12 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                             </button>
 
                             {/* Tombol Hapus */}
-                            {community.rumpun_jabatan === 'UMUM' ? (
+                            {community.nama_komunitas === 'Komunitas Umum' ? (
                               <button 
                                 type="button"
                                 disabled
                                 className="p-1.5 text-gray-300 cursor-not-allowed rounded-md"
-                                title="Komunitas Umum tidak dapat dihapus"
+                                title="Komunitas Umum utama tidak dapat dihapus"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1432,10 +1432,10 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
                       <select 
-                        disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
+                        disabled={selectedCommunity.nama_komunitas === 'Komunitas Umum'}
                         value={selectedCommunity.rumpun_jabatan} 
                         onChange={e => setSelectedCommunity({...selectedCommunity, rumpun_jabatan: e.target.value})} 
-                        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.nama_komunitas === 'Komunitas Umum' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                       >
                         <option value="JPT">JPT</option>
                         <option value="JA">JA</option>
@@ -1443,6 +1443,9 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                         <option value="JP">JP (Pelaksana)</option>
                         <option value="UMUM">Umum (Semua Rumpun)</option>
                       </select>
+                      {selectedCommunity.nama_komunitas === 'Komunitas Umum' && (
+                        <p className="text-[11px] text-amber-600 mt-1">Rumpun jabatan Komunitas Umum utama tidak dapat diubah.</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Jumlah Anggota</label>
@@ -1469,16 +1472,19 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                     <select 
-                      disabled={selectedCommunity.rumpun_jabatan === 'UMUM'}
+                      disabled={selectedCommunity.nama_komunitas === 'Komunitas Umum'}
                       value={selectedCommunity.status} 
                       onChange={e => setSelectedCommunity({...selectedCommunity, status: e.target.value})} 
-                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.rumpun_jabatan === 'UMUM' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none ${selectedCommunity.nama_komunitas === 'Komunitas Umum' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                     >
                       <option value="aktif">Aktif</option>
                       <option value="menunggu_persetujuan">Menunggu Persetujuan</option>
                       <option value="nonaktif">Nonaktif</option>
                       <option value="ditolak">Ditolak</option>
                     </select>
+                    {selectedCommunity.nama_komunitas === 'Komunitas Umum' && (
+                      <p className="text-[11px] text-amber-600 mt-1">Status Komunitas Umum utama harus selalu aktif.</p>
+                    )}
                   </div>
 
                   <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
