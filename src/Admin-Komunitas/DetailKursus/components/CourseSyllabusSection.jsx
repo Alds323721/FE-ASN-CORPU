@@ -282,14 +282,29 @@ const CourseSyllabusSection = ({
                                   </>
                                 )}
 
-                                <a
-                                  href={getStorageUrl(mat.tautan_atau_berkas)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50 rounded transition-colors"
-                                >
-                                  <Eye className="w-3.5 h-3.5" /> Buka
-                                </a>
+                                {(() => {
+                                  const fileUrl = getStorageUrl(mat.tautan_atau_berkas);
+                                  const hasValidFile = Boolean(fileUrl && fileUrl.trim() !== '');
+
+                                  return hasValidFile ? (
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50 rounded transition-colors"
+                                      title="Lihat / Buka Materi"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" /> Buka
+                                    </a>
+                                  ) : (
+                                    <span
+                                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-400 bg-gray-50 border border-gray-200 rounded cursor-not-allowed select-none"
+                                      title="Berkas materi belum diunggah atau tautan belum tersedia"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" /> Belum Ada Berkas
+                                    </span>
+                                  );
+                                })()}
                                 {!isReadOnly && (
                                   <button
                                     onClick={() => handleDeleteMaterial(mat.materi_id, mat.judul_materi)}

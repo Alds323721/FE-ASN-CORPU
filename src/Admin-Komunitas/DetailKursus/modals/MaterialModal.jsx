@@ -124,11 +124,10 @@ const MaterialModal = ({
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                 {isEdit ? 'Ganti Berkas PDF (Opsional, Maks. 10MB)' : 'Unggah Berkas PDF (Maks. 10MB)'}
               </label>
-              {isEdit && editingMaterial?.tautan_atau_berkas && (
+              {isEdit && getStorageUrl(editingMaterial?.tautan_atau_berkas) && (
                 <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600 flex items-center justify-between">
                   <span className="truncate max-w-xs">
-
-                    Berkas saat ini: {editingMaterial.tautan_atau_berkas.split('/').pop()}
+                    Berkas saat ini: {editingMaterial.tautan_atau_berkas.split('/').pop() || 'Berkas PDF'}
                   </span>
                   <a
                     href={getStorageUrl(editingMaterial.tautan_atau_berkas)}
@@ -468,12 +467,12 @@ const MaterialModal = ({
                 </button>
               </div>
 
-              {isEdit && editingMaterial?.tipe_materi === 'video_embed' && editingMaterial?.tautan_atau_berkas && (
+              {isEdit && editingMaterial?.tipe_materi === 'video_embed' && getStorageUrl(editingMaterial?.tautan_atau_berkas) && (
                 <div className="p-2 bg-white border border-teal-200 rounded text-xs text-teal-900 flex items-center justify-between">
                   <span className="truncate max-w-xs font-medium">
                     Video saat ini:{' '}
                     {editingMaterial.tautan_atau_berkas.includes('/storage/')
-                      ? editingMaterial.tautan_atau_berkas.split('/').pop()
+                      ? editingMaterial.tautan_atau_berkas.split('/').pop() || 'Berkas Video'
                       : editingMaterial.tautan_atau_berkas}
                   </span>
                   <a

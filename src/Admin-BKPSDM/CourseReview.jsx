@@ -555,9 +555,15 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                                           <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" /> {materi.tipe_materi === 'h5p' ? 'VIDEO INTERAKTIF (H5P)' : materi.tipe_materi === 'scorm' ? 'VIDEO INTERAKTIF (SCORM)' : materi.tipe_materi === 'tautan_web' ? 'MATERI WEB (WEBVIEW)' : (materi.tipe_materi || '').replace('_', ' ').toUpperCase()}</span>
                                         </div>
                                       </div>
-                                      <a href={getStorageUrl(materi.tautan_atau_berkas)} target="_blank" rel="noreferrer" className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shrink-0">
-                                        <Eye className="w-4 h-4" /> Lihat
-                                      </a>
+                                      {getStorageUrl(materi.tautan_atau_berkas) ? (
+                                        <a href={getStorageUrl(materi.tautan_atau_berkas)} target="_blank" rel="noreferrer" className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shrink-0">
+                                          <Eye className="w-4 h-4" /> Lihat
+                                        </a>
+                                      ) : (
+                                        <span className="w-full sm:w-auto mt-3 sm:mt-0 px-4 py-2 bg-gray-50 border border-gray-200 text-gray-400 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shrink-0 cursor-not-allowed select-none" title="Berkas materi belum tersedia">
+                                          <Eye className="w-4 h-4" /> Belum Ada Berkas
+                                        </span>
+                                      )}
                                     </div>
                                   ))}
                                   {kuisList.map((k, kIdx) => (

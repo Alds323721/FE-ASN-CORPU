@@ -5,6 +5,9 @@
 export const getStorageUrl = (path) => {
   if (!path) return '';
   let trimmed = String(path).trim();
+  if (trimmed === '' || trimmed === '/storage/' || trimmed === '/storage' || trimmed === 'storage/' || trimmed === 'storage') {
+    return '';
+  }
 
   // Ambil konfigurasi API URL dari env
   const envUrl =

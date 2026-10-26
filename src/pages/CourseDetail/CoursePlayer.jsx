@@ -236,11 +236,11 @@ export default function CoursePlayer({
                 title={activeMateri.judul}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
-            ) : activeMateri.tautan ? (
+            ) : docUrl ? (
               <video
                 controls
                 className="w-full h-full object-contain"
-                src={getDocumentUrl(activeMateri.tautan)}
+                src={docUrl}
                 onEnded={() => {
                   if (!activeMateri.is_read) {
                     onMarkAsRead();
@@ -263,7 +263,7 @@ export default function CoursePlayer({
               <p className="text-gray-600 font-medium mb-5 text-sm md:text-base">
                 Silakan baca dokumen materi berikut
               </p>
-              {activeMateri.tautan ? (
+              {docUrl ? (
                 <a
                   href={docUrl}
                   target="_blank"
