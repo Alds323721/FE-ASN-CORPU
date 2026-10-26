@@ -11,7 +11,7 @@ import { useLanguage } from '../context/LanguageContext';
 import {
   ChevronDown, Menu, X,
   Mail, Phone, MapPin, Users, BookOpen,
-  ArrowRight, ChevronLeft, ChevronRight, Check, Lock
+  ArrowRight, ChevronLeft, ChevronRight, Check, Lock, Search
 } from 'lucide-react';
 
 /* ── Navbar ───────────────────────────────────── */
@@ -166,6 +166,7 @@ const CommunityContent = ({ onNavigate }) => {
   const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('Semua Kategori');
   const [communities, setCommunities] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [userRumpun, setUserRumpun] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}').rumpun_jabatan || '';
@@ -240,9 +241,13 @@ const CommunityContent = ({ onNavigate }) => {
     onNavigate('catalog');
   };
 
-  const filteredCommunities = communities.filter(c =>
-    activeCategory === 'Semua Kategori' || c.category === activeCategory
-  );
+  const filteredCommunities = communities.filter((c) => {
+    const matchesCategory = activeCategory === 'Semua Kategori' || c.category === activeCategory;
+    const communityName = (c.title || c.nama_komunitas || '').toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || communityName.includes(query);
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <section className="bg-[#F9FBFC] min-h-screen">
@@ -289,16 +294,41 @@ const CommunityContent = ({ onNavigate }) => {
           )}
 
           {/* Top bar */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <p className="text-[14px] font-medium text-gray-500 mb-3 sm:mb-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <p className="text-[14px] font-medium text-gray-500 mb-2 sm:mb-0">
               {t('community.showing')} <span className="font-bold text-[#1D315F]">{filteredCommunities.length}</span> {t('catalog.of')} <span className="font-bold text-[#1D315F]">{communities.length}</span> {t('community.communities')}
             </p>
-            <div className="flex items-center gap-2 text-[13px] font-semibold text-[#1D315F]">
-              {t('catalog.sortBy')}
-              <div className="flex items-center gap-1 border border-gray-300 px-3 py-1.5 rounded bg-white cursor-pointer ml-1">
-                {t('catalog.newest')} <ChevronDown className="w-4 h-4 text-gray-500" />
+            
+            {/* Search Input & Button replacing Urutkan */}
+            <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64 md:w-72">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('community.searchPlaceholder')}
+                  className="w-full pl-9 pr-8 py-2 bg-white border border-gray-300 rounded-l-lg text-xs sm:text-sm text-[#1D315F] placeholder-gray-400 focus:outline-none focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63] transition-all shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition-colors"
+                    title={t('community.clearSearch')}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            </div>
+              <button
+                type="submit"
+                className="px-3.5 py-2 bg-[#006A63] text-white text-xs sm:text-sm font-semibold rounded-r-lg hover:bg-[#00534D] transition-colors border border-[#006A63] shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>{t('community.searchButton')}</span>
+              </button>
+            </form>
           </div>
 
           {loading ? (
@@ -316,7 +346,29 @@ const CommunityContent = ({ onNavigate }) => {
                 />
               ))}
               {filteredCommunities.length === 0 && (
-                <div className="col-span-full text-center text-gray-500 py-10 font-semibold">{t('community.empty')}</div>
+                <div className="col-span-full text-center py-12 bg-white rounded-lg border border-dashed border-gray-300 p-6">
+                  <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-700 font-semibold text-base mb-1">
+                    {searchQuery.trim()
+                      ? `${t('community.noSearchResults')} "${searchQuery}"`
+                      : t('community.empty')}
+                  </p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    {searchQuery.trim()
+                      ? 'Coba gunakan kata kunci lain atau periksa kembali ejaan nama komunitas.'
+                      : 'Belum ada komunitas yang tersedia pada kategori ini.'}
+                  </p>
+                  {searchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#006A63] bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      {t('community.clearSearch')}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

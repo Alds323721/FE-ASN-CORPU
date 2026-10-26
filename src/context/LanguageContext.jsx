@@ -102,6 +102,10 @@ const translations = {
     'community.communities': 'komunitas',
     'community.loading': 'Memuat Komunitas...',
     'community.empty': 'Tidak ada komunitas di kategori ini.',
+    'community.searchPlaceholder': 'Cari nama komunitas...',
+    'community.searchButton': 'Cari',
+    'community.clearSearch': 'Hapus pencarian',
+    'community.noSearchResults': 'Tidak ada komunitas yang cocok dengan pencarian',
 
     // Help Center
     'helpCenter.heroTitle': 'Pusat Bantuan',
@@ -248,6 +252,10 @@ const translations = {
     'community.communities': 'communities',
     'community.loading': 'Loading Communities...',
     'community.empty': 'No communities in this category.',
+    'community.searchPlaceholder': 'Search community by name...',
+    'community.searchButton': 'Search',
+    'community.clearSearch': 'Clear search',
+    'community.noSearchResults': 'No communities matched your search',
 
     // Help Center
     'helpCenter.heroTitle': 'Help Center',
