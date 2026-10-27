@@ -81,11 +81,20 @@ export default function CommunityRegistrationSection() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Helper validasi kecocokan nama input dengan nama resmi di database
+  const isNameMatching = (inputName, dbName) => {
+    if (!inputName || !dbName) return false;
+    const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return cleanInput === cleanDb || 
+      (cleanInput.length >= 4 && cleanDb.includes(cleanInput)) ||
+      (cleanDb.length >= 4 && cleanInput.includes(cleanDb));
+  };
+
   // 2. Lookup NIP Ketua (Otomatis panggil saat 18 digit)
   const handleNipKetuaChange = async (val) => {
     const numericVal = val.replace(/\D/g, '').slice(0, 18);
     setFormData(prev => ({ ...prev, nip_ketua: numericVal }));
-    if (errors.nip_ketua) setErrors(prev => ({ ...prev, nip_ketua: null }));
 
     if (numericVal.length === 18) {
       setIsLookingUpKetua(true);
@@ -95,17 +104,20 @@ export default function CommunityRegistrationSection() {
           const p = res.data.data;
           setFormData(prev => ({ ...prev, nama_ketua: p.nama_lengkap }));
           setKetuaVerified(p);
-          if (errors.nama_ketua) setErrors(prev => ({ ...prev, nama_ketua: null }));
+          setErrors(prev => ({ ...prev, nip_ketua: null, nama_ketua: null }));
         } else {
           setKetuaVerified(null);
+          setErrors(prev => ({ ...prev, nip_ketua: 'NIP ketua tidak ditemukan di database pegawai.' }));
         }
       } catch {
         setKetuaVerified(null);
+        setErrors(prev => ({ ...prev, nip_ketua: 'Gagal memverifikasi NIP pegawai.' }));
       } finally {
         setIsLookingUpKetua(false);
       }
     } else {
       setKetuaVerified(null);
+      if (errors.nip_ketua) setErrors(prev => ({ ...prev, nip_ketua: null }));
     }
   };
 
@@ -152,7 +164,6 @@ export default function CommunityRegistrationSection() {
   const handleNipAdminChange = async (val) => {
     const numericVal = val.replace(/\D/g, '').slice(0, 18);
     setFormData(prev => ({ ...prev, nip_admin: numericVal }));
-    if (errors.nip_admin) setErrors(prev => ({ ...prev, nip_admin: null }));
 
     if (numericVal.length === 18) {
       setIsLookingUpAdmin(true);
@@ -162,17 +173,20 @@ export default function CommunityRegistrationSection() {
           const p = res.data.data;
           setFormData(prev => ({ ...prev, nama_admin: p.nama_lengkap }));
           setAdminVerified(p);
-          if (errors.nama_admin) setErrors(prev => ({ ...prev, nama_admin: null }));
+          setErrors(prev => ({ ...prev, nip_admin: null, nama_admin: null }));
         } else {
           setAdminVerified(null);
+          setErrors(prev => ({ ...prev, nip_admin: 'NIP admin tidak ditemukan di database pegawai.' }));
         }
       } catch {
         setAdminVerified(null);
+        setErrors(prev => ({ ...prev, nip_admin: 'Gagal memverifikasi NIP pegawai.' }));
       } finally {
         setIsLookingUpAdmin(false);
       }
     } else {
       setAdminVerified(null);
+      if (errors.nip_admin) setErrors(prev => ({ ...prev, nip_admin: null }));
     }
   };
 
@@ -219,6 +233,17 @@ export default function CommunityRegistrationSection() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+
+    if (name === 'nama_ketua' && ketuaVerified) {
+      if (!isNameMatching(value, ketuaVerified.nama_lengkap)) {
+        setErrors(prev => ({ ...prev, nama_ketua: `Nama tidak sesuai data database (${ketuaVerified.nama_lengkap})` }));
+      }
+    }
+    if (name === 'nama_admin' && adminVerified) {
+      if (!isNameMatching(value, adminVerified.nama_lengkap)) {
+        setErrors(prev => ({ ...prev, nama_admin: `Nama tidak sesuai data database (${adminVerified.nama_lengkap})` }));
+      }
+    }
   };
 
   const handleSelectCommunityName = (item) => {
@@ -278,18 +303,30 @@ export default function CommunityRegistrationSection() {
       newErrors.nama_komunitas = 'Silakan pilih nama komunitas dari daftar dropdown.';
     }
 
+    // Validasi Pengurus: Ketua Komunitas
+    if (!formData.nip_ketua || formData.nip_ketua.length !== 18) {
+      newErrors.nip_ketua = 'NIP ketua harus berjumlah 18 digit angka.';
+    } else if (!ketuaVerified) {
+      newErrors.nip_ketua = 'Data Ketua Komunitas tidak ditemukan di database pegawai.';
+    } else if (!isNameMatching(formData.nama_ketua, ketuaVerified.nama_lengkap)) {
+      newErrors.nama_ketua = `Nama ketua tidak cocok dengan data database (${ketuaVerified.nama_lengkap}).`;
+    }
+
     if (!formData.nama_ketua.trim()) {
       newErrors.nama_ketua = 'Nama ketua komunitas wajib diisi.';
     }
-    if (!formData.nip_ketua || formData.nip_ketua.length !== 18) {
-      newErrors.nip_ketua = 'NIP ketua harus berjumlah 18 digit angka.';
+
+    // Validasi Pengurus: Admin Komunitas
+    if (!formData.nip_admin || formData.nip_admin.length !== 18) {
+      newErrors.nip_admin = 'NIP admin harus berjumlah 18 digit angka.';
+    } else if (!adminVerified) {
+      newErrors.nip_admin = 'Data Admin Komunitas tidak ditemukan di database pegawai.';
+    } else if (!isNameMatching(formData.nama_admin, adminVerified.nama_lengkap)) {
+      newErrors.nama_admin = `Nama admin tidak cocok dengan data database (${adminVerified.nama_lengkap}).`;
     }
 
     if (!formData.nama_admin.trim()) {
       newErrors.nama_admin = 'Nama admin komunitas wajib diisi.';
-    }
-    if (!formData.nip_admin || formData.nip_admin.length !== 18) {
-      newErrors.nip_admin = 'NIP admin harus berjumlah 18 digit angka.';
     }
 
     if (!formData.rumpun_jabatan) {
@@ -314,8 +351,8 @@ export default function CommunityRegistrationSection() {
     if (!validateForm()) {
       Swal.fire({
         icon: 'warning',
-        title: 'Formulir Belum Lengkap',
-        text: 'Mohon periksa kembali kolom yang bertanda merah.',
+        title: 'Pengurus Tidak Terverifikasi',
+        text: 'Data Ketua dan Admin Komunitas wajib terdaftar di database pegawai dan namanya harus sesuai.',
         confirmButtonColor: '#006A63'
       });
       return;
@@ -614,11 +651,15 @@ export default function CommunityRegistrationSection() {
                       <Award className="w-4 h-4" />
                       <span>Ketua Komunitas</span>
                     </div>
-                    {ketuaVerified && (
-                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi
+                    {ketuaVerified ? (
+                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
+                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi di DB
                       </span>
-                    )}
+                    ) : formData.nip_ketua.length === 18 && !isLookingUpKetua ? (
+                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-200">
+                        <AlertCircle className="w-3 h-3 text-red-600" /> Tidak Ditemukan di DB
+                      </span>
+                    ) : null}
                   </div>
 
                   {/* NIP Ketua */}
@@ -704,11 +745,15 @@ export default function CommunityRegistrationSection() {
                       <UserCheck className="w-4 h-4" />
                       <span>Admin Komunitas</span>
                     </div>
-                    {adminVerified && (
-                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi
+                    {adminVerified ? (
+                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
+                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi di DB
                       </span>
-                    )}
+                    ) : formData.nip_admin.length === 18 && !isLookingUpAdmin ? (
+                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-200">
+                        <AlertCircle className="w-3 h-3 text-red-600" /> Tidak Ditemukan di DB
+                      </span>
+                    ) : null}
                   </div>
 
                   {/* NIP Admin */}

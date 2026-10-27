@@ -300,6 +300,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
         roles: currentRoles,
         status: selectedUser.status,
         email: selectedUser.email ? selectedUser.email.trim() : null,
+        rumpun_jabatan: selectedUser.rumpun_jabatan || 'JP',
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
       
@@ -604,7 +605,12 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                             const userRoles = Array.isArray(user.roles) && user.roles.length > 0
                               ? user.roles
                               : (user.peran ? [user.peran] : ['peserta']);
-                            setSelectedUser({ ...user, roles: userRoles, email: user.email || '' });
+                            setSelectedUser({ 
+                              ...user, 
+                              roles: userRoles, 
+                              email: user.email || '', 
+                              rumpun_jabatan: user.rumpun_jabatan || 'JP' 
+                            });
                             setShowEditModal(true);
                           }}
                           title="Edit Pengguna"
@@ -933,6 +939,22 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
+                    <select
+                      value={selectedUser.rumpun_jabatan || 'JP'}
+                      onChange={e => setSelectedUser({ ...selectedUser, rumpun_jabatan: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    >
+                      <option value="JPT">JPT (Jabatan Pimpinan Tinggi)</option>
+                      <option value="JA">JA (Jabatan Administrasi)</option>
+                      <option value="JF">JF (Jabatan Fungsional)</option>
+                      <option value="JP">JP (Jabatan Pelaksana)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Menentukan kelompok rumpun peserta untuk rekomendasi materi kursus dan akses komunitas belajar.
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status Akun</label>
                     <select value={selectedUser.status} onChange={e => setSelectedUser({ ...selectedUser, status: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
