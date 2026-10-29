@@ -135,6 +135,48 @@ const BankSoal = ({ onNavigate, onLogout }) => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
   };
 
+  const handleSavePostTestSettings = async () => {
+    if (!courseId) return;
+    try {
+      const passingGrade = postTest?.nilai_kelulusan ?? course?.nilai_kelulusan ?? 70;
+      const rawMaks = postTest?.maks_percobaan;
+      const parsedMaks =
+        rawMaks === '' || rawMaks === null || rawMaks === undefined
+          ? 3
+          : Math.max(0, parseInt(rawMaks, 10) || 0);
+      const payload = {
+        nilai_kelulusan: Number(passingGrade),
+        maks_percobaan: parsedMaks,
+        durasi_menit: Number(postTest?.durasi_menit) || 45
+      };
+
+      if (postTest && postTest.post_test_id) {
+        await api.put(`/admin-komunitas/post-test/${postTest.post_test_id}`, payload);
+      } else {
+        await api.post(`/admin-komunitas/pembelajaran/${courseId}/post-test`, payload);
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Pengaturan Post Test Disimpan!',
+        text:
+          parsedMaks === 0
+            ? 'Batas maksimal percobaan Post Test diatur ke Tanpa Batas (Unlimited).'
+            : `Batas maksimal percobaan Post Test diatur ke ${parsedMaks} kali kesempatan.`,
+        confirmButtonColor: '#0F766E',
+        timer: 2000
+      });
+      fetchData();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menyimpan Pengaturan',
+        text: error.response?.data?.message || 'Terjadi kesalahan saat menyimpan pengaturan Post Test.',
+        confirmButtonColor: '#0F766E'
+      });
+    }
+  };
+
   const handleAddQuestionSubmit = async (e) => {
     e.preventDefault();
     if (!newQuestion.trim()) {
@@ -200,10 +242,14 @@ const BankSoal = ({ onNavigate, onLogout }) => {
         });
       } else {
         // Create post test first
+        const parsedMaks =
+          postTest?.maks_percobaan === '' || postTest?.maks_percobaan === null || postTest?.maks_percobaan === undefined
+            ? 3
+            : Math.max(0, parseInt(postTest.maks_percobaan, 10) || 0);
         await api.post(`/admin-komunitas/pembelajaran/${courseId}/post-test`, {
-          nilai_kelulusan: course?.nilai_kelulusan || 70,
-          maks_percobaan: 3,
-          durasi_menit: 45,
+          nilai_kelulusan: course?.nilai_kelulusan ?? 70,
+          maks_percobaan: parsedMaks,
+          durasi_menit: postTest?.durasi_menit || 45,
           soal: [newQuestionPayload]
         });
       }
@@ -330,6 +376,129 @@ const BankSoal = ({ onNavigate, onLogout }) => {
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Tambah Soal</span>
               </button>
+            </div>
+
+            {/* Form Pengaturan Batas Maksimal Percobaan & Konfigurasi Post Test */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">Pengaturan Batas Percobaan & Kelulusan Post Test</h2>
+                  <p className="text-xs text-gray-500">
+                    Isi <b>0</b> untuk percobaan Tanpa Batas (Unlimited), atau ketik bebas jumlah batas percobaan.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSavePostTestSettings}
+                  className="px-4 py-2 bg-[#0F766E] hover:bg-teal-800 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer self-start sm:self-center"
+                >
+                  Simpan Pengaturan Post Test
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Nilai Kelulusan (Passing Grade %)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={postTest?.nilai_kelulusan ?? course?.nilai_kelulusan ?? 70}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setPostTest((prev) => (prev ? { ...prev, nilai_kelulusan: val } : { nilai_kelulusan: val, maks_percobaan: 3, durasi_menit: 45 }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Durasi Pengerjaan (Menit)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={postTest?.durasi_menit ?? 45}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setPostTest((prev) => (prev ? { ...prev, durasi_menit: val } : { durasi_menit: val, maks_percobaan: 3, nilai_kelulusan: course?.nilai_kelulusan ?? 70 }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Batas Maksimal Percobaan
+                    </label>
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                        Number(postTest?.maks_percobaan ?? 3) === 0
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-teal-50 text-teal-800'
+                      }`}
+                    >
+                      {Number(postTest?.maks_percobaan ?? 3) === 0
+                        ? '∞ Tanpa Batas (Unlimited)'
+                        : `Maks. ${postTest?.maks_percobaan ?? 3} Kali`}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0 = Unlimited, atau ketik bebas..."
+                    value={postTest?.maks_percobaan ?? 3}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const nextVal = val === '' ? '' : Math.max(0, parseInt(val, 10) || 0);
+                      setPostTest((prev) =>
+                        prev
+                          ? { ...prev, maks_percobaan: nextVal }
+                          : { maks_percobaan: nextVal, nilai_kelulusan: course?.nilai_kelulusan ?? 70, durasi_menit: 45 }
+                      );
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === '' || e.target.value === null) {
+                        setPostTest((prev) => (prev ? { ...prev, maks_percobaan: 0 } : { maks_percobaan: 0 }));
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    {[
+                      { label: '0 (Unlimited)', val: 0 },
+                      { label: '1x', val: 1 },
+                      { label: '2x', val: 2 },
+                      { label: '3x', val: 3 },
+                      { label: '5x', val: 5 },
+                      { label: '10x', val: 10 }
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() =>
+                          setPostTest((prev) =>
+                            prev
+                              ? { ...prev, maks_percobaan: p.val }
+                              : { maks_percobaan: p.val, nilai_kelulusan: course?.nilai_kelulusan ?? 70, durasi_menit: 45 }
+                          )
+                        }
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold border cursor-pointer transition-colors ${
+                          postTest?.maks_percobaan !== '' && Number(postTest?.maks_percobaan ?? 3) === p.val
+                            ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-teal-50 hover:border-teal-200'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Filter Tabs & Search Bar */}

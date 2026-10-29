@@ -77,7 +77,7 @@ const CourseEvaluationSection = ({
                           </div>
                           <p className="text-[11px] text-gray-500">
                             {hasEvalQuiz
-                              ? `Durasi: ${evalQuiz?.durasi_menit || 15}m • KKM: ${evalQuiz?.nilai_kelulusan ?? 70}% • Percobaan: ${evalQuiz?.maks_percobaan ?? 3}x`
+                              ? `Durasi: ${evalQuiz?.durasi_menit || 15}m • KKM: ${evalQuiz?.nilai_kelulusan ?? 70}% • Percobaan: ${evalQuiz?.maks_percobaan === 0 ? 'Tanpa Batas' : `${evalQuiz?.maks_percobaan ?? 3}x`}`
                               : 'Kuis evaluasi pemahaman modul dengan sistem salah & benar.'}
                           </p>
                         </div>
@@ -127,7 +127,7 @@ const CourseEvaluationSection = ({
                           </div>
                           <p className="text-[11px] text-gray-500">
                             {hasWeightedQuiz
-                              ? `Durasi: ${weightedQuiz?.durasi_menit || 15}m • Penilaian Bobot Nilai (Tanpa Salah/Benar Mutlak)`
+                              ? `Durasi: ${weightedQuiz?.durasi_menit || 15}m • Penilaian Bobot Nilai • Percobaan: ${weightedQuiz?.maks_percobaan === 0 ? 'Tanpa Batas' : `${weightedQuiz?.maks_percobaan ?? 3}x`}`
                               : 'Kuis dengan bobot nilai tiap butir & opsi jawaban (asesmen / skala nilai).'}
                           </p>
                         </div>
@@ -168,14 +168,6 @@ const CourseEvaluationSection = ({
               <h3 className="text-sm font-bold text-gray-900">Konfigurasi Post Test Akhir</h3>
               <p className="text-xs text-gray-500">Evaluasi kelulusan komprehensif setelah seluruh modul diselesaikan.</p>
             </div>
-            {!isReadOnly && (
-              <button
-                onClick={handleSavePostTestConfig}
-                className="px-3 py-1.5 bg-white border border-gray-200 text-teal-700 hover:bg-teal-50 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-              >
-                Simpan Konfigurasi
-              </button>
-            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,33 +181,92 @@ const CourseEvaluationSection = ({
                   min="0"
                   max="100"
                   value={course.nilai_kelulusan ?? 70}
-                  onChange={(e) => setCourse({ ...course, nilai_kelulusan: Number(e.target.value) })}
+                  onChange={(e) => setCourse({ ...course, nilai_kelulusan: e.target.value === '' ? '' : Number(e.target.value) })}
                   className="w-full pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">%</span>
               </div>
+              <span className="text-[10px] text-gray-500 mt-1 block">
+                Standar nilai minimal kelulusan Post Test (0–100%).
+              </span>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Batas Maksimal Percobaan</label>
-              <div className="relative">
-                <select
-                  value={postTest?.maks_percobaan || 3}
-                  onChange={(e) =>
-                    setPostTest((prev) =>
-                      prev
-                        ? { ...prev, maks_percobaan: Number(e.target.value) }
-                        : { maks_percobaan: Number(e.target.value) }
-                    )
-                  }
-                  className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 pr-10"
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-gray-700">
+                  Batas Maksimal Percobaan (Kuis Post Test)
+                </label>
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                    Number(postTest?.maks_percobaan ?? 3) === 0
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-teal-50 text-teal-800 border border-teal-200'
+                  }`}
                 >
-                  <option value="3">3 Kali Kesempatan</option>
-                  <option value="1">1 Kali Kesempatan</option>
-                  <option value="2">2 Kali Kesempatan</option>
-                  <option value="5">5 Kali Kesempatan</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  {Number(postTest?.maks_percobaan ?? 3) === 0
+                    ? '∞ Tanpa Batas (Unlimited)'
+                    : `Maks. ${postTest?.maks_percobaan ?? 3} Kali`}
+                </span>
               </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Isi 0 untuk Unlimited atau ketik jumlah batas..."
+                  value={postTest?.maks_percobaan ?? 3}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPostTest((prev) => {
+                      const nextVal = val === '' ? '' : Math.max(0, parseInt(val, 10) || 0);
+                      return prev ? { ...prev, maks_percobaan: nextVal } : { maks_percobaan: nextVal };
+                    });
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '' || e.target.value === null) {
+                      setPostTest((prev) => (prev ? { ...prev, maks_percobaan: 0 } : { maks_percobaan: 0 }));
+                    }
+                  }}
+                  className="w-full px-3.5 py-2 pr-20 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold pointer-events-none">
+                  {Number(postTest?.maks_percobaan ?? 3) === 0 ? 'Unlimited' : 'Kali'}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="text-[10px] text-gray-500 mr-1">Pilihan Cepat:</span>
+                {[
+                  { label: '0 (Unlimited)', value: 0 },
+                  { label: '1x', value: 1 },
+                  { label: '2x', value: 2 },
+                  { label: '3x', value: 3 },
+                  { label: '5x', value: 5 },
+                  { label: '10x', value: 10 }
+                ].map((preset) => {
+                  const isActive =
+                    postTest?.maks_percobaan !== '' &&
+                    Number(postTest?.maks_percobaan ?? 3) === preset.value;
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() =>
+                        setPostTest((prev) =>
+                          prev ? { ...prev, maks_percobaan: preset.value } : { maks_percobaan: preset.value }
+                        )
+                      }
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-[10px] text-gray-500 mt-1 block">
+                Isi <b>0</b> untuk tanpa batasan percobaan (Unlimited), atau ketik bebas angka batas maksimal percobaan.
+              </span>
             </div>
           </div>
         </div>

@@ -247,7 +247,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     setCourseThumbnailPreview(course?.thumbnail_url || '');
   };
 
-  // --- Informasi Dasar & Aksi Kursus ---
+  // --- Simpan Seluruh Perubahan Kursus (Terintegrasi 1 Tombol) ---
   const handleUpdateBasicInfo = async () => {
     if (!course) return;
 
@@ -259,11 +259,32 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     const wasPublished = course.status === 'dipublikasikan';
     try {
       setSavingBasicInfo(true);
-      
+
+      const passingGrade = course.nilai_kelulusan === '' ? 70 : (course.nilai_kelulusan ?? 70);
+      const rawMaks = postTest?.maks_percobaan;
+      const parsedMaks =
+        rawMaks === '' || rawMaks === null || rawMaks === undefined
+          ? 3
+          : Math.max(0, parseInt(rawMaks, 10) || 0);
+
+      // 1. Simpan Konfigurasi Post Test (Nilai Kelulusan, Batas Maksimal Percobaan, Durasi)
+      const postTestPayload = {
+        nilai_kelulusan: passingGrade,
+        maks_percobaan: parsedMaks,
+        durasi_menit: postTest?.durasi_menit || 45
+      };
+
+      if (postTest?.post_test_id) {
+        await api.put(`/admin-komunitas/post-test/${postTest.post_test_id}`, postTestPayload);
+      } else {
+        await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/post-test`, postTestPayload);
+      }
+
+      // 2. Simpan Informasi Dasar, Thumbnail (jika ada), dan Surat Pernyataan PDF (jika ada)
       let res;
       const cleanDeskripsi = (course.deskripsi && course.deskripsi !== '-') ? course.deskripsi : '';
 
-      if (courseThumbnailFile) {
+      if (courseThumbnailFile || suratFile) {
         const data = new FormData();
         data.append('judul_pembelajaran', course.judul_pembelajaran || '');
         data.append('deskripsi', cleanDeskripsi);
@@ -272,10 +293,15 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         }
         data.append('kategori', course.kategori || 'Pengembangan Kompetensi');
         data.append('capaian_pembelajaran', course.capaian_pembelajaran || '');
-        data.append('nilai_kelulusan', course.nilai_kelulusan ?? 70);
+        data.append('nilai_kelulusan', passingGrade);
         data.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
         data.append('komunitas_id', course.komunitas_id);
-        data.append('thumbnail', courseThumbnailFile);
+        if (courseThumbnailFile) {
+          data.append('thumbnail', courseThumbnailFile);
+        }
+        if (suratFile) {
+          data.append('surat_pernyataan', suratFile);
+        }
 
         res = await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, data);
       } else {
@@ -285,7 +311,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           kategori_id: course.kategori_id || null,
           kategori: course.kategori || 'Pengembangan Kompetensi',
           capaian_pembelajaran: course.capaian_pembelajaran || '',
-          nilai_kelulusan: course.nilai_kelulusan ?? 70,
+          nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
           komunitas_id: course.komunitas_id
         };
@@ -301,20 +327,23 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         }
         setCourseThumbnailFile(null);
       }
+      if (suratFile) {
+        setSuratFile(null);
+      }
 
       if (wasPublished) {
         Swal.fire({
           icon: 'info',
           title: 'Status: Menunggu Approval',
-          html: 'Perubahan informasi dasar kursus berhasil disimpan!<br/><span class="text-xs text-gray-600">Kursus otomatis berstatus <b>Menunggu Approval Admin BKPSDM</b> dan tetap tampil terkunci di katalog peserta sampai disetujui kembali.</span>',
+          html: 'Seluruh perubahan kursus berhasil disimpan!<br/><span class="text-xs text-gray-600">Kursus otomatis berstatus <b>Menunggu Approval Admin BKPSDM</b> dan tetap tampil terkunci di katalog peserta sampai disetujui kembali.</span>',
           confirmButtonColor: '#0F766E'
         });
       } else {
         Swal.fire({
           icon: 'success',
-          title: 'Tersimpan!',
-          text: 'Perubahan informasi dasar & thumbnail berhasil disimpan.',
-          timer: 1500,
+          title: 'Perubahan Tersimpan!',
+          text: 'Seluruh perubahan informasi kursus, konfigurasi batas percobaan Post Test, dan berkas berhasil disimpan.',
+          timer: 1800,
           showConfirmButton: false
         });
       }
@@ -1078,7 +1107,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         judul_kuis: existingQuiz.judul_kuis || defaultTitle,
         durasi_menit: existingQuiz.durasi_menit || 15,
         nilai_kelulusan: (type === 'pre_test' || type === 'kuis_berbobot') ? (existingQuiz.nilai_kelulusan ?? 0) : (existingQuiz.nilai_kelulusan ?? 70),
-        maks_percobaan: type === 'pre_test' ? 1 : (existingQuiz.maks_percobaan ?? 3),
+        maks_percobaan: existingQuiz.maks_percobaan ?? (type === 'pre_test' ? 1 : 3),
         soal: allSoal,
         grid_config_json: existingQuiz.grid_config_json || null
       });
@@ -1432,13 +1461,18 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     try {
       const isPreTest = targetQuizType === 'pre_test';
       const isWeighted = targetQuizType === 'kuis_berbobot';
+      const rawMaksQuiz = quizForm.maks_percobaan;
+      const parsedMaksQuiz =
+        rawMaksQuiz === '' || rawMaksQuiz === null || rawMaksQuiz === undefined
+          ? (isPreTest ? 1 : 3)
+          : Math.max(0, parseInt(rawMaksQuiz, 10) || 0);
       const payload = {
         judul_kuis: quizForm.judul_kuis,
         durasi_menit: Number(quizForm.durasi_menit) || 15,
         tipe_kuis: targetQuizType,
         materi_id: isPreTest ? targetQuizMateri?.materi_id : null,
         nilai_kelulusan: (isPreTest || isWeighted) ? Number(quizForm.nilai_kelulusan || 0) : Number(quizForm.nilai_kelulusan),
-        maks_percobaan: isPreTest ? 1 : Number(quizForm.maks_percobaan),
+        maks_percobaan: parsedMaksQuiz,
         grid_config_json: quizForm.grid_config_json,
         soal: quizForm.soal
       };
@@ -1525,14 +1559,19 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
   const handleSavePostTestConfig = async () => {
     if (!course) return;
     try {
-      const passingGrade = course.nilai_kelulusan ?? 70;
+      const passingGrade = course.nilai_kelulusan === '' ? 70 : (course.nilai_kelulusan ?? 70);
+      const rawMaks = postTest?.maks_percobaan;
+      const parsedMaks =
+        rawMaks === '' || rawMaks === null || rawMaks === undefined
+          ? 3
+          : Math.max(0, parseInt(rawMaks, 10) || 0);
       const payload = {
         nilai_kelulusan: passingGrade,
-        maks_percobaan: postTest?.maks_percobaan || 3,
+        maks_percobaan: parsedMaks,
         durasi_menit: postTest?.durasi_menit || 45
       };
 
-      if (postTest) {
+      if (postTest?.post_test_id) {
         await api.put(`/admin-komunitas/post-test/${postTest.post_test_id}`, payload);
       } else {
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/post-test`, payload);
@@ -1699,14 +1738,37 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     if (!confirmSubmit.isConfirmed) return;
 
     try {
+      const passingGrade = course.nilai_kelulusan === '' ? 70 : (course.nilai_kelulusan ?? 70);
+      const rawMaks = postTest?.maks_percobaan;
+      const parsedMaks =
+        rawMaks === '' || rawMaks === null || rawMaks === undefined
+          ? 3
+          : Math.max(0, parseInt(rawMaks, 10) || 0);
+
+      // Pastikan konfigurasi Post Test (batas percobaan, nilai kelulusan, durasi) ikut tersimpan
+      const postTestPayload = {
+        nilai_kelulusan: passingGrade,
+        maks_percobaan: parsedMaks,
+        durasi_menit: postTest?.durasi_menit || 45
+      };
+
+      if (postTest?.post_test_id) {
+        await api.put(`/admin-komunitas/post-test/${postTest.post_test_id}`, postTestPayload);
+      } else {
+        await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/post-test`, postTestPayload);
+      }
+
       // Pastikan informasi dasar dan thumbnail terbaru tersimpan sebelum diajukan
       if (courseThumbnailFile) {
         const formData = new FormData();
         formData.append('judul_pembelajaran', course.judul_pembelajaran);
         formData.append('deskripsi', course.deskripsi || '-');
+        if (course.kategori_id) {
+          formData.append('kategori_id', course.kategori_id);
+        }
         formData.append('kategori', course.kategori || 'Pengembangan Kompetensi');
         formData.append('capaian_pembelajaran', course.capaian_pembelajaran || '-');
-        formData.append('nilai_kelulusan', course.nilai_kelulusan ?? 70);
+        formData.append('nilai_kelulusan', passingGrade);
         formData.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
         formData.append('komunitas_id', course.komunitas_id);
         formData.append('thumbnail', courseThumbnailFile);
@@ -1718,9 +1780,10 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         await api.put(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, {
           judul_pembelajaran: course.judul_pembelajaran,
           deskripsi: course.deskripsi,
+          kategori_id: course.kategori_id || null,
           kategori: course.kategori || 'Pengembangan Kompetensi',
           capaian_pembelajaran: course.capaian_pembelajaran || '-',
-          nilai_kelulusan: course.nilai_kelulusan,
+          nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
           komunitas_id: course.komunitas_id
         });

@@ -84,7 +84,7 @@ const QuizBuilderModal = ({
 
         {/* Quiz General Settings */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-          <div className={targetQuizType === 'pre_test' ? 'sm:col-span-2' : ''}>
+          <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               Judul {targetQuizType === 'pre_test' ? 'Pre-Test' : targetQuizType === 'kuis_berbobot' ? 'Kuis Berbobot' : 'Kuis'}
             </label>
@@ -103,7 +103,7 @@ const QuizBuilderModal = ({
                 min="1"
                 max="300"
                 value={quizForm.durasi_menit ?? 15}
-                onChange={(e) => setQuizForm({ ...quizForm, durasi_menit: Number(e.target.value) })}
+                onChange={(e) => setQuizForm({ ...quizForm, durasi_menit: e.target.value === '' ? '' : Number(e.target.value) })}
                 className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
                 placeholder="15"
               />
@@ -111,55 +111,31 @@ const QuizBuilderModal = ({
             </div>
           </div>
           {targetQuizType === 'evaluasi_modul' ? (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Passing Grade (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={quizForm.nilai_kelulusan ?? 70}
-                  onChange={(e) => setQuizForm({ ...quizForm, nilai_kelulusan: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Maks. Percobaan</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quizForm.maks_percobaan ?? 3}
-                  onChange={(e) => setQuizForm({ ...quizForm, maks_percobaan: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
-                />
-              </div>
-            </>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Passing Grade (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={quizForm.nilai_kelulusan ?? 70}
+                onChange={(e) => setQuizForm({ ...quizForm, nilai_kelulusan: e.target.value === '' ? '' : Number(e.target.value) })}
+                className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
+              />
+            </div>
           ) : targetQuizType === 'kuis_berbobot' ? (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Passing Grade (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={quizForm.nilai_kelulusan ?? 0}
-                  onChange={(e) => setQuizForm({ ...quizForm, nilai_kelulusan: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
-                  placeholder="0 (Selalu Lulus)"
-                />
-                <span className="text-[10px] text-gray-400">0 = Otomatis lulus</span>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Maks. Percobaan</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quizForm.maks_percobaan ?? 3}
-                  onChange={(e) => setQuizForm({ ...quizForm, maks_percobaan: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
-                />
-              </div>
-            </>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Passing Grade (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={quizForm.nilai_kelulusan ?? 0}
+                onChange={(e) => setQuizForm({ ...quizForm, nilai_kelulusan: e.target.value === '' ? '' : Number(e.target.value) })}
+                className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
+                placeholder="0 (Selalu Lulus)"
+              />
+              <span className="text-[10px] text-gray-400">0 = Otomatis lulus</span>
+            </div>
           ) : (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Syarat Kelulusan</label>
@@ -168,6 +144,67 @@ const QuizBuilderModal = ({
               </div>
             </div>
           )}
+
+          {/* Batas Maksimal Percobaan untuk Ketiga Jenis Asesmen Kuis */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-700">Maks. Percobaan</label>
+              <span
+                className={`px-1.5 py-0.5 text-[9px] font-bold rounded-full ${
+                  Number(quizForm.maks_percobaan ?? 3) === 0
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-teal-100 text-teal-800'
+                }`}
+              >
+                {Number(quizForm.maks_percobaan ?? 3) === 0
+                  ? '∞ Unlimited'
+                  : `${quizForm.maks_percobaan ?? 3}x`}
+              </span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              value={quizForm.maks_percobaan ?? 3}
+              onChange={(e) => {
+                const val = e.target.value;
+                setQuizForm({
+                  ...quizForm,
+                  maks_percobaan: val === '' ? '' : Math.max(0, parseInt(val, 10) || 0)
+                });
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || e.target.value === null) {
+                  setQuizForm({ ...quizForm, maks_percobaan: 0 });
+                }
+              }}
+              className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded text-xs"
+              placeholder="0 = Unlimited, atau ketik angka..."
+            />
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {[
+                { label: '0 (Unlimited)', val: 0 },
+                { label: '1x', val: 1 },
+                { label: '3x', val: 3 },
+                { label: '5x', val: 5 }
+              ].map((p) => (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => setQuizForm({ ...quizForm, maks_percobaan: p.val })}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-semibold border cursor-pointer transition-colors ${
+                    quizForm.maks_percobaan !== '' && Number(quizForm.maks_percobaan ?? 3) === p.val
+                      ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[10px] text-gray-500 block mt-0.5">
+              Isi 0 untuk tanpa batas, atau ketik bebas
+            </span>
+          </div>
         </div>
 
         {/* Tab Nav: Pilihan Ganda vs Teka-Teki Silang vs Drag & Drop vs Pilihan Berbobot */}

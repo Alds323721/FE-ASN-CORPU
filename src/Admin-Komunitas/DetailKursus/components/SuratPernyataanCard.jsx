@@ -91,13 +91,14 @@ const SuratPernyataanCard = ({
             />
             <p className="text-xs text-gray-400 mt-2">Maksimal ukuran file 5MB (Format .pdf) • Opsional</p>
             {suratFile && (
-              <div className="mt-3">
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 font-medium">
+                <span>📄 Berkas dipilih: <b>{suratFile.name}</b> (Akan diunggah saat klik <b>Simpan Perubahan</b>)</span>
                 <button
-                  onClick={handleUploadSuratPernyataan}
-                  disabled={isUploadingSurat}
-                  className="px-4 py-1.5 bg-[#0F766E] text-white rounded-lg text-xs font-semibold hover:bg-teal-800 disabled:opacity-50 cursor-pointer"
+                  type="button"
+                  onClick={() => setSuratFile(null)}
+                  className="text-red-600 hover:text-red-800 font-bold ml-1 cursor-pointer"
                 >
-                  {isUploadingSurat ? 'Mengunggah...' : 'Upload Berkas Sekarang'}
+                  ✕
                 </button>
               </div>
             )}

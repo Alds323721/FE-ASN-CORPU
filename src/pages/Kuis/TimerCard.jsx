@@ -92,9 +92,21 @@ export default function TimerCard({
           <span className="text-gray-600 font-semibold">Status</span>
           <span className="text-[#006A63] font-semibold">Sedang Berjalan</span>
         </div>
+        {(isPreTest || isWeighted) && (
+          <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+            <span className="text-gray-600 font-semibold">
+              {isPreTest ? 'Jenis Ujian' : 'Jenis Kuis'}
+            </span>
+            <span className="text-[#1D315F] font-semibold">
+              {isPreTest ? 'Pre-Test Materi' : 'Kuis Nilai Berbobot'}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-          <span className="text-gray-600 font-semibold">{isPreTest ? 'Jenis Ujian' : (isWeighted ? 'Jenis Kuis' : 'Batas Kesempatan')}</span>
-          <span className="text-[#1D315F] font-semibold">{isPreTest ? 'Pre-Test Materi' : (isWeighted ? 'Kuis Nilai Berbobot' : `${maxAttempts} Kali`)}</span>
+          <span className="text-gray-600 font-semibold">Batas Kesempatan</span>
+          <span className="text-[#1D315F] font-semibold">
+            {Number(maxAttempts) === 0 ? 'Tanpa Batas' : `${maxAttempts} Kali`}
+          </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600 font-semibold">Soal Terjawab</span>

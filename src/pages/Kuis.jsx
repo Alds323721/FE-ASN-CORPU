@@ -476,7 +476,7 @@ export default function Kuis({ onNavigate, onBack }) {
               answeredCount={answeredCount}
               totalQuestions={totalSoal}
               durationMinutes={testData.durasi_menit || 15}
-              maxAttempts={testData.maks_percobaan || 3}
+              maxAttempts={testData.maks_percobaan ?? 3}
               isPreTest={testData.tipe_kuis === 'pre_test'}
               isWeighted={testData.tipe_kuis === 'kuis_berbobot' || (weightedQuestions.length > 0 && pgQuestions.length === 0 && ttsQuestions.length === 0 && dragDropQuestions.length === 0) || Number(testData.nilai_kelulusan || 0) === 0}
               storageKey={timerStorageKey}

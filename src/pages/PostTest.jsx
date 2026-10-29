@@ -104,7 +104,7 @@ const PostTestHeader = ({ onBack, testData, currentQuestion }) => (
   </div>
 );
 
-const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, storageKey }) => {
+const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, storageKey, testData }) => {
   const [time, setTime] = useState(() => {
     if (!storageKey || !durationMinutes) return (durationMinutes || 60) * 60;
     try {
@@ -189,7 +189,9 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, s
         </div>
         <div className="flex justify-between items-center pb-3 border-b border-gray-200">
           <span className="text-gray-600 font-semibold">Batas Kesempatan</span>
-          <span className="text-[#1D315F] font-semibold">3 Kali</span>
+          <span className="text-[#1D315F] font-semibold">
+            {Number(testData?.maks_percobaan) === 0 ? 'Tanpa Batas' : `${testData?.maks_percobaan || 3} Kali`}
+          </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600 font-semibold">Soal Terjawab</span>
@@ -620,6 +622,7 @@ export default function PostTest({ onNavigate, onBack }) {
               totalQuestions={testData.soal.length} 
               durationMinutes={testData.durasi_menit}
               storageKey={timerStorageKey}
+              testData={testData}
               onTimeUp={() => handleSubmit(true)}
             />
           </div>

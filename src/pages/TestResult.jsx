@@ -201,7 +201,9 @@ const ScoreSummary = ({ resultData }) => (
       <div className="bg-[#F4F8FB] border border-[#3FCDC1]/30 rounded-lg p-4 flex items-start gap-3">
         <Info className="w-5 h-5 text-[#006A63] flex-shrink-0 mt-0.5" />
         <p className="text-xs text-gray-600 font-semibold">
-          Percobaan ke-{resultData.percobaan_ke} dari maksimal {resultData.maks_percobaan} kali percobaan.
+          {Number(resultData.maks_percobaan) === 0 
+            ? `Percobaan ke-${resultData.percobaan_ke} (Tanpa Batas Percobaan)` 
+            : `Percobaan ke-${resultData.percobaan_ke} dari maksimal ${resultData.maks_percobaan} kali percobaan.`}
         </p>
       </div>
     </div>
@@ -337,7 +339,9 @@ export default function TestResult({ onNavigate }) {
             <p className="text-sm md:text-base text-gray-600 font-semibold">
               {resultData.apakah_lulus 
                 ? 'Anda telah berhasil menyelesaikan program pelatihan dan berhak mendapatkan sertifikat resmi.'
-                : `Nilai Anda masih di bawah standar kelulusan. Sisa percobaan Anda: ${resultData.sisa_percobaan} kali.`
+                : (Number(resultData.maks_percobaan) === 0
+                    ? 'Nilai Anda masih di bawah standar kelulusan. Anda dapat mencoba kembali kapan saja tanpa batasan.'
+                    : `Nilai Anda masih di bawah standar kelulusan. Sisa percobaan Anda: ${resultData.sisa_percobaan} kali.`)
               }
             </p>
           </div>
@@ -350,7 +354,7 @@ export default function TestResult({ onNavigate }) {
                  <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
                     <h2 className="text-2xl font-bold text-[#1D315F] mb-4">Belum Bisa Mengunduh Sertifikat</h2>
                     <p className="text-gray-500 mb-6 font-semibold">Anda harus lulus Post Test terlebih dahulu untuk dapat mengunduh sertifikat pelatihan ini.</p>
-                    {resultData.sisa_percobaan > 0 && (
+                    {(!resultData.apakah_lulus && (Number(resultData.maks_percobaan) === 0 || resultData.sisa_percobaan > 0)) && (
                       <button 
                         onClick={() => onNavigate('post-test')}
                         className="px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors"
