@@ -288,7 +288,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       const validKuesioner = (kuesionerQuestions || []).filter(
         (q) => q.pertanyaan && q.pertanyaan.trim() !== '' && Array.isArray(q.opsi_jawaban) && q.opsi_jawaban.length >= 2
       );
-      if (validKuesioner.length > 0) {
+      if (Array.isArray(kuesionerQuestions)) {
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/kuesioner`, {
           soal: validKuesioner
         });
@@ -1780,7 +1780,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       const validKuesioner = (kuesionerQuestions || []).filter(
         (q) => q.pertanyaan && q.pertanyaan.trim() !== '' && Array.isArray(q.opsi_jawaban) && q.opsi_jawaban.length >= 2
       );
-      if (validKuesioner.length > 0) {
+      if (Array.isArray(kuesionerQuestions)) {
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/kuesioner`, {
           soal: validKuesioner
         });

@@ -59,27 +59,7 @@ export default function CourseFeedbackConfigCard({
           }))
         );
       } else {
-        // Template bawaan jika belum pernah diatur
-        setQuestions([
-          {
-            pertanyaan: 'Bagaimana tingkat kepuasan Anda terhadap materi pembelajaran yang disajikan?',
-            tipe_skala: 'kepuasan',
-            opsi_jawaban: PRESET_OPTIONS.kepuasan,
-            apakah_wajib: true
-          },
-          {
-            pertanyaan: 'Seberapa mudah materi pada kursus ini untuk dipahami dan dipelajari?',
-            tipe_skala: 'pemahaman',
-            opsi_jawaban: PRESET_OPTIONS.pemahaman,
-            apakah_wajib: true
-          },
-          {
-            pertanyaan: 'Seberapa relevan materi ini dalam menunjang tugas dan pengembangan kompetensi Anda?',
-            tipe_skala: 'kepuasan',
-            opsi_jawaban: ['Sangat Relevan', 'Relevan', 'Cukup Relevan', 'Kurang Relevan', 'Tidak Relevan'],
-            apakah_wajib: true
-          }
-        ]);
+        setQuestions([]);
       }
     } catch (err) {
       console.error('Error fetching kuesioner:', err);
@@ -101,15 +81,6 @@ export default function CourseFeedbackConfigCard({
   };
 
   const handleRemoveQuestion = (index) => {
-    if (questions.length <= 1) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Minimal 1 Pertanyaan',
-        text: 'Kursus wajib memiliki minimal 1 butir kuesioner evaluasi.',
-        confirmButtonColor: '#0F766E'
-      });
-      return;
-    }
     setQuestions((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -220,7 +191,18 @@ export default function CourseFeedbackConfigCard({
         ) : (
           <>
             <div className="space-y-4">
-              {questions.map((q, idx) => (
+              {questions.length === 0 ? (
+              <div className="text-center py-8 border border-dashed border-gray-200 rounded-xl bg-gray-50/50 space-y-2">
+                <div className="w-10 h-10 mx-auto rounded-full bg-teal-50 flex items-center justify-center text-[#0F766E]">
+                  <HelpCircle className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium text-gray-700">Belum Ada Butir Pertanyaan Kuesioner</p>
+                <p className="text-xs text-gray-400 max-w-md mx-auto">
+                  Kuesioner evaluasi bersifat opsional. Klik tombol di bawah untuk menambahkan butir pertanyaan evaluasi bagi peserta kursus.
+                </p>
+              </div>
+            ) : (
+              questions.map((q, idx) => (
                 <div
                   key={idx}
                   className="p-4 border border-gray-200 rounded-xl bg-gray-50/40 hover:bg-white hover:border-gray-300 transition-all space-y-3"
@@ -233,7 +215,7 @@ export default function CourseFeedbackConfigCard({
                       <span className="text-xs font-bold text-gray-700">Pertanyaan #{idx + 1}</span>
                     </div>
 
-                    {!isReadOnly && questions.length > 1 && (
+                    {!isReadOnly && (
                       <button
                         type="button"
                         onClick={() => handleRemoveQuestion(idx)}
@@ -303,7 +285,8 @@ export default function CourseFeedbackConfigCard({
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
 
             {!isReadOnly && (
@@ -347,7 +330,12 @@ export default function CourseFeedbackConfigCard({
             </p>
 
             <div className="space-y-4">
-              {questions.map((q, idx) => (
+              {questions.length === 0 ? (
+                <div className="text-center py-8 text-xs text-gray-400 border border-dashed border-gray-200 rounded-xl">
+                  Belum ada butir pertanyaan kuesioner yang ditambahkan.
+                </div>
+              ) : (
+                questions.map((q, idx) => (
                 <div key={idx} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
                   <p className="text-xs font-semibold text-gray-900 leading-snug">
                     <span className="text-[#0F766E] font-bold mr-1.5">{idx + 1}.</span>
@@ -375,7 +363,8 @@ export default function CourseFeedbackConfigCard({
                     })}
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
 
             <div className="border-t border-gray-100 pt-4 flex justify-end">
