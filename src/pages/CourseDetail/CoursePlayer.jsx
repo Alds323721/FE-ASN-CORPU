@@ -354,7 +354,12 @@ export default function CoursePlayer({
             </button>
           )}
 
-          {activeMateri.is_read && nextStepInfo?.type === 'modul_kuis' && (
+          {activeMateri.is_read &&
+            nextStepInfo?.type === 'modul_kuis' &&
+            !nextStepInfo?.kuis?.is_completed &&
+            !courseData?.post_test?.is_completed &&
+            courseData?.status_pendaftaran !== 'lulus' &&
+            courseData?.status_pendaftaran !== 'selesai' && (
             <button
               onClick={() => {
                 localStorage.setItem('userModulId', nextStepInfo.modulId);

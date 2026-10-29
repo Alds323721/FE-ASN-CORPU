@@ -44,6 +44,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
   const [courseThumbnailFile, setCourseThumbnailFile] = useState(null);
   const [courseThumbnailPreview, setCourseThumbnailPreview] = useState('');
   const [savingBasicInfo, setSavingBasicInfo] = useState(false);
+  const [kuesionerQuestions, setKuesionerQuestions] = useState([]);
 
   // Modal State: Tambah & Edit Modul
   const [showAddModuleModal, setShowAddModuleModal] = useState(false);
@@ -281,6 +282,16 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         await api.put(`/admin-komunitas/post-test/${postTest.post_test_id}`, postTestPayload);
       } else {
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/post-test`, postTestPayload);
+      }
+
+      // 1b. Simpan Kuesioner Evaluasi Kursus (Feedback Peserta)
+      const validKuesioner = (kuesionerQuestions || []).filter(
+        (q) => q.pertanyaan && q.pertanyaan.trim() !== '' && Array.isArray(q.opsi_jawaban) && q.opsi_jawaban.length >= 2
+      );
+      if (validKuesioner.length > 0) {
+        await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/kuesioner`, {
+          soal: validKuesioner
+        });
       }
 
       // 2. Simpan Informasi Dasar, Thumbnail (jika ada), dan Surat Pernyataan PDF (jika ada)
@@ -1765,6 +1776,16 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/post-test`, postTestPayload);
       }
 
+      // Pastikan konfigurasi Kuesioner Feedback Peserta ikut tersimpan
+      const validKuesioner = (kuesionerQuestions || []).filter(
+        (q) => q.pertanyaan && q.pertanyaan.trim() !== '' && Array.isArray(q.opsi_jawaban) && q.opsi_jawaban.length >= 2
+      );
+      if (validKuesioner.length > 0) {
+        await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}/kuesioner`, {
+          soal: validKuesioner
+        });
+      }
+
       // Pastikan informasi dasar dan thumbnail terbaru tersimpan sebelum diajukan
       if (courseThumbnailFile) {
         const formData = new FormData();
@@ -1936,6 +1957,13 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
               handleSavePostTestConfig={handleSavePostTestConfig}
               isReadOnly={isReadOnly}
               onNavigate={onNavigate}
+            />
+
+            {/* Section 3B: Kuesioner Evaluasi Kursus (Feedback Peserta) */}
+            <CourseFeedbackConfigCard
+              courseId={course.pembelajaran_id}
+              isReadOnly={isReadOnly}
+              onQuestionsChange={setKuesionerQuestions}
             />
 
             {/* Section 4: Surat Pernyataan Keabsahan */}

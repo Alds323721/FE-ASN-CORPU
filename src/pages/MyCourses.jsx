@@ -65,7 +65,7 @@ const MyCoursesNavbar = ({ onNavigate }) => {
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors">{t('nav.dashboard')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors">{t('nav.community')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors">{t('nav.catalog')}</a>
-          <a href="#" className="text-[#006A63]">{t('nav.myCourses')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="text-[#006A63]">{t('nav.myCourses')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors">{t('nav.certificates')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors">{t('nav.helpCenter')}</a>
         </div>
@@ -111,12 +111,20 @@ const Tabs = ({ activeTab, setActiveTab, stats }) => {
 };
 
 /* ── Cards ──────────────────────────── */
-const InProgressCard = ({ image, categoryIcon: Icon, category, title, jpl, modules, progress, onContinue }) => {
+const InProgressCard = ({ image, categoryIcon: Icon, category, title, jpl, modules, progress, status, onContinue }) => {
   const { t } = useLanguage();
+  const isCompleted = Number(progress || 0) >= 100 || status === 'lulus' || status === 'selesai';
+  const displayProgress = isCompleted ? 100 : Number(progress || 0);
+
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
       <div className="h-44 relative">
         <img src={image} alt={title} className="w-full h-full object-cover" />
+        {isCompleted && (
+          <div className="absolute top-3 left-3 bg-[#10B981] text-white px-3 py-1 text-[11px] font-bold rounded-sm shadow-sm flex items-center gap-1.5 tracking-wider">
+            <CheckCircle2 className="w-3.5 h-3.5" /> {t('myCourses.completedTag')} (100%)
+          </div>
+        )}
         <div className="absolute top-3 right-3 bg-[#006A63] text-white px-3 py-1 text-[11px] font-bold rounded-sm shadow-sm tracking-wider">
           {t('common.free')}
         </div>
@@ -135,31 +143,32 @@ const InProgressCard = ({ image, categoryIcon: Icon, category, title, jpl, modul
         <div className="mb-5">
           <div className="flex justify-between items-center text-[13px] font-semibold mb-2">
             <span className="text-[#1D315F]">{t('myCourses.learningProgress')}</span>
-            <span className="text-[#006A63]">{progress}%</span>
+            <span className={isCompleted ? 'text-[#10B981] font-bold' : 'text-[#006A63]'}>{displayProgress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-[#006A63] h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+            <div className={`${isCompleted ? 'bg-[#10B981]' : 'bg-[#006A63]'} h-2 rounded-full`} style={{ width: `${displayProgress}%` }}></div>
           </div>
         </div>
         
         <button 
           onClick={onContinue}
           className="w-full py-2.5 bg-[#006A63] text-white rounded-md text-[13px] font-bold hover:bg-[#00534D] transition-colors flex items-center justify-center gap-2">
-          {t('dashboard.continueLearning')} <ArrowRight className="w-4 h-4" />
+          {isCompleted ? t('common.viewDetails') : t('dashboard.continueLearning')} <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
 };
 
-const CompletedCard = ({ image, categoryIcon: Icon, category, title, jpl, completedDate }) => {
+const CompletedCard = ({ image, categoryIcon: Icon, category, title, jpl, modules, progress, completedDate, onViewDetail }) => {
   const { t } = useLanguage();
+  const displayProgress = Number(progress || 100) >= 100 ? 100 : Number(progress || 100);
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
       <div className="h-44 relative">
-        <img src={image} alt={title} className="w-full h-full object-cover grayscale opacity-90 mix-blend-multiply" />
-        <div className="absolute top-3 left-3 bg-[#3FCDC1] text-white px-3 py-1.5 text-[11px] font-bold rounded-sm shadow-sm flex items-center gap-1.5 tracking-wider">
-          <CheckCircle2 className="w-3.5 h-3.5" /> {t('myCourses.completedTag')}
+        <img src={image} alt={title} className="w-full h-full object-cover" />
+        <div className="absolute top-3 left-3 bg-[#10B981] text-white px-3 py-1.5 text-[11px] font-bold rounded-sm shadow-sm flex items-center gap-1.5 tracking-wider">
+          <CheckCircle2 className="w-3.5 h-3.5" /> {t('myCourses.completedTag')} (100%)
         </div>
       </div>
       <div className="p-6 flex-1 flex flex-col bg-white">
@@ -168,17 +177,33 @@ const CompletedCard = ({ image, categoryIcon: Icon, category, title, jpl, comple
         </div>
         <h3 className="font-bold text-[#1D315F] text-[17px] leading-snug mb-5 flex-1">{title}</h3>
         
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <span className="flex items-center gap-1.5 text-[12px] font-semibold bg-gray-100 px-3 py-1.5 rounded text-gray-600"><Clock className="w-3.5 h-3.5" /> {jpl} {t('common.hours')}</span>
+          {modules !== undefined && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold bg-gray-100 px-3 py-1.5 rounded text-gray-600"><BookOpen className="w-3.5 h-3.5" /> {modules} {t('common.modules')}</span>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <div className="flex justify-between items-center text-[13px] font-semibold mb-1.5">
+            <span className="text-[#1D315F]">{t('myCourses.learningProgress')}</span>
+            <span className="text-[#10B981] font-bold">{displayProgress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="bg-[#10B981] h-2 rounded-full" style={{ width: `${displayProgress}%` }}></div>
+          </div>
         </div>
         
-        <div className="flex justify-between items-center border-t border-gray-100 pt-5 pb-5">
+        <div className="flex justify-between items-center border-t border-gray-100 pt-4 pb-4">
           <span className="text-[13px] font-semibold text-gray-500">{t('myCourses.completedOn')}</span>
           <span className="text-[13px] font-bold text-[#1D315F]">{completedDate}</span>
         </div>
         
-        <button className="w-full py-2.5 border border-[#1D315F] text-[#1D315F] bg-white rounded-md text-[13px] font-bold hover:bg-gray-50 transition-colors">
-          {t('common.viewDetails')}
+        <button
+          onClick={onViewDetail}
+          className="w-full py-2.5 bg-[#006A63] text-white rounded-md text-[13px] font-bold hover:bg-[#00534D] transition-colors cursor-pointer flex items-center justify-center gap-2"
+        >
+          {t('common.viewDetails')} <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -242,6 +267,10 @@ const MyCoursesContent = ({ onNavigate }) => {
                     {...c}
                     categoryIcon={Scale}
                     completedDate={c.terdaftar_pada ? new Date(c.terdaftar_pada).toLocaleDateString() : '-'}
+                    onViewDetail={() => {
+                      localStorage.setItem('userCourseId', c.pembelajaran_id);
+                      onNavigate('course-detail');
+                    }}
                   />
                 );
               }

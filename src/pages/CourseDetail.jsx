@@ -7,6 +7,7 @@ import CourseHeader from './CourseDetail/CourseHeader';
 import CourseOutlineSidebar from './CourseDetail/CourseOutlineSidebar';
 import CoursePlayer from './CourseDetail/CoursePlayer';
 import CourseFooter from './CourseDetail/CourseFooter';
+import CourseFeedbackKuesioner from './TestResult/CourseFeedbackKuesioner';
 import { isMateriVideo, findNextMateriInfo } from './CourseDetail/courseHelpers';
 
 export default function CourseDetail({ onNavigate, onBack }) {
@@ -186,9 +187,25 @@ export default function CourseDetail({ onNavigate, onBack }) {
       if (res.data?.data) {
         const fetchedData = res.data.data;
         setCourseData(fetchedData);
+
+        if (fetchedData.post_test?.result_data) {
+          localStorage.setItem('postTestResult', JSON.stringify(fetchedData.post_test.result_data));
+        }
+
         const resolved = resolveActiveMateri(fetchedData, activeMateri);
         if (resolved) {
           setActiveMateri(resolved);
+        }
+
+        const shouldScrollFeedback = localStorage.getItem('userOpenCourseFeedback');
+        if (shouldScrollFeedback) {
+          localStorage.removeItem('userOpenCourseFeedback');
+          setTimeout(() => {
+            const el = document.getElementById('course-feedback-section');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 350);
         }
       }
     } catch (error) {
@@ -489,6 +506,57 @@ export default function CourseDetail({ onNavigate, onBack }) {
 
   const nextStepInfo = activeMateri ? findNextMateriInfo(courseData?.modul, activeMateri.currentModulId, activeMateri.materi_id) : null;
 
+  const handleScrollToFeedback = () => {
+    const el = document.getElementById('course-feedback-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleOpenGraduationPage = () => {
+    if (!courseData?.kuesioner_selesai) {
+      handleScrollToFeedback();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Wajib Mengisi Feedback Kursus',
+        text: 'Silakan isi dan kirim Kuesioner Feedback Kursus pada bagian di bawah terlebih dahulu sebelum membuka Halaman Kelulusan.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
+    if (courseData?.post_test?.result_data) {
+      localStorage.setItem(
+        'postTestResult',
+        JSON.stringify({
+          ...courseData.post_test.result_data,
+          sudah_mengisi_kuesioner: true
+        })
+      );
+    }
+    onNavigate('test-result');
+  };
+
+  const handleSyncSudahMengisi = (val) => {
+    const boolVal = Boolean(val);
+    setCourseData((prev) => (prev ? { ...prev, kuesioner_selesai: boolVal } : prev));
+    if (courseData?.post_test?.result_data) {
+      localStorage.setItem(
+        'postTestResult',
+        JSON.stringify({
+          ...courseData.post_test.result_data,
+          sudah_mengisi_kuesioner: boolVal
+        })
+      );
+    }
+  };
+
+  const handleFeedbackSubmitted = () => {
+    handleSyncSudahMengisi(true);
+    if (courseData?.post_test?.is_completed || courseData?.status_pendaftaran === 'lulus') {
+      onNavigate('test-result');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
       <CourseDetailNavbar onNavigate={onNavigate} />
@@ -563,9 +631,32 @@ export default function CourseDetail({ onNavigate, onBack }) {
                 activeMateri={activeMateri}
                 onSelectMateri={handleSelectMateri}
                 onNavigate={onNavigate}
+                onSelectFeedbackSection={handleScrollToFeedback}
+                onOpenGraduationPage={handleOpenGraduationPage}
               />
             </div>
           </div>
+
+          {/* Section Baru di Bawah Post Test: Feedback & Evaluasi Penyelenggaraan Kursus */}
+          {courseData?.is_enrolled && !courseData?.is_locked_review && (
+            <section id="course-feedback-section" className="mt-8 scroll-mt-24">
+              <CourseFeedbackKuesioner
+                variant="section"
+                courseId={courseId}
+                sudahMengisi={Boolean(courseData?.kuesioner_selesai)}
+                setSudahMengisi={handleSyncSudahMengisi}
+                isPostTestCompleted={Boolean(
+                  courseData?.post_test?.is_completed || courseData?.status_pendaftaran === 'lulus'
+                )}
+                showCertificateButton={Boolean(
+                  courseData?.post_test?.is_completed || courseData?.status_pendaftaran === 'lulus'
+                )}
+                courseTitle={courseData?.judul}
+                onSubmitted={handleFeedbackSubmitted}
+                onOpenGraduationPage={handleOpenGraduationPage}
+              />
+            </section>
+          )}
         </div>
       </main>
 

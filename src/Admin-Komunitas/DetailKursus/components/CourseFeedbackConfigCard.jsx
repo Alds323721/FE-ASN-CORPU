@@ -20,12 +20,22 @@ const PRESET_OPTIONS = {
   ]
 };
 
-export default function CourseFeedbackConfigCard({ courseId, isReadOnly = false }) {
+export default function CourseFeedbackConfigCard({
+  courseId,
+  isReadOnly = false,
+  onQuestionsChange
+}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState({});
+
+  useEffect(() => {
+    if (onQuestionsChange) {
+      onQuestionsChange(questions);
+    }
+  }, [questions, onQuestionsChange]);
 
   useEffect(() => {
     if (courseId) {
@@ -195,22 +205,11 @@ export default function CourseFeedbackConfigCard({ courseId, isReadOnly = false 
           <button
             type="button"
             onClick={() => setShowPreviewModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5 text-teal-700" />
             <span>Pratinjau Kuesioner</span>
           </button>
-          {!isReadOnly && (
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving || loading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? 'Menyimpan...' : 'Simpan Kuesioner'}</span>
-            </button>
-          )}
         </div>
       </div>
 

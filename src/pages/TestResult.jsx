@@ -37,7 +37,8 @@ const TestResultNavbar = ({ onNavigate }) => {
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.dashboard')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.community')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.catalog')}</a>
-        <a href="#" className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.myCourses')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.myCourses')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.certificates')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.helpCenter')}</a>
 
         <div className="flex items-center gap-4 ml-4 border-l border-gray-200 pl-6">
@@ -59,7 +60,8 @@ const TestResultNavbar = ({ onNavigate }) => {
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors">{t('nav.dashboard')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors">{t('nav.community')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors">{t('nav.catalog')}</a>
-          <a href="#" className="text-[#006A63]">{t('nav.myCourses')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="text-[#006A63]">{t('nav.myCourses')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors">{t('nav.certificates')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors">{t('nav.helpCenter')}</a>
         </div>
       )}
@@ -338,9 +340,42 @@ export default function TestResult({ onNavigate }) {
   useEffect(() => {
     const data = localStorage.getItem('postTestResult');
     if (data) {
-      setResultData(JSON.parse(data));
+      try {
+        const parsed = JSON.parse(data);
+        setResultData(parsed);
+        if (parsed?.sudah_mengisi_kuesioner) {
+          setSudahMengisiKuesioner(true);
+        }
+      } catch (e) {}
     }
   }, []);
+
+  useEffect(() => {
+    if (!courseId || !resultData?.apakah_lulus) return;
+    let isMounted = true;
+    api
+      .get(`/user/courses/${courseId}/kuesioner`)
+      .then((res) => {
+        if (!isMounted) return;
+        const done = Boolean(res.data?.sudah_mengisi);
+        setSudahMengisiKuesioner(done);
+        if (!done) {
+          localStorage.setItem('userOpenCourseFeedback', '1');
+          Swal.fire({
+            icon: 'warning',
+            title: 'Wajib Mengisi Feedback Kursus',
+            text: 'Silakan lengkapi Kuesioner Feedback Kursus terlebih dahulu sebelum mengakses Halaman Kelulusan & Sertifikat.',
+            confirmButtonColor: '#006A63'
+          }).then(() => {
+            onNavigate('course-detail');
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, resultData?.apakah_lulus]);
 
   if (!resultData) {
     return <div className="min-h-screen flex items-center justify-center font-bold text-[#1D315F]">Memuat Hasil...</div>;
@@ -394,15 +429,20 @@ export default function TestResult({ onNavigate }) {
             
             <div className="lg:col-span-4">
               <ScoreSummary resultData={resultData} />
-              {resultData.apakah_lulus && (
-                <CourseFeedbackKuesioner
-                  courseId={courseId}
-                  sudahMengisi={sudahMengisiKuesioner}
-                  setSudahMengisi={setSudahMengisiKuesioner}
-                />
-              )}
             </div>
           </div>
+
+          {resultData.apakah_lulus && (
+            <section className="mt-6">
+              <CourseFeedbackKuesioner
+                variant="section"
+                courseId={courseId}
+                courseTitle={resultData?.sertifikat?.judul_pembelajaran}
+                sudahMengisi={sudahMengisiKuesioner}
+                setSudahMengisi={setSudahMengisiKuesioner}
+              />
+            </section>
+          )}
           
           <div className="mt-8 flex justify-center">
             <button 

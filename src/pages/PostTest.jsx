@@ -38,7 +38,7 @@ const PostTestNavbar = ({ onNavigate }) => {
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.dashboard')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.community')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.catalog')}</a>
-        <a href="#" className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.myCourses')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.myCourses')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.certificates')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.helpCenter')}</a>
 
@@ -63,7 +63,7 @@ const PostTestNavbar = ({ onNavigate }) => {
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors">{t('nav.dashboard')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="hover:text-[#006A63] transition-colors">{t('nav.community')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors">{t('nav.catalog')}</a>
-          <a href="#" className="text-[#006A63]">{t('nav.myCourses')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="text-[#006A63]">{t('nav.myCourses')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors">{t('nav.certificates')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('help-center'); }} className="hover:text-[#006A63] transition-colors">{t('nav.helpCenter')}</a>
         </div>
@@ -565,6 +565,33 @@ export default function PostTest({ onNavigate, onBack }) {
         if (flaggedStorageKey) localStorage.removeItem(flaggedStorageKey);
         if (questionStorageKey) localStorage.removeItem(questionStorageKey);
       } catch (e) {}
+
+      const resultPayload = res.data?.data || {};
+
+      // Jika peserta lulus Post Test tetapi belum mengisi Feedback Kursus,
+      // wajibkan mengisi Feedback Kursus terlebih dahulu sebelum ke Halaman Kelulusan
+      if (resultPayload.apakah_lulus && !resultPayload.sudah_mengisi_kuesioner) {
+        localStorage.setItem('userOpenCourseFeedback', 'true');
+        await Swal.fire({
+          icon: 'success',
+          title: '🎉 Selamat, Anda Lulus Post Test!',
+          html: `
+            <div class="text-left text-sm text-gray-600 space-y-2.5 pt-1">
+              <p>Jawaban Post Test Anda berhasil dikumpulkan dengan nilai akhir <b class="text-[#006A63]">${Math.round(resultPayload.nilai || 0)}/100</b> (<b>Lulus</b>).</p>
+              <div class="p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-900 leading-relaxed">
+                📋 <b>Langkah Wajib Selanjutnya:</b><br/>
+                Silakan isi <b>Feedback & Evaluasi Kursus</b> terlebih dahulu pada halaman kursus untuk membuka <b>Halaman Kelulusan & Sertifikat Resmi</b>.
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#006A63',
+          confirmButtonText: 'Isi Feedback Kursus Sekarang',
+          allowOutsideClick: false
+        });
+
+        onNavigate('course-detail');
+        return;
+      }
 
       // Alert Post Test Berhasil di Submit
       await Swal.fire({

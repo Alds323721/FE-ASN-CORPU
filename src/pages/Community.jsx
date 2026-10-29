@@ -30,7 +30,7 @@ const CommunityNavbar = ({ onNavigate }) => {
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-8 text-[#1D315F] font-semibold text-sm">
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.dashboard')}</a>
-        <a href="#" className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.community')}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="text-[#006A63] border-b-2 border-[#006A63] pb-1">{t('nav.community')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.catalog')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.myCourses')}</a>
         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63] transition-colors pb-1">{t('nav.certificates')}</a>
@@ -51,7 +51,7 @@ const CommunityNavbar = ({ onNavigate }) => {
       {mobileOpen && (
         <div className="absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-md md:hidden flex flex-col py-4 px-6 gap-4 text-[#1D315F] font-semibold text-sm z-50">
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }} className="hover:text-[#006A63]">{t('nav.dashboard')}</a>
-          <a href="#" className="text-[#006A63]">{t('nav.community')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('community'); }} className="text-[#006A63]">{t('nav.community')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('catalog'); }} className="hover:text-[#006A63]">{t('nav.catalog')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('my-courses'); }} className="hover:text-[#006A63]">{t('nav.myCourses')}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('certificates'); }} className="hover:text-[#006A63]">{t('nav.certificates')}</a>

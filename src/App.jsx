@@ -275,8 +275,8 @@ function App() {
         }
         const defaultPath = routePaths[defaultRoute] || '/dashboard';
 
-        // Jika tombol Back ditekan menuju root '/', halaman login, atau state kosong:
-        if (path === '/' || !event.state || event.state?.route === 'portal') {
+        // Jika tombol Back ditekan menuju root '/' atau portal:
+        if (path === '/' || event.state?.route === 'portal') {
           setCurrentRoute('portal');
         } else if (event.state?.route === 'lms') {
           window.history.pushState({ route: defaultRoute }, '', defaultPath);
@@ -286,6 +286,12 @@ function App() {
           // Navigasi back/forward antar halaman internal yang valid
           setCurrentRoute(event.state.route);
           localStorage.setItem('current_route', event.state.route);
+        } else {
+          // Jika event.state kosong (mis. klik anchor '#' pada halaman yang sama), pertahankan rute sesuai URL path
+          const matchedEntry = Object.entries(routePaths).find(([, p]) => p === path);
+          const resolvedRoute = matchedEntry ? matchedEntry[0] : (localStorage.getItem('current_route') || defaultRoute);
+          window.history.replaceState({ route: resolvedRoute }, '', routePaths[resolvedRoute] || path);
+          setCurrentRoute(resolvedRoute);
         }
       } else {
         if (path.toLowerCase() === '/lms') {
@@ -425,11 +431,18 @@ function App() {
       }
     }
 
+    const targetPath = routePaths[targetRoute] || '/dashboard';
+
+    if (targetRoute === currentRoute) {
+      window.history.replaceState({ route: targetRoute }, '', targetPath);
+      window.scrollTo(0, 0);
+      return;
+    }
+
     setIsTransitioning(true)
     setCurrentRoute(targetRoute)
     localStorage.setItem('current_route', targetRoute);
 
-    const targetPath = routePaths[targetRoute] || '/dashboard';
     window.history.pushState({ route: targetRoute }, '', targetPath);
 
     setIsTransitioning(false)
