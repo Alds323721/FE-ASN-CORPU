@@ -5,6 +5,7 @@ import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
 import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
+import CourseFeedbackKuesioner from './TestResult/CourseFeedbackKuesioner';
 import LanguageDropdown from '../components/LanguageDropdown';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -66,10 +67,20 @@ const TestResultNavbar = ({ onNavigate }) => {
   );
 };
 
-const CertificatePreview = ({ sertifikat }) => {
+const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
+    if (!sudahMengisiKuesioner) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Kuesioner Belum Diisi',
+        text: 'Mohon lengkapi kuesioner evaluasi kursus di samping terlebih dahulu agar sertifikat resmi dapat diunduh.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
+
     const courseId = localStorage.getItem('userCourseId');
     if (!courseId) {
       Swal.fire({
@@ -158,11 +169,24 @@ const CertificatePreview = ({ sertifikat }) => {
       </div>
     </div>
     
+    {!sudahMengisiKuesioner && (
+      <div className="mb-6 w-full max-w-md p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-left flex items-start gap-2.5 text-amber-900">
+        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+        <p className="text-xs font-semibold leading-relaxed">
+          <b>Syarat Sertifikat:</b> Mohon isi kuesioner evaluasi di samping terlebih dahulu untuk mengaktifkan tombol unduh sertifikat resmi.
+        </p>
+      </div>
+    )}
+
     <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
       <button 
         onClick={handleDownload} 
-        disabled={downloading}
-        className="flex-1 px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        disabled={downloading || !sudahMengisiKuesioner}
+        className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
+          !sudahMengisiKuesioner
+            ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+            : 'bg-[#006A63] text-white hover:bg-[#00534D]'
+        }`}
       >
         <Download className="w-5 h-5" />
         {downloading ? 'Mengunduh...' : 'Unduh Sertifikat (PDF)'}
@@ -308,6 +332,8 @@ const FeedbackSection = () => {
 
 export default function TestResult({ onNavigate }) {
   const [resultData, setResultData] = useState(null);
+  const [sudahMengisiKuesioner, setSudahMengisiKuesioner] = useState(false);
+  const courseId = localStorage.getItem('userCourseId');
 
   useEffect(() => {
     const data = localStorage.getItem('postTestResult');
@@ -349,7 +375,7 @@ export default function TestResult({ onNavigate }) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8">
               {resultData.apakah_lulus ? (
-                 <CertificatePreview sertifikat={resultData.sertifikat} />
+                 <CertificatePreview sertifikat={resultData.sertifikat} sudahMengisiKuesioner={sudahMengisiKuesioner} />
               ) : (
                  <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
                     <h2 className="text-2xl font-bold text-[#1D315F] mb-4">Belum Bisa Mengunduh Sertifikat</h2>
@@ -368,7 +394,13 @@ export default function TestResult({ onNavigate }) {
             
             <div className="lg:col-span-4">
               <ScoreSummary resultData={resultData} />
-              {resultData.apakah_lulus && <FeedbackSection />}
+              {resultData.apakah_lulus && (
+                <CourseFeedbackKuesioner
+                  courseId={courseId}
+                  sudahMengisi={sudahMengisiKuesioner}
+                  setSudahMengisi={setSudahMengisiKuesioner}
+                />
+              )}
             </div>
           </div>
           

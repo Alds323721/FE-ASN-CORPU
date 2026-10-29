@@ -58,6 +58,19 @@ const MaterialModal = ({
           </div>
 
           <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              Deskripsi Materi (Opsional)
+            </label>
+            <textarea
+              rows={3}
+              value={form.deskripsi || ''}
+              onChange={(e) => setForm({ ...form, deskripsi: e.target.value })}
+              placeholder="Tuliskan ringkasan pokok bahasan, instruksi, atau panduan materi untuk peserta..."
+              className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-y"
+            />
+          </div>
+
+          <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
               Tipe Materi
             </label>

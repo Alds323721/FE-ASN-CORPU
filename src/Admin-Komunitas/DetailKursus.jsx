@@ -25,6 +25,7 @@ import { validateThumbnailFile } from '../utils/imageValidation';
 import CourseBasicInfoCard from './DetailKursus/components/CourseBasicInfoCard';
 import CourseSyllabusSection from './DetailKursus/components/CourseSyllabusSection';
 import CourseEvaluationSection from './DetailKursus/components/CourseEvaluationSection';
+import CourseFeedbackConfigCard from './DetailKursus/components/CourseFeedbackConfigCard';
 import SuratPernyataanCard from './DetailKursus/components/SuratPernyataanCard';
 import CourseReviewsCard from './DetailKursus/components/CourseReviewsCard';
 import ModuleModal from './DetailKursus/modals/ModuleModal';
@@ -57,6 +58,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
   const [targetModuleId, setTargetModuleId] = useState(null);
   const [materialForm, setMaterialForm] = useState({
     judul_materi: '',
+    deskripsi: '',
     tipe_materi: 'pdf',
     durasi_menit: 15,
     tautan_atau_berkas_embed: '',
@@ -72,6 +74,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [editMaterialForm, setEditMaterialForm] = useState({
     judul_materi: '',
+    deskripsi: '',
     tipe_materi: 'pdf',
     durasi_menit: 15,
     tautan_atau_berkas_embed: '',
@@ -578,6 +581,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     setTargetModuleId(modulId);
     setMaterialForm({
       judul_materi: '',
+      deskripsi: '',
       tipe_materi: 'pdf',
       durasi_menit: 15,
       tautan_atau_berkas_embed: '',
@@ -607,6 +611,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     try {
       const formData = new FormData();
       formData.append('judul_materi', materialForm.judul_materi);
+      formData.append('deskripsi', materialForm.deskripsi || '');
       formData.append('tipe_materi', materialForm.tipe_materi);
       formData.append('durasi_menit', materialForm.durasi_menit);
 
@@ -804,6 +809,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     const isH5pFile = materi.tipe_materi === 'h5p' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/h5p/');
     setEditMaterialForm({
       judul_materi: materi.judul_materi || '',
+      deskripsi: materi.deskripsi || '',
       tipe_materi: materi.tipe_materi || 'pdf',
       durasi_menit: materi.durasi_menit || 15,
       tautan_atau_berkas_embed: (materi.tipe_materi !== 'pdf' && !isScormZip && !isVideoFile && !isH5pFile) ? (materi.tautan_atau_berkas || '') : '',
@@ -857,6 +863,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     try {
       const formData = new FormData();
       formData.append('judul_materi', editMaterialForm.judul_materi);
+      formData.append('deskripsi', editMaterialForm.deskripsi || '');
       formData.append('tipe_materi', editMaterialForm.tipe_materi);
       formData.append('durasi_menit', editMaterialForm.durasi_menit);
       formData.append('apakah_wajib', editMaterialForm.apakah_wajib ? '1' : '0');

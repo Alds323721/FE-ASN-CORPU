@@ -284,6 +284,18 @@ export default function CoursePlayer({
         )}
       </div>
 
+      {/* Deskripsi Materi */}
+      {Boolean(activeMateri?.deskripsi && activeMateri.deskripsi.trim()) && (
+        <div className="bg-white border border-[#BBC9C7] rounded-lg p-5 md:p-6 shadow-xs">
+          <h3 className="text-sm md:text-base font-semibold text-[#1D315F] mb-2">
+            Deskripsi & Panduan Materi
+          </h3>
+          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line font-medium">
+            {activeMateri.deskripsi}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 flex justify-between items-center flex-wrap gap-4 shadow-xs">
         <div>
           <h3 className="text-base md:text-lg font-semibold text-[#1D315F] mb-1">Status Penyelesaian</h3>
