@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Users, UserCheck, Award, Briefcase, Upload, Image as ImageIcon, 
+import {
+  Users, UserCheck, Award, Briefcase, Upload, Image as ImageIcon,
   CheckCircle2, AlertCircle, X, Loader2, HelpCircle, ChevronDown,
   Search, Check, RefreshCw
 } from 'lucide-react';
@@ -86,7 +86,7 @@ export default function CommunityRegistrationSection() {
     if (!inputName || !dbName) return false;
     const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return cleanInput === cleanDb || 
+    return cleanInput === cleanDb ||
       (cleanInput.length >= 4 && cleanDb.includes(cleanInput)) ||
       (cleanDb.length >= 4 && cleanInput.includes(cleanDb));
   };
@@ -415,7 +415,7 @@ export default function CommunityRegistrationSection() {
       console.error('Registration failed:', error);
       const serverMsg = error.response?.data?.message || 'Terjadi kesalahan saat mengirim pendaftaran.';
       const serverErrors = error.response?.data?.errors;
-      
+
       let detailedMsg = serverMsg;
       if (serverErrors) {
         detailedMsg = Object.values(serverErrors).flat().join('<br/>');
@@ -432,7 +432,7 @@ export default function CommunityRegistrationSection() {
     }
   };
 
-  const filteredNames = availableNames.filter(item => 
+  const filteredNames = availableNames.filter(item =>
     item.nama_komunitas.toLowerCase().includes(nameFilterSearch.toLowerCase())
   );
 
@@ -443,14 +443,14 @@ export default function CommunityRegistrationSection() {
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-        
+
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1D315F] leading-tight mb-3">
             Formulir Pendaftaran Komunitas
           </h2>
           <p className="text-gray-600 text-xs sm:text-sm md:text-base leading-relaxed">
-            Daftarkan komunitas belajar instansi atau rumpun jabatan Anda. Setiap permohonan akan diverifikasi oleh 
+            Daftarkan komunitas belajar instansi atau rumpun jabatan Anda. Setiap permohonan akan diverifikasi oleh
             <span className="font-semibold text-[#1D315F]"> Admin BKPSDM</span> sebelum aktif di portal peserta.
           </p>
         </div>
@@ -458,9 +458,9 @@ export default function CommunityRegistrationSection() {
         {/* Main Card Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="h-2 bg-gradient-to-r from-[#006A63] via-[#3FCDC1] to-[#1D315F]" />
-          
+
           <form onSubmit={handleSubmit} className="p-6 sm:p-8 md:p-10 space-y-8">
-            
+
             {/* Bagian 1: Identitas Komunitas */}
             <div>
               <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-100">
@@ -480,7 +480,7 @@ export default function CommunityRegistrationSection() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
+
                 {/* Nama Komunitas (Searchable Dropdown dari Excel JF) */}
                 <div className="md:col-span-2 relative" ref={dropdownRef}>
                   <label className="block text-xs sm:text-sm font-bold text-[#1D315F] mb-1.5 flex justify-between items-center">
@@ -493,13 +493,12 @@ export default function CommunityRegistrationSection() {
                   {/* Trigger Box Dropdown */}
                   <div
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className={`w-full px-4 py-2.5 rounded-lg border text-sm flex items-center justify-between cursor-pointer transition-colors bg-gray-50/50 hover:bg-white ${
-                      errors.nama_komunitas 
-                        ? 'border-red-400 bg-red-50/40' 
-                        : isDropdownOpen 
-                        ? 'border-[#006A63] ring-1 ring-[#006A63] bg-white' 
-                        : 'border-gray-200'
-                    }`}
+                    className={`w-full px-4 py-2.5 rounded-lg border text-sm flex items-center justify-between cursor-pointer transition-colors bg-gray-50/50 hover:bg-white ${errors.nama_komunitas
+                        ? 'border-red-400 bg-red-50/40'
+                        : isDropdownOpen
+                          ? 'border-[#006A63] ring-1 ring-[#006A63] bg-white'
+                          : 'border-gray-200'
+                      }`}
                   >
                     <span className={formData.nama_komunitas ? 'font-bold text-[#1D315F]' : 'text-gray-400'}>
                       {formData.nama_komunitas || (isLoadingNames ? 'Memuat daftar komunitas...' : '-- Pilih Nama Komunitas JF --')}
@@ -516,7 +515,7 @@ export default function CommunityRegistrationSection() {
                   {/* Dropdown Menu Popup with Search */}
                   {isDropdownOpen && (
                     <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
-                      
+
                       {/* Search box inside dropdown */}
                       <div className="p-3 border-b border-gray-100 bg-gray-50">
                         <div className="relative">
@@ -541,11 +540,10 @@ export default function CommunityRegistrationSection() {
                               <div
                                 key={item.id}
                                 onClick={() => handleSelectCommunityName(item)}
-                                className={`px-4 py-2.5 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${
-                                  isSelected 
-                                    ? 'bg-teal-50 font-bold text-[#006A63]' 
+                                className={`px-4 py-2.5 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-between ${isSelected
+                                    ? 'bg-teal-50 font-bold text-[#006A63]'
                                     : 'hover:bg-teal-50/60 text-gray-800'
-                                }`}
+                                  }`}
                               >
                                 <span>{item.nama_komunitas}</span>
                                 {isSelected && <Check className="w-4 h-4 text-[#006A63] shrink-0" />}
@@ -598,11 +596,10 @@ export default function CommunityRegistrationSection() {
                     value={formData.jumlah_anggota}
                     onChange={handleInputChange}
                     placeholder="Contoh: 25"
-                    className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 focus:outline-none transition-colors ${
-                      errors.jumlah_anggota 
-                        ? 'border-red-400 bg-red-50/40 focus:ring-1 focus:ring-red-400' 
+                    className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 focus:outline-none transition-colors ${errors.jumlah_anggota
+                        ? 'border-red-400 bg-red-50/40 focus:ring-1 focus:ring-red-400'
                         : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63]'
-                    }`}
+                      }`}
                   />
                   {errors.jumlah_anggota ? (
                     <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
@@ -638,12 +635,12 @@ export default function CommunityRegistrationSection() {
                   <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">2. Pengurus Komunitas</h3>
                 </div>
                 <span className="text-[11px] text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full hidden sm:inline-block">
-                  ⚡ Auto-fill NIP & Nama Pegawai aktif
+                  Auto-fill NIP & Nama Pegawai aktif
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
+
                 {/* Ketua Komunitas Box */}
                 <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200/80 space-y-4 relative" ref={ketuaRef}>
                   <div className="flex items-center justify-between">
@@ -680,9 +677,8 @@ export default function CommunityRegistrationSection() {
                         value={formData.nip_ketua}
                         onChange={(e) => handleNipKetuaChange(e.target.value)}
                         placeholder="198001012005011001"
-                        className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${
-                          errors.nip_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
-                        }`}
+                        className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${errors.nip_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                          }`}
                       />
                     </div>
                     <div className="flex justify-between items-center mt-1 text-[11px]">
@@ -706,9 +702,8 @@ export default function CommunityRegistrationSection() {
                       value={formData.nama_ketua}
                       onChange={handleInputChange}
                       placeholder="Ketik nama untuk mencari..."
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${
-                        errors.nama_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
-                      }`}
+                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${errors.nama_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                        }`}
                     />
                     {errors.nama_ketua && (
                       <p className="text-[11px] text-red-500 mt-1">{errors.nama_ketua}</p>
@@ -773,9 +768,8 @@ export default function CommunityRegistrationSection() {
                       value={formData.nip_admin}
                       onChange={(e) => handleNipAdminChange(e.target.value)}
                       placeholder="199205152015021002"
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${
-                        errors.nip_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
-                      }`}
+                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${errors.nip_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                        }`}
                     />
                     <div className="flex justify-between items-center mt-1 text-[11px]">
                       {errors.nip_admin ? (
@@ -798,9 +792,8 @@ export default function CommunityRegistrationSection() {
                       value={formData.nama_admin}
                       onChange={handleInputChange}
                       placeholder="Ketik nama untuk mencari..."
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${
-                        errors.nama_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
-                      }`}
+                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${errors.nama_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                        }`}
                     />
                     {errors.nama_admin && (
                       <p className="text-[11px] text-red-500 mt-1">{errors.nama_admin}</p>
@@ -878,7 +871,7 @@ export default function CommunityRegistrationSection() {
                       className="hidden"
                     />
                   </label>
-                  
+
                   <div className="mt-2 text-xs text-gray-500 space-y-0.5">
                     <p className="font-semibold text-gray-700">Persyaratan Gambar:</p>
                     <p>• Format: JPG, JPEG, PNG, atau WEBP</p>
@@ -905,11 +898,10 @@ export default function CommunityRegistrationSection() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed shadow-none' 
+                className={`w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${isSubmitting
+                    ? 'bg-gray-400 cursor-not-allowed shadow-none'
                     : 'bg-[#006A63] hover:bg-[#00524d] hover:shadow-teal-900/20 hover:-translate-y-0.5 active:translate-y-0'
-                }`}
+                  }`}
               >
                 {isSubmitting ? (
                   <>

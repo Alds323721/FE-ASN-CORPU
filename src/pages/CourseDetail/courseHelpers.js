@@ -44,16 +44,16 @@ export const getQuizBadges = (tipeSoalList = []) => {
   if (!tipeSoalList || !Array.isArray(tipeSoalList) || tipeSoalList.length === 0) return [];
   const badges = [];
   if (tipeSoalList.includes('tts')) {
-    badges.push({ label: '🧩 TTS', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
+    badges.push({ label: 'TTS', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' });
   }
   if (tipeSoalList.includes('drag_drop')) {
-    badges.push({ label: '🎯 Drag & Drop', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
+    badges.push({ label: 'Drag & Drop', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' });
   }
   if (tipeSoalList.includes('pilihan_berbobot')) {
-    badges.push({ label: '⭐ Berbobot', color: 'bg-amber-50 text-amber-700 border-amber-200' });
+    badges.push({ label: 'Berbobot', color: 'bg-amber-50 text-amber-700 border-amber-200' });
   }
   if (tipeSoalList.includes('pilihan_ganda') && (tipeSoalList.includes('tts') || tipeSoalList.includes('drag_drop') || tipeSoalList.includes('pilihan_berbobot'))) {
-    badges.push({ label: '📝 PG', color: 'bg-teal-50 text-teal-700 border-teal-200' });
+    badges.push({ label: 'Pilihan Ganda', color: 'bg-teal-50 text-teal-700 border-teal-200' });
   }
   return badges;
 };

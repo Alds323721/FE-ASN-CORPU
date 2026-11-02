@@ -357,8 +357,8 @@ export default function Kuis({ onNavigate, onBack }) {
           title: 'Pre-Test Selesai!',
           html: `
             <div class="text-center space-y-4 pt-2">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 text-teal-700 text-3xl font-bold mx-auto">
-                ✓
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 text-teal-700 mx-auto">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
               </div>
               <div>
                 <div class="text-4xl font-extrabold text-[#006A63]">
@@ -392,8 +392,8 @@ export default function Kuis({ onNavigate, onBack }) {
           title: 'Kuis Berbobot Selesai!',
           html: `
             <div class="text-center space-y-4 pt-2">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-700 text-3xl font-bold mx-auto">
-                ★
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-700 mx-auto">
+                <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
               </div>
               <div>
                 <div class="text-4xl font-extrabold text-amber-600">
@@ -431,7 +431,7 @@ export default function Kuis({ onNavigate, onBack }) {
           html: `
             <div class="text-center space-y-4 pt-2">
               <div class="inline-flex items-center justify-center w-16 h-16 rounded-full ${isPassed ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600'} text-3xl font-bold mx-auto">
-                ${isPassed ? '✓' : '✕'}
+                ${isPassed ? '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>'}
               </div>
               <div>
                 <div class="text-4xl font-extrabold ${isPassed ? 'text-[#006A63]' : 'text-red-600'}">

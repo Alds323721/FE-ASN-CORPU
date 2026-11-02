@@ -33,14 +33,14 @@ const CourseCard = ({ image, category, title, instructor, jpl, modules, rating }
         </div>
       </div>
 
-      <button className="w-full py-2.5 border border-[#006A63] text-[#006A63] bg-[#FFFFFF] rounded-md text-[13px] font-bold hover:bg-[#006A63] hover:text-white transition-colors cursor-pointer">
+      <button onClick={onExplore || (() => {})} className="w-full py-2.5 border border-[#006A63] text-[#006A63] bg-[#FFFFFF] rounded-md text-[13px] font-bold hover:bg-[#006A63] hover:text-white transition-colors cursor-pointer">
         Mulai Belajar
       </button>
     </div>
   </div>
 );
 
-export default function PopularCoursesSection() {
+export default function PopularCoursesSection({ onExplore, onNavigate }) {
   const courses = [
     {
       image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop",
@@ -79,9 +79,9 @@ export default function PopularCoursesSection() {
             <h2 className="text-xl md:text-2xl font-bold text-[#1D315F] mb-2">Pelatihan Terpopuler</h2>
             <p className="text-gray-500 text-xs sm:text-sm">Ikuti pelatihan yang paling banyak diminati oleh rekan-rekan ASN lainnya.</p>
           </div>
-          <a href="#" className="text-[#3FCDC1] text-xs sm:text-sm font-bold flex items-center gap-1 hover:underline">
+          <button type="button" onClick={onExplore || (() => onNavigate && onNavigate('catalog'))} className="text-[#3FCDC1] text-xs sm:text-sm font-bold flex items-center gap-1 hover:underline cursor-pointer">
             Lihat Semua Pelatihan <ChevronRight className="w-4 h-4" />
-          </a>
+          </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
           {courses.map((course, idx) => (

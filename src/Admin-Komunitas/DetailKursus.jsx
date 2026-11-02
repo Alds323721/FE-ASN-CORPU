@@ -251,7 +251,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     setCourseThumbnailPreview(course?.thumbnail_url || '');
   };
 
-  // --- Simpan Seluruh Perubahan Kursus (Terintegrasi 1 Tombol) ---
+  // Simpan seluruh perubahan kursus
   const handleUpdateBasicInfo = async () => {
     if (!course) return;
 
@@ -445,7 +445,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Modul Handlers ---
+  // Modul Handlers
   const handleOpenAddModuleModal = () => {
     setIsEditingModule(false);
     setEditingModuleId(null);
@@ -601,7 +601,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Materi Handlers ---
+  // Materi Handlers
   const handleOpenAddMaterialModal = (modulId) => {
     setTargetModuleId(modulId);
     setMaterialForm({
@@ -869,7 +869,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           <div class="text-left text-sm text-gray-600 space-y-2">
             <p>Perubahan pada materi pembelajaran ini akan mengubah status kursus menjadi <b>Menunggu Approval Admin BKPSDM</b>.</p>
             <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-semibold">
-              🔒 Pada katalog peserta, kursus otomatis terkunci dan berubah menjadi abu-abu sampai diverifikasi serta disetujui kembali oleh Admin BKPSDM.
+              Pada katalog peserta, kursus otomatis terkunci dan berubah menjadi abu-abu sampai diverifikasi serta disetujui kembali oleh Admin BKPSDM.
             </div>
             <p class="text-xs text-gray-500">Apakah Anda yakin ingin menyimpan perubahan materi ini?</p>
           </div>
@@ -1022,7 +1022,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Helper Kuis ---
+  // Helper Kuis
   const getModulQuiz = (m, type = 'evaluasi_modul') => {
     if (!m) return null;
     if (type === 'kuis_berbobot') {
@@ -1046,7 +1046,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     return (m.kuis && m.kuis.tipe_kuis !== 'kuis_berbobot') ? m.kuis : null;
   };
 
-  // --- Kuis Handlers ---
+  // Kuis Handlers
   const syncTtsLayoutToQuizForm = (layout, wordSource) => {
     if (!layout || layout.placedWords.length === 0) return;
 
@@ -1587,7 +1587,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Post Test Config Handlers ---
+  // Post Test Config Handlers
   const handleSavePostTestConfig = async () => {
     if (!course) return;
     try {
@@ -1628,7 +1628,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Surat Pernyataan Handlers ---
+  // Surat Pernyataan Handlers
   const handleUploadSuratPernyataan = async () => {
     if (!suratFile) {
       Swal.fire({
@@ -1716,7 +1716,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // --- Ajukan Approval ---
+  // Ajukan Approval
   const handleAjukanApproval = async () => {
     if (!course) return;
 

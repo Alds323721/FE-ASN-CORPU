@@ -76,7 +76,7 @@ const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, onLogout, is
         </div>
 
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
+          <button onClick={() => onNavigate && onNavigate('help-center')} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
             Bantuan Teknis
           </button>
           <button
@@ -343,7 +343,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
       html: `<div class="text-left text-sm text-gray-600 space-y-2">
         <p>Kata sandi akun <b>${userName}</b> (${user?.nip}) akan direset menggunakan <b>karakter acak sistem</b>.</p>
         <div class="text-amber-900 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs leading-relaxed">
-          ⚠️ <b>Catatan Keamanan:</b>
+          <b>Catatan Keamanan:</b>
           <ul class="list-disc ml-4 mt-1 space-y-0.5">
             <li>Pengguna tidak dapat login menggunakan kata sandi lama atau 8 digit NIP.</li>
             <li>Seluruh sesi login aktif pengguna akan dicabut.</li>
@@ -524,7 +524,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {filterBelumAktivasi ? '✓ Filter: Belum Aktivasi' : 'Filter: Belum Aktivasi'}
+                  {filterBelumAktivasi ? 'Filter Aktif: Belum Aktivasi' : 'Filter: Belum Aktivasi'}
                 </button>
               </div>
             </div>

@@ -74,7 +74,7 @@ const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, onLogout, 
         </div>
 
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
+          <button onClick={() => onNavigate && onNavigate('help-center')} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
             Bantuan Teknis
           </button>
           <button
@@ -324,7 +324,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                   </div>
                   {course.statistik_ulasan?.total > 0 && (
                     <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-900 rounded-full text-xs font-bold flex items-center gap-1">
-                      ⭐ {course.statistik_ulasan.rata_rata} ({course.statistik_ulasan.total} Ulasan)
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 inline mr-1" />{course.statistik_ulasan.rata_rata} ({course.statistik_ulasan.total} Ulasan)
                     </span>
                   )}
                 </div>

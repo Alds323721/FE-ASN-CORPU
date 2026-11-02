@@ -344,7 +344,7 @@ const CourseAccessRequestsCard = ({ course, isReadOnly, onRequestsUpdated }) => 
                           isApproved ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                           'bg-red-100 text-red-800 border border-red-200'
                         }`}>
-                          {isPending ? '⏳ Menunggu Persetujuan' : isApproved ? '✓ Disetujui' : '✕ Ditolak'}
+                          {isPending ? 'Menunggu Persetujuan' : isApproved ? 'Disetujui' : 'Ditolak'}
                         </span>
                       </div>
 

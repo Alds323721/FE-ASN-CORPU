@@ -234,7 +234,7 @@ const MaterialModal = ({
                     <p className="text-[11px] text-gray-400 mt-1">Biarkan kosong jika tidak ingin mengubah paket H5P saat ini.</p>
                   )}
                   <p className="text-[11px] text-gray-500 mt-1">
-                    💡 Sistem otomatis mengekstrak berkas <b>.h5p</b> dan memutar video interaktif di server.
+                    Sistem otomatis mengekstrak berkas <b>.h5p</b> dan memutar video interaktif di server.
                   </p>
                 </div>
               ) : (
@@ -251,7 +251,7 @@ const MaterialModal = ({
                     className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
-                    💡 Masukkan URL run/embed dari Lumi Cloud, H5P.org, atau kode iframe video interaktif.
+                    Masukkan URL run/embed dari Lumi Cloud, H5P.org, atau kode iframe video interaktif.
                   </p>
                 </div>
               )}
@@ -276,7 +276,7 @@ const MaterialModal = ({
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
-                  📦 Unggah Paket ZIP
+                  Unggah Paket ZIP
                 </button>
                 <button
                   type="button"
@@ -286,7 +286,7 @@ const MaterialModal = ({
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                     }`}
                 >
-                  🔗 Tautan Eksternal
+                  Tautan Eksternal
                 </button>
               </div>
 
@@ -319,7 +319,7 @@ const MaterialModal = ({
                     className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
-                    💡 Sistem otomatis mengekstrak berkas dan membaca file launcher (
+                    Sistem otomatis mengekstrak berkas dan membaca file launcher (
                     <code className="bg-amber-100 px-1 rounded">imsmanifest.xml</code> /{' '}
                     <code className="bg-amber-100 px-1 rounded">index.html</code>).
                   </p>
@@ -338,7 +338,7 @@ const MaterialModal = ({
                     className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
-                    💡 Masukkan URL player SCORM Cloud atau URL hosting web eksternal.
+                    Masukkan URL player SCORM Cloud atau URL hosting web eksternal.
                   </p>
                 </div>
               )}
@@ -391,7 +391,7 @@ const MaterialModal = ({
                   className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
                 <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                  💡 Masukkan URL lengkap artikel / website materi (otomatis menggunakan <b>https://</b>). Konten akan ditampilkan di card preview peserta yang dapat digulir ke bawah (*scroll down*).
+                  Masukkan URL lengkap artikel / website materi (otomatis menggunakan <b>https://</b>). Konten akan ditampilkan di card preview peserta yang dapat digulir ke bawah (*scroll down*).
                 </p>
               </div>
 
@@ -532,7 +532,7 @@ const MaterialModal = ({
                     className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
-                    💡 Masukkan URL lengkap video YouTube (contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/...).
+                    Masukkan URL lengkap video YouTube (contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/...).
                   </p>
                 </div>
               )}

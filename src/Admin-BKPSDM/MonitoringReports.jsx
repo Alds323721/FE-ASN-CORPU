@@ -63,7 +63,7 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
         </div>
 
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
+          <button onClick={() => onNavigate && onNavigate('help-center')} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
             Bantuan Teknis
           </button>
           <button
@@ -289,14 +289,12 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     fetchValidasiReports(1);
   }, []);
 
-  // Fetch data saat currentPage berubah
   useEffect(() => {
     if (activeTabReport === 'peserta') {
       fetchReports(currentPage);
     }
   }, [currentPage]);
 
-  // Fetch data saat tab atau filter komunitas berganti
   useEffect(() => {
     if (activeTabReport === 'peserta') {
       if (currentPage === 1) {
@@ -410,7 +408,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             <p><strong>Pelatihan:</strong> ${course}</p>
             <div class="flex items-center gap-1.5 pt-1">
               <strong>Penilaian:</strong>
-              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">⭐ ${ulasan.skor_rating || 5} / 5</span>
+              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">Skor: ${ulasan.skor_rating || 5} / 5</span>
             </div>
           </div>
           <div class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-gray-800 italic leading-relaxed">
@@ -558,13 +556,13 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               />
               <StatCard
                 title="RATA-RATA KEPUASAN"
-                value={ulasanStats.rata_rata_rating ? `⭐ ${ulasanStats.rata_rata_rating}` : '0.0'}
+                value={ulasanStats.rata_rata_rating ? `${ulasanStats.rata_rata_rating} / 5` : '0.0'}
                 icon={Star}
                 colorClass="bg-yellow-50"
                 iconColorClass="text-yellow-600"
               />
               <StatCard
-                title="INDEKS PUAS (>= 4★)"
+                title="INDEKS PUAS (>= Skor 4)"
                 value={`${ulasanStats.persen_puas || 0}%`}
                 icon={ThumbsUp}
                 colorClass="bg-green-50"
@@ -638,11 +636,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
                   >
                     <option value="">Semua Rating</option>
-                    <option value="5">⭐⭐⭐⭐⭐ (5 Bintang)</option>
-                    <option value="4">⭐⭐⭐⭐ (4 Bintang)</option>
-                    <option value="3">⭐⭐⭐ (3 Bintang)</option>
-                    <option value="2">⭐⭐ (2 Bintang)</option>
-                    <option value="1">⭐ (1 Bintang)</option>
+                    <option value="5">5 Bintang</option>
+                    <option value="4">4 Bintang</option>
+                    <option value="3">3 Bintang</option>
+                    <option value="2">2 Bintang</option>
+                    <option value="1">1 Bintang</option>
                   </select>
                 )}
 

@@ -104,11 +104,11 @@ const CourseReviewsCard = ({
           </span>
           {[
             { id: 'all', label: `Semua (${reviewsData.statistik?.total_ulasan || 0})` },
-            { id: '5', label: `⭐ 5 (${reviewsData.statistik?.distribusi?.[5] || 0})` },
-            { id: '4', label: `⭐ 4 (${reviewsData.statistik?.distribusi?.[4] || 0})` },
-            { id: '3', label: `⭐ 3 (${reviewsData.statistik?.distribusi?.[3] || 0})` },
-            { id: '2', label: `⭐ 2 (${reviewsData.statistik?.distribusi?.[2] || 0})` },
-            { id: '1', label: `⭐ 1 (${reviewsData.statistik?.distribusi?.[1] || 0})` },
+            { id: '5', label: `5 Bintang (${reviewsData.statistik?.distribusi?.[5] || 0})` },
+            { id: '4', label: `4 Bintang (${reviewsData.statistik?.distribusi?.[4] || 0})` },
+            { id: '3', label: `3 Bintang (${reviewsData.statistik?.distribusi?.[3] || 0})` },
+            { id: '2', label: `2 Bintang (${reviewsData.statistik?.distribusi?.[2] || 0})` },
+            { id: '1', label: `1 Bintang (${reviewsData.statistik?.distribusi?.[1] || 0})` },
           ].map((filter) => (
             <button
               key={filter.id}

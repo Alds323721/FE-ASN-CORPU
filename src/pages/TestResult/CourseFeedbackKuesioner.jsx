@@ -187,7 +187,7 @@ export default function CourseFeedbackKuesioner({
               }`}
             >
               {sudahMengisi
-                ? '✓ Selesai Diisi'
+                ? 'Selesai Diisi'
                 : isPostTestCompleted
                   ? 'Wajib Diisi Sebelum Halaman Kelulusan'
                   : 'Menunggu Penyelesaian Post Test'}
@@ -223,7 +223,7 @@ export default function CourseFeedbackKuesioner({
               </div>
             </div>
             <span className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-500 shrink-0">
-              🔒 Terkunci Sementara
+              Terkunci Sementara
             </span>
           </div>
         ) : sudahMengisi ? (
@@ -276,7 +276,7 @@ export default function CourseFeedbackKuesioner({
                     Hasil Jawaban Feedback Anda (Tersimpan)
                   </h4>
                   <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                    ✓ Data Evaluasi Tersimpan
+                    Data Evaluasi Tersimpan
                   </span>
                 </div>
 

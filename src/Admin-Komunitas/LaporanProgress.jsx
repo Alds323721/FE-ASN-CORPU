@@ -353,7 +353,7 @@ const LaporanProgress = ({ onNavigate, onLogout }) => {
                                           <p><strong>Peserta:</strong> ${row.nama}</p>
                                           <p><strong>NIP:</strong> ${row.nip}</p>
                                           <p><strong>Pelatihan:</strong> ${row.judul_pembelajaran}</p>
-                                          <p><strong>Rating:</strong> ⭐ ${row.ulasan.skor_rating} / 5</p>
+                                          <p><strong>Rating:</strong> ${row.ulasan.skor_rating} / 5</p>
                                         </div>
                                         <div class="p-3.5 bg-amber-50/70 border border-amber-200 rounded-lg text-xs text-gray-800 italic">
                                           "${row.ulasan.teks_ulasan || 'Peserta memberikan penilaian rating tanpa komentar teks.'}"

@@ -67,7 +67,6 @@ export default function DragDropSection({
             disabled={submitting}
             className="w-full sm:w-auto px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 text-sm cursor-pointer"
           >
-            <span className="text-base">▶</span>
             {submitting ? 'Mengumpulkan...' : 'Submit Kuis'}
           </button>
         </div>
