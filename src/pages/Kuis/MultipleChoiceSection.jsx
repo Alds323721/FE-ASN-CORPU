@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flag, Check, ChevronLeft } from 'lucide-react';
+import { Flag, Check, ChevronLeft, Send } from 'lucide-react';
 import QuestionNavigation from './QuestionNavigation';
 
 export const QuestionCard = ({
@@ -10,7 +10,11 @@ export const QuestionCard = ({
   onFlag,
   onAnswer,
   isDisabled,
-  savedAnswer
+  savedAnswer,
+  isAllAnswered = false,
+  onSubmit = null,
+  submitting = false,
+  submitLabel = 'Kumpulkan Jawaban'
 }) => {
   if (!questionData) return null;
 
@@ -30,7 +34,7 @@ export const QuestionCard = ({
           onClick={onFlag}
           className="flex items-center gap-2 text-gray-500 hover:text-[#F59E0B] transition-colors text-sm font-semibold cursor-pointer"
         >
-          <Flag className="w-4 h-4" />
+          <Flag className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Tandai Ragu</span>
         </button>
       </div>
@@ -43,7 +47,10 @@ export const QuestionCard = ({
 
       <div className="space-y-3 sm:space-y-4">
         {options.map(([key, text]) => {
-          const isSelected = savedAnswer !== undefined && savedAnswer !== null && String(savedAnswer).trim().toLowerCase() === String(key).trim().toLowerCase();
+          const isSelected =
+            savedAnswer !== undefined &&
+            savedAnswer !== null &&
+            String(savedAnswer).trim().toLowerCase() === String(key).trim().toLowerCase();
           return (
             <div
               key={key}
@@ -81,7 +88,7 @@ export const QuestionCard = ({
               <div className="shrink-0 self-start sm:self-center">
                 {isSelected ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
                     <span className="hidden sm:inline">Terpilih</span>
                   </div>
                 ) : (
@@ -101,7 +108,7 @@ export const QuestionCard = ({
             isDisabled.previous ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
           }`}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           Sebelumnya
         </button>
 
@@ -109,20 +116,34 @@ export const QuestionCard = ({
           onClick={onFlag}
           className="px-6 py-2.5 bg-[#F59E0B] text-white font-semibold rounded-md hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Flag className="w-4 h-4" />
+          <Flag className="w-4 h-4" aria-hidden="true" />
           Ragu-ragu
         </button>
 
-        <button
-          onClick={onNext}
-          disabled={isDisabled.next}
-          className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer ${
-            isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
-          }`}
-        >
-          Selanjutnya
-          <ChevronLeft className="w-4 h-4 rotate-180" />
-        </button>
+        {isAllAnswered && onSubmit ? (
+          <button
+            type="button"
+            onClick={() => onSubmit(false)}
+            disabled={submitting}
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            <Check className="w-4 h-4" aria-hidden="true" />
+            <span>{submitting ? 'Mengumpulkan...' : submitLabel}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={isDisabled.next}
+            title={isDisabled.next ? 'Lengkapi seluruh soal untuk mengumpulkan' : undefined}
+            className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+              isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
+            }`}
+          >
+            <span>Selanjutnya</span>
+            <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -141,12 +162,19 @@ export default function MultipleChoiceSection({
   flaggedQuestions,
   answeredQuestionsSet,
   handleSubmit,
-  submitting
+  submitting,
+  isAllAnswered: isAllAnsweredProp,
+  submitLabel = 'Kumpulkan Jawaban'
 }) {
+  const isAllAnswered =
+    typeof isAllAnsweredProp === 'boolean'
+      ? isAllAnsweredProp
+      : pgQuestions.length > 0 && answeredQuestionsSet.size >= pgQuestions.length;
+
   return (
     <>
       {/* Desktop Layout: QuestionCard + Navigation + Submit */}
-      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
         <div className="lg:col-span-8">
           <QuestionCard
             questionNumber={currentQuestion}
@@ -156,6 +184,10 @@ export default function MultipleChoiceSection({
             onNext={handleNext}
             onFlag={handleFlag}
             onAnswer={handleAnswer}
+            isAllAnswered={isAllAnswered}
+            onSubmit={handleSubmit}
+            submitting={submitting}
+            submitLabel={submitLabel}
             isDisabled={{
               previous: currentQuestion === 1,
               next: currentQuestion === pgQuestions.length,
@@ -179,8 +211,8 @@ export default function MultipleChoiceSection({
               disabled={submitting}
               className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <span className="text-lg">▶</span>
-              {submitting ? 'Mengumpulkan...' : 'Submit Kuis'}
+              <Send className="w-4 h-4" aria-hidden="true" />
+              <span>{submitting ? 'Mengumpulkan...' : 'Submit Kuis'}</span>
             </button>
           </div>
         </div>
@@ -188,7 +220,7 @@ export default function MultipleChoiceSection({
 
       {/* Tablet & Mobile Layout: QuestionCard + Navigation */}
       <div className="lg:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
           <div className="md:col-span-8">
             <QuestionCard
               questionNumber={currentQuestion}
@@ -198,6 +230,10 @@ export default function MultipleChoiceSection({
               onNext={handleNext}
               onFlag={handleFlag}
               onAnswer={handleAnswer}
+              isAllAnswered={isAllAnswered}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+              submitLabel={submitLabel}
               isDisabled={{
                 previous: currentQuestion === 1,
                 next: currentQuestion === pgQuestions.length,
@@ -223,8 +259,8 @@ export default function MultipleChoiceSection({
             disabled={submitting}
             className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
-            <span className="text-lg">▶</span>
-            {submitting ? 'Mengumpulkan...' : 'Submit Kuis'}
+            <Send className="w-4 h-4" aria-hidden="true" />
+            <span>{submitting ? 'Mengumpulkan...' : 'Submit Kuis'}</span>
           </button>
         </div>
       </div>

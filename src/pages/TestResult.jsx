@@ -3,13 +3,11 @@ import api from '../api/axios';
 import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
-import hiasanImg from '../assets/Hiasan.png';
 import ProfileDropdown from '../components/ProfileDropdown';
 import CourseFeedbackKuesioner from './TestResult/CourseFeedbackKuesioner';
 import LanguageDropdown from '../components/LanguageDropdown';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  ChevronDown,
   Menu,
   X,
   Award,
@@ -18,8 +16,37 @@ import {
   ChevronLeft,
   Star,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
+
+function getRemainingCooldownParts(tersediaPadaIso, tersediaPadaStr, fallbackSeconds = 0) {
+  let targetMs = null;
+  if (tersediaPadaIso) {
+    const parsed = Date.parse(tersediaPadaIso);
+    if (!Number.isNaN(parsed)) targetMs = parsed;
+  }
+  if (!targetMs && tersediaPadaStr) {
+    const parsed = Date.parse(tersediaPadaStr.replace(' ', 'T'));
+    if (!Number.isNaN(parsed)) targetMs = parsed;
+  }
+
+  const rawRemaining = targetMs
+    ? Math.max(0, Math.floor((targetMs - Date.now()) / 1000))
+    : Math.max(0, Number(fallbackSeconds || 0));
+
+  let diffSec = rawRemaining;
+  const days = Math.floor(diffSec / 86400);
+  diffSec -= days * 86400;
+  const hours = Math.floor(diffSec / 3600);
+  diffSec -= hours * 3600;
+  const minutes = days === 0 && hours === 0 ? Math.max(1, Math.ceil(diffSec / 60)) : Math.floor(diffSec / 60);
+
+  return {
+    totalSeconds: rawRemaining,
+    label: `Tersisa ${days} Hari ${hours} Jam ${minutes} Menit`
+  };
+}
 
 const TestResultNavbar = ({ onNavigate }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -71,13 +98,38 @@ const TestResultNavbar = ({ onNavigate }) => {
 
 const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
   const [downloading, setDownloading] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!sertifikat?.cooldown) return;
+    const interval = setInterval(() => {
+      setTick((prev) => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [sertifikat?.cooldown]);
+
+  const cooldownInfo = sertifikat?.cooldown
+    ? getRemainingCooldownParts(sertifikat.tersedia_pada_iso, sertifikat.tersedia_pada, sertifikat.sisa_detik)
+    : { totalSeconds: 0, label: '' };
+
+  const isCooldownActive = Boolean(sertifikat?.cooldown && cooldownInfo.totalSeconds > 0);
 
   const handleDownload = async () => {
     if (!sudahMengisiKuesioner) {
       Swal.fire({
         icon: 'warning',
         title: 'Kuesioner Belum Diisi',
-        text: 'Mohon lengkapi kuesioner evaluasi kursus di samping terlebih dahulu agar sertifikat resmi dapat diunduh.',
+        text: 'Mohon lengkapi kuesioner evaluasi kursus terlebih dahulu agar sertifikat resmi dapat diunduh.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
+
+    if (isCooldownActive) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Masa Tunggu Sertifikat KPK',
+        text: sertifikat?.message || 'Sertifikat khusus kursus KPK baru dapat diunduh 3 hari setelah kursus diselesaikan.',
         confirmButtonColor: '#006A63'
       });
       return;
@@ -112,10 +164,23 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download error:', error);
+      let serverMessage = 'Pastikan Anda telah lulus Post Test dan berhak mendapatkan sertifikat resmi pelatihan ini.';
+      try {
+        if (error.response?.data instanceof Blob) {
+          const text = await error.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed?.message) serverMessage = parsed.message;
+        } else if (error.response?.data?.message) {
+          serverMessage = error.response.data.message;
+        }
+      } catch {
+        // Fallback to default message
+      }
+
       Swal.fire({
-        icon: 'error',
-        title: 'Gagal Mengunduh Sertifikat',
-        text: 'Pastikan Anda telah lulus Post Test dan berhak mendapatkan sertifikat resmi pelatihan ini.',
+        icon: error.response?.status === 403 ? 'info' : 'error',
+        title: error.response?.status === 403 ? 'Masa Tunggu Sertifikat KPK' : 'Gagal Mengunduh Sertifikat',
+        text: serverMessage,
         confirmButtonColor: '#006A63'
       });
     } finally {
@@ -128,84 +193,111 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
     navigator.clipboard.writeText(`Saya telah menyelesaikan pelatihan "${title}" di Buleleng ASN Corpu!`);
     Swal.fire({
       icon: 'success',
-      title: 'Tersalin ke Clipboard!',
-      text: 'Pesan achievement berhasil disalin ke papan klip.',
+      title: 'Tersalin ke Clipboard',
+      text: 'Pesan pencapaian berhasil disalin ke papan klip.',
       timer: 2000,
       showConfirmButton: false
     });
   };
 
   return (
-  <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
-    <div className="w-16 h-16 md:w-20 md:h-20 bg-[#3FCDC1]/10 rounded-full flex items-center justify-center mb-6">
-      <Award className="w-8 h-8 md:w-10 md:h-10 text-[#006A63]" />
-    </div>
-    
-    <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">HALAMAN KELULUSAN</p>
-    
-    <h2 className="text-2xl md:text-3xl font-semibold text-[#1D315F] mb-4 md:mb-6">
-      {sertifikat?.judul_pembelajaran || 'Pelatihan'}
-    </h2>
+    <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
+      <div className="w-16 h-16 md:w-20 md:h-20 bg-[#3FCDC1]/10 rounded-full flex items-center justify-center mb-6">
+        <Award className="w-8 h-8 md:w-10 md:h-10 text-[#006A63]" aria-hidden="true" />
+      </div>
 
-    {sertifikat?.is_kpk && (
-      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold mb-6 shadow-sm">
-        <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-5 h-5 object-contain" />
-        <span>Program Kolaborasi Resmi KPK RI</span>
-      </div>
-    )}
-    
-    <div className="mb-6 md:mb-8">
-      <p className="text-sm md:text-base text-gray-600 font-semibold mb-2">Diberikan Kepada:</p>
-      <h3 className="text-xl md:text-2xl font-semibold text-[#1D315F] mb-1">{sertifikat?.nama_peserta || 'Peserta'}</h3>
-      <p className="text-sm text-gray-500 font-semibold">NIP: {sertifikat?.nip || '-'}</p>
-    </div>
-    
-    <div className="grid grid-cols-2 gap-8 md:gap-16 mb-8 md:mb-10 w-full max-w-md">
-      <div className="text-center">
-        <p className="text-xs text-gray-500 font-semibold mb-1">JPL</p>
-        <p className="text-2xl md:text-3xl font-semibold text-[#1D315F]">{sertifikat?.jpl || 0} Jam</p>
-      </div>
-      <div className="text-center">
-        <p className="text-xs text-gray-500 font-semibold mb-1">Tanggal</p>
-        <p className="text-base md:text-lg font-semibold text-[#1D315F]">{sertifikat?.tanggal || 'Hari Ini'}</p>
-      </div>
-    </div>
-    
-    {!sudahMengisiKuesioner && (
-      <div className="mb-6 w-full max-w-md p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-left flex items-start gap-2.5 text-amber-900">
-        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-        <p className="text-xs font-semibold leading-relaxed">
-          <b>Syarat Sertifikat:</b> Mohon isi kuesioner evaluasi di samping terlebih dahulu untuk mengaktifkan tombol unduh sertifikat resmi.
-        </p>
-      </div>
-    )}
+      <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">HALAMAN KELULUSAN</p>
 
-    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-      <button 
-        onClick={handleDownload} 
-        disabled={downloading || !sudahMengisiKuesioner}
-        className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
-          !sudahMengisiKuesioner
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
-            : 'bg-[#006A63] text-white hover:bg-[#00534D]'
-        }`}
-      >
-        <Download className="w-5 h-5" />
-        {downloading ? 'Mengunduh...' : 'Unduh Sertifikat (PDF)'}
-      </button>
-      <button onClick={handleShare} className="flex-1 px-6 py-3 border-2 border-[#006A63] text-[#006A63] font-semibold rounded-md hover:bg-[#EFF5F3] transition-colors flex items-center justify-center gap-2">
-        <Share2 className="w-5 h-5" />
-        Bagikan Achievement
-      </button>
+      <h2 className="text-2xl md:text-3xl font-semibold text-[#1D315F] mb-4 md:mb-6">
+        {sertifikat?.judul_pembelajaran || 'Pelatihan'}
+      </h2>
+
+      {sertifikat?.is_kpk && (
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold mb-6 shadow-sm">
+          <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-5 h-5 object-contain" />
+          <span>Program Kolaborasi Resmi KPK RI</span>
+        </div>
+      )}
+
+      <div className="mb-6 md:mb-8">
+        <p className="text-sm md:text-base text-gray-600 font-semibold mb-2">Diberikan Kepada:</p>
+        <h3 className="text-xl md:text-2xl font-semibold text-[#1D315F] mb-1">{sertifikat?.nama_peserta || 'Peserta'}</h3>
+        <p className="text-sm text-gray-500 font-semibold">NIP: {sertifikat?.nip || '-'}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 md:gap-16 mb-8 md:mb-10 w-full max-w-md">
+        <div className="text-center">
+          <p className="text-xs text-gray-500 font-semibold mb-1">JPL</p>
+          <p className="text-2xl md:text-3xl font-semibold text-[#1D315F]">{sertifikat?.jpl || 0} Jam</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-500 font-semibold mb-1">Tanggal</p>
+          <p className="text-base md:text-lg font-semibold text-[#1D315F]">{sertifikat?.tanggal || 'Hari Ini'}</p>
+        </div>
+      </div>
+
+      {!sudahMengisiKuesioner && (
+        <div className="mb-6 w-full max-w-md p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-left flex items-start gap-2.5 text-amber-900">
+          <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-xs font-semibold leading-relaxed">
+            <b>Syarat Sertifikat:</b> Mohon isi kuesioner evaluasi pada bagian di bawah terlebih dahulu untuk mengaktifkan tombol unduh sertifikat resmi.
+          </p>
+        </div>
+      )}
+
+      {isCooldownActive && (
+        <div className="mb-6 w-full max-w-md p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-amber-900 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-800">
+            <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Masa Tunggu Sertifikat KPK ({cooldownInfo.label})</span>
+          </div>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Sertifikat khusus kursus KPK memiliki masa tunggu verifikasi selama 3 hari (72 jam) sejak kursus diselesaikan.
+            {sertifikat?.tersedia_pada_formatted ? (
+              <> Sertifikat dapat diunduh mulai <b>{sertifikat.tersedia_pada_formatted}</b>.</>
+            ) : null}
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+        <button
+          onClick={handleDownload}
+          disabled={downloading || !sudahMengisiKuesioner || isCooldownActive}
+          className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
+            !sudahMengisiKuesioner || isCooldownActive
+              ? 'bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed'
+              : 'bg-[#006A63] text-white hover:bg-[#00534D] cursor-pointer'
+          }`}
+        >
+          {isCooldownActive ? (
+            <>
+              <Clock className="w-5 h-5" aria-hidden="true" />
+              <span>Masa Tunggu 3 Hari KPK</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5" aria-hidden="true" />
+              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat (PDF)'}</span>
+            </>
+          )}
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex-1 px-6 py-3 border-2 border-[#006A63] text-[#006A63] font-semibold rounded-md hover:bg-[#EFF5F3] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Share2 className="w-5 h-5" aria-hidden="true" />
+          <span>Bagikan Achievement</span>
+        </button>
+      </div>
     </div>
-  </div>
   );
 };
 
 const ScoreSummary = ({ resultData }) => (
   <div className="bg-white border border-[#BBC9C7] rounded-lg p-6">
     <h3 className="font-semibold text-[#1D315F] text-lg mb-6">Ringkasan Nilai</h3>
-    
+
     <div className="space-y-4">
       <div className="flex justify-between items-center pb-4 border-b border-gray-200">
         <span className="text-gray-600 font-semibold text-sm">Nilai Akhir Post Test</span>
@@ -214,7 +306,7 @@ const ScoreSummary = ({ resultData }) => (
           <span className="text-gray-500 font-semibold">/100</span>
         </div>
       </div>
-      
+
       <div className="flex justify-between items-center pb-4 border-b border-gray-200">
         <span className="text-gray-600 font-semibold text-sm">Status Kelulusan</span>
         <span className={`px-4 py-1.5 font-semibold text-sm rounded-full ${
@@ -223,114 +315,18 @@ const ScoreSummary = ({ resultData }) => (
           {resultData.apakah_lulus ? 'Lulus' : 'Tidak Lulus'}
         </span>
       </div>
-      
+
       <div className="bg-[#F4F8FB] border border-[#3FCDC1]/30 rounded-lg p-4 flex items-start gap-3">
-        <Info className="w-5 h-5 text-[#006A63] flex-shrink-0 mt-0.5" />
+        <Info className="w-5 h-5 text-[#006A63] flex-shrink-0 mt-0.5" aria-hidden="true" />
         <p className="text-xs text-gray-600 font-semibold">
-          {Number(resultData.maks_percobaan) === 0 
-            ? `Percobaan ke-${resultData.percobaan_ke} (Tanpa Batas Percobaan)` 
+          {Number(resultData.maks_percobaan) === 0
+            ? `Percobaan ke-${resultData.percobaan_ke} (Tanpa Batas Percobaan)`
             : `Percobaan ke-${resultData.percobaan_ke} dari maksimal ${resultData.maks_percobaan} kali percobaan.`}
         </p>
       </div>
     </div>
   </div>
 );
-
-const FeedbackSection = () => {
-  const [rating, setRating] = useState(5);
-  const [feedback, setFeedback] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const courseId = localStorage.getItem('userCourseId');
-
-  const handleSubmit = async () => {
-    if (!feedback.trim()) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Perhatian',
-        text: 'Mohon isi pesan ulasan Anda terlebih dahulu sebelum mengirimkan tanggapan.',
-        confirmButtonColor: '#006A63'
-      });
-      return;
-    }
-    try {
-      setSubmitting(true);
-      await api.post(`/user/courses/${courseId}/ulasan`, {
-        rating: rating,
-        ulasan: feedback
-      });
-      setIsSubmitted(true);
-      Swal.fire({
-        icon: 'success',
-        title: 'Ulasan Berhasil Dikirim!',
-        text: 'Terima kasih atas tanggapan dan masukan Anda. Penilaian Anda sangat membantu kami dalam meningkatkan kualitas pelatihan.',
-        confirmButtonColor: '#006A63'
-      });
-      setFeedback('');
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Mengirim Ulasan',
-        text: error.response?.data?.message || 'Terjadi kesalahan saat mengirim ulasan. Silakan coba beberapa saat lagi.',
-        confirmButtonColor: '#006A63'
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 mt-6">
-      <h3 className="font-semibold text-[#1D315F] text-lg mb-4">Berikan Ulasan Anda</h3>
-      
-      <p className="text-sm text-gray-600 font-semibold mb-4">
-        Bantu kami meningkatkan kualitas pelatihan dengan memberikan ulasan.
-      </p>
-      
-      <div className="flex items-center gap-2 mb-4">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            onClick={() => !isSubmitted && setRating(star)}
-            disabled={isSubmitted}
-            className="focus:outline-none transition-transform hover:scale-110 disabled:cursor-default"
-          >
-            <Star
-              className={`w-8 h-8 ${
-                star <= rating ? 'fill-[#F59E0B] text-[#F59E0B]' : 'text-gray-300'
-              }`}
-            />
-          </button>
-        ))}
-      </div>
-      
-      <p className="text-xs text-gray-500 font-semibold mb-4">Kesan & Pesan / Keluhan Layanan</p>
-      
-      <textarea
-        value={feedback}
-        onChange={(e) => setFeedback(e.target.value)}
-        disabled={isSubmitted || submitting}
-        placeholder="Tuliskan pengalaman Anda mengikuti pelatihan ini..."
-        className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#006A63] focus:border-transparent resize-none font-semibold disabled:bg-gray-50 disabled:text-gray-500"
-      />
-      
-      {isSubmitted ? (
-        <div className="mt-4 p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-md text-xs font-semibold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-          <span>Ulasan dan rating Anda telah berhasil tersimpan. Terima kasih!</span>
-        </div>
-      ) : (
-        <button 
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="mt-4 w-full px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {submitting ? 'Mengirim...' : 'Kirim Ulasan'}
-        </button>
-      )}
-    </div>
-  );
-};
 
 export default function TestResult({ onNavigate }) {
   const [resultData, setResultData] = useState(null);
@@ -346,9 +342,34 @@ export default function TestResult({ onNavigate }) {
         if (parsed?.sudah_mengisi_kuesioner) {
           setSudahMengisiKuesioner(true);
         }
-      } catch (e) {}
+      } catch {
+        // Ignore invalid localStorage payload
+      }
     }
   }, []);
+
+  // Refresh latest course & KPK cooldown metadata from server
+  useEffect(() => {
+    if (!courseId) return;
+    let isMounted = true;
+    api
+      .get(`/user/courses/${courseId}`)
+      .then((res) => {
+        if (!isMounted) return;
+        const freshResult = res.data?.data?.post_test?.result_data;
+        if (freshResult) {
+          setResultData((prev) => {
+            const merged = { ...(prev || {}), ...freshResult };
+            localStorage.setItem('postTestResult', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId]);
 
   useEffect(() => {
     if (!courseId || !resultData?.apakah_lulus) return;
@@ -384,7 +405,7 @@ export default function TestResult({ onNavigate }) {
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
       <TestResultNavbar onNavigate={onNavigate} />
-      
+
       <main className="flex-grow py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
           {/* Success / Fail Banner */}
@@ -392,13 +413,13 @@ export default function TestResult({ onNavigate }) {
             <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
               resultData.apakah_lulus ? 'bg-[#10B981]/10' : 'bg-red-100'
             }`}>
-              <Award className={`w-8 h-8 md:w-10 md:h-10 ${resultData.apakah_lulus ? 'text-[#10B981]' : 'text-red-500'}`} />
+              <Award className={`w-8 h-8 md:w-10 md:h-10 ${resultData.apakah_lulus ? 'text-[#10B981]' : 'text-red-500'}`} aria-hidden="true" />
             </div>
             <h1 className="text-3xl md:text-4xl font-semibold text-[#1D315F] mb-3">
               {resultData.apakah_lulus ? 'Selamat, Anda Lulus!' : 'Mohon Maaf, Anda Belum Lulus'}
             </h1>
             <p className="text-sm md:text-base text-gray-600 font-semibold">
-              {resultData.apakah_lulus 
+              {resultData.apakah_lulus
                 ? 'Anda telah berhasil menyelesaikan program pelatihan dan berhak mendapatkan sertifikat resmi.'
                 : (Number(resultData.maks_percobaan) === 0
                     ? 'Nilai Anda masih di bawah standar kelulusan. Anda dapat mencoba kembali kapan saja tanpa batasan.'
@@ -406,27 +427,27 @@ export default function TestResult({ onNavigate }) {
               }
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-8">
               {resultData.apakah_lulus ? (
-                 <CertificatePreview sertifikat={resultData.sertifikat} sudahMengisiKuesioner={sudahMengisiKuesioner} />
+                <CertificatePreview sertifikat={resultData.sertifikat} sudahMengisiKuesioner={sudahMengisiKuesioner} />
               ) : (
-                 <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
-                    <h2 className="text-2xl font-bold text-[#1D315F] mb-4">Belum Bisa Mengunduh Sertifikat</h2>
-                    <p className="text-gray-500 mb-6 font-semibold">Anda harus lulus Post Test terlebih dahulu untuk dapat mengunduh sertifikat pelatihan ini.</p>
-                    {(!resultData.apakah_lulus && (Number(resultData.maks_percobaan) === 0 || resultData.sisa_percobaan > 0)) && (
-                      <button 
-                        onClick={() => onNavigate('post-test')}
-                        className="px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors"
-                      >
-                        Coba Lagi Post Test
-                      </button>
-                    )}
-                 </div>
+                <div className="bg-white border border-[#BBC9C7] rounded-lg p-8 md:p-12 flex flex-col items-center text-center shadow-sm">
+                  <h2 className="text-2xl font-bold text-[#1D315F] mb-4">Belum Bisa Mengunduh Sertifikat</h2>
+                  <p className="text-gray-500 mb-6 font-semibold">Anda harus lulus Post Test terlebih dahulu untuk dapat mengunduh sertifikat pelatihan ini.</p>
+                  {(!resultData.apakah_lulus && (Number(resultData.maks_percobaan) === 0 || resultData.sisa_percobaan > 0)) && (
+                    <button
+                      onClick={() => onNavigate('post-test')}
+                      className="px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors cursor-pointer"
+                    >
+                      Coba Lagi Post Test
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-            
+
             <div className="lg:col-span-4">
               <ScoreSummary resultData={resultData} />
             </div>
@@ -443,14 +464,14 @@ export default function TestResult({ onNavigate }) {
               />
             </section>
           )}
-          
+
           <div className="mt-8 flex justify-center">
-            <button 
+            <button
               onClick={() => onNavigate('my-courses')}
-              className="flex items-center gap-2 text-[#006A63] hover:text-[#00534D] font-semibold transition-colors"
+              className="flex items-center gap-2 text-[#006A63] hover:text-[#00534D] font-semibold transition-colors cursor-pointer"
             >
-              <ChevronLeft className="w-5 h-5" />
-              Kembali ke Pelatihanku
+              <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+              <span>Kembali ke Pelatihanku</span>
             </button>
           </div>
         </div>

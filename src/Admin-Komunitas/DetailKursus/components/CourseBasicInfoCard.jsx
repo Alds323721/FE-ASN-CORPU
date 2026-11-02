@@ -1,5 +1,5 @@
-import React from 'react';
-import { Eye, AlertCircle, Upload, ChevronDown, Lock, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, EyeOff, AlertCircle, Upload, ChevronDown, Lock, Globe, KeyRound, Copy, Check, Info } from 'lucide-react';
 
 const CourseBasicInfoCard = ({
   course,
@@ -14,12 +14,22 @@ const CourseBasicInfoCard = ({
   savingBasicInfo,
   isReadOnly
 }) => {
+  const [showAccessCode, setShowAccessCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleCopyAccessCode = () => {
+    if (!course.kode_akses) return;
+    navigator.clipboard.writeText(course.kode_akses);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Read-Only Alert Banner */}
       {isReadOnly && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 shadow-xs">
-          <Eye className="w-5 h-5 text-blue-600 shrink-0" />
+          <Eye className="w-5 h-5 text-blue-600 shrink-0" aria-hidden="true" />
           <div>
             <h4 className="text-sm font-bold text-blue-900">Mode Hanya Baca (Read-Only)</h4>
             <p className="text-xs text-blue-700">
@@ -33,15 +43,16 @@ const CourseBasicInfoCard = ({
       {course.status === 'dipublikasikan' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5 flex items-start gap-3.5 shadow-sm">
           <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle className="w-5 h-5" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold text-amber-900 mb-1">Pelatihan Sedang Aktif Dipublikasikan</h3>
             <p className="text-xs text-amber-800 leading-relaxed mb-2">
               Pelatihan ini saat ini berstatus aktif di katalog umum. Jika Anda melakukan perubahan (edit informasi dasar, modul, materi, kuis, atau post-test), status pelatihan akan <b>otomatis menjadi Menunggu Approval</b> dan <b>tetap tampil di katalog peserta dalam kondisi terkunci</b> sampai disetujui kembali oleh Admin BKPSDM.
             </p>
-            <p className="text-[11px] text-amber-700 font-medium">
-              💡 Pelatihan tidak akan hilang dari katalog peserta, melainkan terkunci secara otomatis.
+            <p className="text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" aria-hidden="true" />
+              <span>Pelatihan tidak akan hilang dari katalog peserta, melainkan terkunci secara otomatis selama peninjauan.</span>
             </p>
           </div>
         </div>
@@ -51,7 +62,7 @@ const CourseBasicInfoCard = ({
       {course.status === 'ditolak' && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-5 flex items-start gap-3.5 shadow-sm">
           <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle className="w-5 h-5" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -68,9 +79,10 @@ const CourseBasicInfoCard = ({
                 ? course.validasi.catatan
                 : 'Pembelajaran ini memerlukan perbaikan sebelum dapat dipublikasikan. Silakan lengkapi modul, materi, atau evaluasi sesuai arahan verifikator.'}
             </p>
-            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1.5">
+            <p className="text-[11px] text-red-700 font-medium flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-red-600 shrink-0" aria-hidden="true" />
               <span>
-                💡 <b>Petunjuk:</b> Lakukan perbaikan konten pada halaman ini, lalu klik tombol <b>"Simpan Draft"</b> untuk mengembalikan status kursus ke <b>Draft</b> sebelum diajukan approval kembali.
+                <b>Petunjuk:</b> Lakukan perbaikan konten pada halaman ini, lalu klik tombol <b>"Simpan Draft"</b> untuk mengembalikan status kursus ke <b>Draft</b> sebelum diajukan approval kembali.
               </span>
             </p>
           </div>
@@ -216,7 +228,7 @@ const CourseBasicInfoCard = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-teal-100 text-[#0F766E] flex items-center justify-center shrink-0 mt-0.5">
-                  <Lock className="w-5 h-5" />
+                  <Lock className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">Perlu Permintaan Akses (Request Akses Peserta)</h4>
@@ -224,11 +236,21 @@ const CourseBasicInfoCard = ({
                     Jika diaktifkan, peserta harus meminta akses terlebih dahulu. Anda (Admin Komunitas) yang akan memvalidasi dan menyetujui sebelum peserta dapat membuka katalog modul dan materi kursus ini.
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${course.butuh_persetujuan ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
-                      {course.butuh_persetujuan ? '🔒 Mode: Butuh Persetujuan Admin' : '🌐 Mode: Terbuka Langsung'}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-bold ${course.butuh_persetujuan ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                      {course.butuh_persetujuan ? (
+                        <>
+                          <Lock className="w-3 h-3 text-purple-700" aria-hidden="true" />
+                          <span>Mode: Butuh Persetujuan Admin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="w-3 h-3 text-gray-600" aria-hidden="true" />
+                          <span>Mode: Terbuka Langsung</span>
+                        </>
+                      )}
                     </span>
                     {course.pending_request_count > 0 && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         {course.pending_request_count} Permintaan Akses Menunggu
                       </span>
                     )}
@@ -247,6 +269,91 @@ const CourseBasicInfoCard = ({
                 </label>
               )}
             </div>
+          </div>
+
+          {/* Pengaturan Kode Akses Kursus */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-200/80 text-slate-800 flex items-center justify-center shrink-0 mt-0.5">
+                  <KeyRound className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Gunakan Kode Akses Kursus (Enrollment Key)</h4>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                    Jika diaktifkan, peserta wajib memasukkan kode akses yang Anda tentukan saat mendaftar kursus ini di katalog pembelajaran.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-bold ${course.wajib_kode_akses ? 'bg-teal-100 text-teal-900 border border-teal-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                      <KeyRound className="w-3 h-3" aria-hidden="true" />
+                      <span>{course.wajib_kode_akses ? 'Wajib Kode Akses' : 'Tanpa Kode Akses'}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {!isReadOnly && (
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(course.wajib_kode_akses)}
+                    onChange={(e) => setCourse({ ...course, wajib_kode_akses: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
+                </label>
+              )}
+            </div>
+
+            {course.wajib_kode_akses && (
+              <div className="pt-3 border-t border-slate-200/80">
+                <label htmlFor="course-access-code-input" className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Kode Akses Pelatihan
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 max-w-lg">
+                  <div className="relative flex-1">
+                    <input
+                      id="course-access-code-input"
+                      type={showAccessCode ? 'text' : 'password'}
+                      disabled={isReadOnly}
+                      value={course.kode_akses || ''}
+                      onChange={(e) => setCourse({ ...course, kode_akses: e.target.value })}
+                      placeholder="Contoh: KPK-INTEGRITAS-2026"
+                      maxLength={50}
+                      className="w-full px-3.5 py-2 pr-10 bg-white border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAccessCode((prev) => !prev)}
+                      aria-label={showAccessCode ? 'Sembunyikan kode akses' : 'Tampilkan kode akses'}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1 cursor-pointer"
+                    >
+                      {showAccessCode ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyAccessCode}
+                    disabled={!course.kode_akses}
+                    className="px-3.5 py-2 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-700 border border-gray-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+                        <span>Tersalin</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" />
+                        <span>Salin Kode</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1.5">
+                  Bagikan kode akses ini kepada peserta yang berhak mengikuti pelatihan. Klik tombol Simpan Perubahan untuk menyimpan kode.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>

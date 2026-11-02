@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import api from '../api/axios';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
@@ -8,18 +9,38 @@ import LanguageDropdown from '../components/LanguageDropdown';
 import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  ChevronDown,
   Menu,
   X,
-  ChevronLeft,
   Award,
   Download,
   Calendar,
   User,
-  Mail,
-  Phone,
-  MapPin
+  Clock
 } from 'lucide-react';
+
+function getRemainingCooldownParts(tersediaPadaIso, tersediaPadaStr, fallbackSeconds = 0) {
+  let targetMs = null;
+  if (tersediaPadaIso) {
+    const parsed = Date.parse(tersediaPadaIso);
+    if (!Number.isNaN(parsed)) targetMs = parsed;
+  }
+  if (!targetMs && tersediaPadaStr) {
+    const parsed = Date.parse(tersediaPadaStr.replace(' ', 'T'));
+    if (!Number.isNaN(parsed)) targetMs = parsed;
+  }
+
+  let diffSec = targetMs ? Math.max(0, Math.floor((targetMs - Date.now()) / 1000)) : Math.max(0, Number(fallbackSeconds || 0));
+  const days = Math.floor(diffSec / 86400);
+  diffSec -= days * 86400;
+  const hours = Math.floor(diffSec / 3600);
+  diffSec -= hours * 3600;
+  const minutes = Math.max(1, Math.ceil(diffSec / 60));
+
+  return {
+    totalSeconds: targetMs ? Math.max(0, Math.floor((targetMs - Date.now()) / 1000)) : Math.max(0, Number(fallbackSeconds || 0)),
+    label: `Tersisa ${days} Hari ${hours} Jam ${days === 0 && hours === 0 ? minutes : Math.floor(diffSec / 60)} Menit`
+  };
+}
 
 const CertificatesNavbar = ({ onNavigate }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,8 +105,24 @@ const CertificatesHeader = () => {
   );
 };
 
-const CertificateCard = ({ id, image, title, institution, date, certificateId, isNew, onDownload, downloading }) => {
+const CertificateCard = ({ id, image, title, institution, date, certificateId, isNew, onDownload, downloading, certData }) => {
   const { t } = useLanguage();
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!certData?.cooldown) return;
+    const interval = setInterval(() => {
+      setTick((prev) => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [certData?.cooldown]);
+
+  const cooldownInfo = certData?.cooldown
+    ? getRemainingCooldownParts(certData.tersedia_pada_iso, certData.tersedia_pada, certData.sisa_detik)
+    : { totalSeconds: 0, label: '' };
+
+  const isCooldownActive = Boolean(certData?.cooldown && cooldownInfo.totalSeconds > 0);
+
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
       <div className="relative">
@@ -104,30 +141,58 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
           </span>
         )}
         <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-[#1D315F] text-xs font-bold px-3 py-1.5 rounded shadow-sm">
-          <Award className="w-4 h-4 inline mr-1" />
+          <Award className="w-4 h-4 inline mr-1" aria-hidden="true" />
           100%
         </div>
       </div>
       <div className="p-6 flex-1 flex flex-col">
         <h3 className="font-bold text-[#1D315F] text-[15px] leading-snug mb-3 flex-1 line-clamp-2">{title}</h3>
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-          <User className="w-3.5 h-3.5" />
+          <User className="w-3.5 h-3.5" aria-hidden="true" />
           <span className="font-semibold">{institution}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-          <Calendar className="w-3.5 h-3.5" />
+          <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
           <span className="font-semibold">{t('certificates.published')}: {date}</span>
         </div>
         <div className="text-xs text-gray-500 mb-4 font-mono bg-gray-50 px-2 py-1 rounded">
           ID: {certificateId}
         </div>
+
+        {isCooldownActive && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+            <div className="font-bold flex items-center gap-1.5 text-amber-800">
+              <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Masa Tunggu Sertifikat KPK ({cooldownInfo.label})</span>
+            </div>
+            {certData?.tersedia_pada_formatted && (
+              <p className="text-[11px] text-amber-700">
+                Dapat diunduh mulai: <b>{certData.tersedia_pada_formatted}</b>
+              </p>
+            )}
+          </div>
+        )}
+
         <button
-          onClick={() => onDownload?.(id, title)}
-          disabled={downloading}
-          className="w-full py-2.5 bg-[#006A63] text-white text-sm font-bold rounded-md hover:bg-[#00534D] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          onClick={() => onDownload?.(id, title, certData)}
+          disabled={downloading || isCooldownActive}
+          className={`w-full py-2.5 text-sm font-bold rounded-md transition-colors flex items-center justify-center gap-2 ${
+            isCooldownActive
+              ? 'bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed'
+              : 'bg-[#006A63] text-white hover:bg-[#00534D] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
+          }`}
         >
-          <Download className="w-4 h-4" />
-          {downloading ? 'Mengunduh...' : t('certificates.downloadPdf')}
+          {isCooldownActive ? (
+            <>
+              <Clock className="w-4 h-4" aria-hidden="true" />
+              <span>Masa Tunggu 3 Hari KPK</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" aria-hidden="true" />
+              <span>{downloading ? 'Mengunduh...' : t('certificates.downloadPdf')}</span>
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -156,7 +221,17 @@ const CertificatesContent = () => {
     fetchCertificates();
   }, []);
 
-  const handleDownloadCertificate = async (certificateId, title) => {
+  const handleDownloadCertificate = async (certificateId, title, certData) => {
+    if (certData?.cooldown) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Masa Tunggu Sertifikat KPK',
+        text: certData.message || 'Sertifikat khusus kursus KPK baru dapat diunduh 3 hari setelah kursus diselesaikan.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
+
     try {
       setDownloadingId(certificateId);
       const response = await api.get(`/user/certificates/${certificateId}/download`, {
@@ -175,7 +250,25 @@ const CertificatesContent = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download certificate error:', error);
-      alert('Gagal mengunduh sertifikat. Silakan coba beberapa saat lagi.');
+      let serverMessage = 'Gagal mengunduh sertifikat. Silakan coba beberapa saat lagi.';
+      try {
+        if (error.response?.data instanceof Blob) {
+          const text = await error.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed?.message) serverMessage = parsed.message;
+        } else if (error.response?.data?.message) {
+          serverMessage = error.response.data.message;
+        }
+      } catch {
+        // Fallback to default message
+      }
+
+      Swal.fire({
+        icon: error.response?.status === 403 ? 'info' : 'error',
+        title: error.response?.status === 403 ? 'Masa Tunggu Sertifikat KPK' : 'Gagal Mengunduh Sertifikat',
+        text: serverMessage,
+        confirmButtonColor: '#006A63'
+      });
     } finally {
       setDownloadingId(null);
     }
@@ -206,13 +299,14 @@ const CertificatesContent = () => {
               isNew={false}
               onDownload={handleDownloadCertificate}
               downloading={downloadingId === cert.sertifikat_id}
+              certData={cert}
             />
           ))}
         </div>
       ) : (
         <div className="text-center py-16">
           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[#006A63] shadow-sm">
-            <Award className="w-12 h-12 text-[#006A63]" />
+            <Award className="w-12 h-12 text-[#006A63]" aria-hidden="true" />
           </div>
           <h3 className="text-lg font-semibold text-[#1D315F] mb-2">{t('certificates.empty')}</h3>
           <p className="text-gray-500 text-sm font-semibold max-w-md mx-auto">

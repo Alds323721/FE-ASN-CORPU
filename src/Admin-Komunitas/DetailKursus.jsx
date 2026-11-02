@@ -260,6 +260,16 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       return;
     }
 
+    if (course.wajib_kode_akses && (!course.kode_akses || !String(course.kode_akses).trim())) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Kode Akses Belum Diisi',
+        text: 'Silakan masukkan Kode Akses terlebih dahulu atau matikan opsi wajib kode akses.',
+        confirmButtonColor: '#3D9F93'
+      });
+      return;
+    }
+
     const wasPublished = course.status === 'dipublikasikan';
     try {
       setSavingBasicInfo(true);
@@ -309,6 +319,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         data.append('capaian_pembelajaran', course.capaian_pembelajaran || '');
         data.append('nilai_kelulusan', passingGrade);
         data.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
+        data.append('wajib_kode_akses', course.wajib_kode_akses ? 1 : 0);
+        data.append('kode_akses', course.kode_akses ? String(course.kode_akses).trim() : '');
         data.append('komunitas_id', course.komunitas_id);
         if (courseThumbnailFile) {
           data.append('thumbnail', courseThumbnailFile);
@@ -327,6 +339,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           capaian_pembelajaran: course.capaian_pembelajaran || '',
           nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
+          wajib_kode_akses: course.wajib_kode_akses ? 1 : 0,
+          kode_akses: course.kode_akses ? String(course.kode_akses).trim() : '',
           komunitas_id: course.komunitas_id
         };
         res = await api.put(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, payload);
@@ -1740,7 +1754,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
             <div>• Surat Keabsahan: <b>${(course.surat_pernyataan_url || suratFile) ? 'Sudah Dilampirkan' : 'Tidak Dilampirkan (Opsional - Tetap Dapat Diajukan)'}</b></div>
           </div>
           <p class="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded border border-emerald-200">
-            ℹ️ Surat Keabsahan bersifat <b>opsional</b>. Kursus ini dapat langsung diajukan dan diverifikasi oleh Admin BKPSDM.
+            Catatan: Surat Keabsahan bersifat <b>opsional</b>. Kursus ini dapat langsung diajukan dan diverifikasi oleh Admin BKPSDM.
           </p>
         </div>
       `,
@@ -1798,6 +1812,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         formData.append('capaian_pembelajaran', course.capaian_pembelajaran || '-');
         formData.append('nilai_kelulusan', passingGrade);
         formData.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
+        formData.append('wajib_kode_akses', course.wajib_kode_akses ? 1 : 0);
+        formData.append('kode_akses', course.kode_akses ? String(course.kode_akses).trim() : '');
         formData.append('komunitas_id', course.komunitas_id);
         formData.append('thumbnail', courseThumbnailFile);
         await api.post(`/admin-komunitas/pembelajaran/${course.pembelajaran_id}`, formData, {
@@ -1813,6 +1829,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           capaian_pembelajaran: course.capaian_pembelajaran || '-',
           nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
+          wajib_kode_akses: course.wajib_kode_akses ? 1 : 0,
+          kode_akses: course.kode_akses ? String(course.kode_akses).trim() : '',
           komunitas_id: course.komunitas_id
         });
       }
@@ -1993,7 +2011,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         {isReadOnly ? (
           <div className="flex items-center justify-between w-full">
             <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-              <Eye className="w-4 h-4 text-gray-400" /> Mode Hanya Baca — Kursus Komunitas Umum milik admin lain
+              <Eye className="w-4 h-4 text-gray-400" aria-hidden="true" /> Mode Hanya Baca: Kursus Komunitas Umum milik admin lain
             </span>
             <button
               onClick={() => onNavigate && onNavigate('katalog-kursus')}

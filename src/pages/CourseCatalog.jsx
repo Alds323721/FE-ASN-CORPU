@@ -104,6 +104,7 @@ const CatalogCard = ({
   modules,
   isEnrolled,
   butuh_persetujuan,
+  wajib_kode_akses,
   request_status,
   catatan_persetujuan,
   onEnroll,
@@ -122,7 +123,7 @@ const CatalogCard = ({
         <div class="text-left text-sm text-gray-600 space-y-3">
           <p>Materi pada pembelajaran <b>"${title}"</b> sedang dalam proses pembaruan oleh <b>Admin Komunitas</b>.</p>
           <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-medium">
-            🔒 Status: <b>Menunggu Persetujuan (Approval) Admin BKPSDM</b>
+            Status: <b>Menunggu Persetujuan (Approval) Admin BKPSDM</b>
           </div>
           <p class="text-xs text-gray-500">
             Katalog pembelajaran otomatis dikunci dan akan dibuka kembali untuk pendaftaran serta akses belajar setelah Admin Komunitas berhasil memperoleh approval resmi dari Admin BKPSDM.
@@ -141,8 +142,8 @@ const CatalogCard = ({
       html: `
         <div class="text-left text-sm text-gray-600 space-y-3">
           <p>Permintaan akses Anda untuk pelatihan <b>"${title}"</b> telah dikirimkan dan saat ini sedang dalam peninjauan oleh <b>Admin Komunitas</b>.</p>
-          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-semibold flex items-center gap-2">
-            <span class="text-base">⏳</span> Status Permintaan: <b>Menunggu Persetujuan</b>
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-semibold">
+            Status Permintaan: <b>Menunggu Persetujuan</b>
           </div>
           <p class="text-xs text-gray-500">
             Anda akan dapat mengakses seluruh modul dan materi pembelajaran segera setelah Admin Komunitas menyetujui permohonan Anda. Silakan cek kembali secara berkala.
@@ -177,12 +178,17 @@ const CatalogCard = ({
         {/* Lock Badge saat ditinjau BKPSDM */}
         {is_locked_review ? (
           <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-gray-200 text-[10px] font-semibold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <Lock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
             <span>Sedang Ditinjau BKPSDM</span>
+          </div>
+        ) : wajib_kode_akses && !isEnrolled ? (
+          <div className="absolute top-3 right-3 bg-teal-900/90 backdrop-blur-sm text-teal-50 text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5 border border-teal-400/30">
+            <Key className="w-3 h-3 text-teal-300" aria-hidden="true" />
+            <span>Perlu Kode Akses</span>
           </div>
         ) : butuh_persetujuan && !isEnrolled ? (
           <div className="absolute top-3 right-3 bg-purple-900/85 backdrop-blur-sm text-purple-100 text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1.5 border border-purple-400/30">
-            <Lock className="w-3 h-3 text-purple-300" />
+            <Lock className="w-3 h-3 text-purple-300" aria-hidden="true" />
             <span>Perlu Request Akses</span>
           </div>
         ) : null}
@@ -270,15 +276,16 @@ const CatalogCard = ({
             onClick={onRequestAccess}
             className="w-full py-2.5 bg-[#006A63] hover:bg-[#00534D] text-white rounded-md text-[13px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
           >
-            <UserCheck className="w-4 h-4" />
+            <UserCheck className="w-4 h-4" aria-hidden="true" />
             <span>Minta Akses Pelatihan</span>
           </button>
         ) : (
           <button
             onClick={() => onEnroll(id)}
-            className="w-full py-2.5 bg-[#006A63] text-white rounded-md text-[13px] font-bold hover:bg-[#00534D] transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-[#006A63] text-white rounded-md text-[13px] font-bold hover:bg-[#00534D] transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
-            {t('catalog.enrollNow')}
+            {wajib_kode_akses && <Key className="w-4 h-4" aria-hidden="true" />}
+            <span>{wajib_kode_akses ? 'Masukkan Kode Akses' : t('catalog.enrollNow')}</span>
           </button>
         )}
       </div>
@@ -409,13 +416,56 @@ const CatalogContent = ({ onNavigate }) => {
 
   const activeKomunitas = joinedCommunities.find(k => String(k.komunitas_id) === String(selectedKomunitasId));
 
-  const handleEnroll = async (id) => {
+  const promptAccessCode = async (courseTitle) => {
+    const { value: enteredCode, isConfirmed } = await Swal.fire({
+      title: 'Masukkan Kode Akses Kursus',
+      html: `
+        <div class="text-left text-sm text-gray-600 space-y-2 mb-2">
+          <p>Pelatihan <b>"${courseTitle || 'ini'}"</b> memerlukan kode akses dari Admin Komunitas untuk dapat didaftarkan.</p>
+        </div>
+      `,
+      input: 'text',
+      inputPlaceholder: 'Ketik kode akses pelatihan...',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonColor: '#006A63',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Verifikasi & Daftar',
+      cancelButtonText: 'Batal',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Silakan masukkan kode akses terlebih dahulu.';
+        }
+        return null;
+      }
+    });
+
+    if (!isConfirmed) return null;
+    return enteredCode.trim();
+  };
+
+  const handleEnroll = async (courseOrId) => {
+    const courseItem = typeof courseOrId === 'object' && courseOrId !== null
+      ? courseOrId
+      : courses.find((item) => String(item.id) === String(courseOrId)) || { id: courseOrId };
+    const id = courseItem.id;
+
+    let kodeAkses = null;
+    if (courseItem.wajib_kode_akses) {
+      kodeAkses = await promptAccessCode(courseItem.title || courseItem.judul);
+      if (kodeAkses === null) return;
+    }
+
     try {
       setEnrolling(true);
-      const res = await api.post(`/user/katalog/${id}/enroll`);
+      const payload = kodeAkses ? { kode_akses: kodeAkses } : {};
+      const res = await api.post(`/user/katalog/${id}/enroll`, payload);
       Swal.fire({
         icon: 'success',
-        title: 'Pendaftaran Berhasil!',
+        title: 'Pendaftaran Berhasil',
         text: res.data?.message || 'Anda telah berhasil mendaftar ke pelatihan ini.',
         confirmButtonColor: '#006A63'
       });
@@ -451,38 +501,45 @@ const CatalogContent = ({ onNavigate }) => {
   const handleRequestAccess = async (courseItem) => {
     const isReapply = courseItem.request_status === 'ditolak';
 
-    const result = await Swal.fire({
-      title: isReapply ? 'Ajukan Ulang Akses Pelatihan?' : 'Minta Akses Pelatihan?',
-      html: `
-        <div class="text-left text-sm text-gray-600 space-y-3">
-          <p>Pelatihan <b>"${courseItem.title || courseItem.judul}"</b> memerlukan persetujuan dari <b>Admin Komunitas</b> sebelum Anda dapat membuka materi pembelajaran.</p>
-          ${isReapply && courseItem.catatan_persetujuan ? `
-            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs">
-              <span class="font-bold">Catatan Penolakan Sebelumnya:</span>
-              <p class="mt-1 italic">"${courseItem.catatan_persetujuan}"</p>
-            </div>
-          ` : ''}
-          <p class="text-xs text-gray-500">
-            Kirim permintaan akses ke Admin Komunitas sekarang?
-          </p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonColor: '#006A63',
-      cancelButtonColor: '#6B7280',
-      confirmButtonText: isReapply ? 'Ya, Kirim Pengajuan Ulang' : 'Ya, Kirim Permintaan Akses',
-      cancelButtonText: 'Batal'
-    });
+    let kodeAkses = null;
+    if (courseItem.wajib_kode_akses) {
+      kodeAkses = await promptAccessCode(courseItem.title || courseItem.judul);
+      if (kodeAkses === null) return;
+    } else {
+      const result = await Swal.fire({
+        title: isReapply ? 'Ajukan Ulang Akses Pelatihan?' : 'Minta Akses Pelatihan?',
+        html: `
+          <div class="text-left text-sm text-gray-600 space-y-3">
+            <p>Pelatihan <b>"${courseItem.title || courseItem.judul}"</b> memerlukan persetujuan dari <b>Admin Komunitas</b> sebelum Anda dapat membuka materi pembelajaran.</p>
+            ${isReapply && courseItem.catatan_persetujuan ? `
+              <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs">
+                <span class="font-bold">Catatan Penolakan Sebelumnya:</span>
+                <p class="mt-1 italic">"${courseItem.catatan_persetujuan}"</p>
+              </div>
+            ` : ''}
+            <p class="text-xs text-gray-500">
+              Kirim permintaan akses ke Admin Komunitas sekarang?
+            </p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#006A63',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: isReapply ? 'Ya, Kirim Pengajuan Ulang' : 'Ya, Kirim Permintaan Akses',
+        cancelButtonText: 'Batal'
+      });
 
-    if (!result.isConfirmed) return;
+      if (!result.isConfirmed) return;
+    }
 
     try {
       setEnrolling(true);
-      const res = await api.post(`/user/katalog/${courseItem.id}/enroll`);
+      const payload = kodeAkses ? { kode_akses: kodeAkses } : {};
+      const res = await api.post(`/user/katalog/${courseItem.id}/enroll`, payload);
 
       Swal.fire({
         icon: 'success',
-        title: 'Permintaan Berhasil Dikirim!',
+        title: 'Permintaan Berhasil Dikirim',
         text: res.data?.message || 'Permintaan akses Anda telah dikirim dan menunggu persetujuan Admin Komunitas.',
         confirmButtonColor: '#006A63'
       });
@@ -666,7 +723,7 @@ const CatalogContent = ({ onNavigate }) => {
               <CatalogCard
                 key={c.id}
                 {...c}
-                onEnroll={() => handleEnroll(c.id)}
+                onEnroll={() => handleEnroll(c)}
                 onRequestAccess={() => handleRequestAccess(c)}
                 onNavigate={onNavigate}
               />

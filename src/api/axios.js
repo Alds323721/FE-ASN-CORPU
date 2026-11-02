@@ -20,6 +20,27 @@ const getApiBaseUrl = () => {
     return 'http://localhost:8000/api';
 };
 
+const getOrCreateDeviceSessionId = () => {
+    const storageKey = 'device_session_id';
+    try {
+        let deviceId = localStorage.getItem(storageKey);
+        if (!deviceId || deviceId.length < 12) {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                deviceId = crypto.randomUUID();
+            } else {
+                deviceId = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 15);
+            }
+            localStorage.setItem(storageKey, deviceId);
+        }
+        if (typeof document !== 'undefined') {
+            document.cookie = `${storageKey}=${encodeURIComponent(deviceId)}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+        return deviceId;
+    } catch (e) {
+        return 'fallback_device_session';
+    }
+};
+
 const api = axios.create({
     baseURL: getApiBaseUrl(),
 
@@ -33,6 +54,11 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
+        const deviceSessionId = getOrCreateDeviceSessionId();
+        if (deviceSessionId) {
+            config.headers['X-Device-Session'] = deviceSessionId;
+        }
+
         const token =
             localStorage.getItem('access_token') ||
             localStorage.getItem('token');

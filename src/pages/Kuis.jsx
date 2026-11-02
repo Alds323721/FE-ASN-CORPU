@@ -234,6 +234,38 @@ export default function Kuis({ onNavigate, onBack }) {
     if (!testData || submitting) return;
 
     const unansweredCount = totalSoal - answeredCount;
+    const isPreTestQuiz = testData?.tipe_kuis === 'pre_test';
+
+    if (isPreTestQuiz && unansweredCount > 0) {
+      const firstUnansPgIdx = pgQuestions.findIndex(s => !answers[s.soal_kuis_id]);
+      if (firstUnansPgIdx !== -1) {
+        setActiveSection('pg');
+        setCurrentQuestion(firstUnansPgIdx + 1);
+      } else if (weightedQuestions.some(s => !answers[s.soal_kuis_id])) {
+        setActiveSection('weighted');
+      } else if (ttsQuestions.some(s => {
+        const a = answers[s.soal_kuis_id];
+        const minLen = s.panjang_kata || 2;
+        return !(typeof a === 'string' && a.trim().length >= minLen && !a.includes(' '));
+      })) {
+        setActiveSection('tts');
+      } else if (dragDropQuestions.some(s => {
+        const a = answers[s.soal_kuis_id];
+        const required = s.jumlah_blank || 1;
+        return !(Array.isArray(a) && a.filter(Boolean).length === required);
+      })) {
+        setActiveSection('drag_drop');
+      }
+
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Jawaban Pre-Test Belum Lengkap',
+        text: `Seluruh pertanyaan Pre-Test wajib dijawab. Masih terdapat ${unansweredCount} soal yang belum terisi. Silakan lengkapi jawaban terlebih dahulu.`,
+        confirmButtonColor: '#006A63',
+        confirmButtonText: 'Lengkapi Jawaban'
+      });
+      return;
+    }
 
     if (!isTimeUp) {
       const unansPG = pgQuestions.filter(s => !answers[s.soal_kuis_id]).length;
@@ -262,7 +294,7 @@ export default function Kuis({ onNavigate, onBack }) {
             <p>Masih ada <b class="text-red-500">${unansweredCount} dari ${totalSoal} butir soal / kata</b> yang belum selesai Anda jawab:</p>
             ${breakdownDetails.length > 0 ? `<ul class="list-disc pl-5 text-xs text-gray-700 space-y-1">${breakdownDetails.join('')}</ul>` : ''}
             <p class="text-xs text-amber-800 bg-amber-50 p-2.5 rounded border border-amber-200">
-              ⚠️ Soal, kata TTS, atau titik kosong yang belum terjawab akan bernilai 0. Apakah Anda yakin ingin mengumpulkan kuis sekarang?
+              Catatan: Soal, kata TTS, atau titik kosong yang belum terjawab akan bernilai 0. Apakah Anda yakin ingin mengumpulkan kuis sekarang?
             </p>
           </div>
         ` : `
@@ -579,6 +611,8 @@ export default function Kuis({ onNavigate, onBack }) {
               answeredQuestionsSet={answeredQuestionsSet}
               handleSubmit={handleSubmit}
               submitting={submitting}
+              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
+              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
             />
           )}
 
@@ -591,6 +625,8 @@ export default function Kuis({ onNavigate, onBack }) {
               handleAnswer={handleAnswer}
               handleSubmit={handleSubmit}
               submitting={submitting}
+              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
+              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
             />
           )}
 
@@ -602,6 +638,8 @@ export default function Kuis({ onNavigate, onBack }) {
               handleAnswer={handleAnswer}
               handleSubmit={handleSubmit}
               submitting={submitting}
+              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
+              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
             />
           )}
 
@@ -614,6 +652,8 @@ export default function Kuis({ onNavigate, onBack }) {
               handleAnswer={handleAnswer}
               handleSubmit={handleSubmit}
               submitting={submitting}
+              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
+              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
             />
           )}
         </div>

@@ -113,7 +113,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
             setTimeout(() => {
               Swal.fire({
                 icon: 'success',
-                title: '🎉 Selamat! Seluruh Modul Selesai',
+                title: 'Seluruh Modul Telah Selesai Dipelajari',
                 text: 'Anda telah menyelesaikan seluruh materi dan kuis modul pelatihan. Lanjutkan ke Post Test Akhir Pelatihan?',
                 showCancelButton: true,
                 confirmButtonColor: '#006A63',
@@ -340,7 +340,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         if (updatedCourse?.post_test && updatedCourse?.status_pendaftaran !== 'lulus') {
           const result = await Swal.fire({
             icon: 'success',
-            title: '🎉 Selamat! Seluruh Silabus Selesai',
+            title: 'Seluruh Silabus Telah Selesai Dipelajari',
             text: 'Anda telah menyelesaikan seluruh materi dan evaluasi modul. Lanjutkan ke Post Test Akhir Pelatihan?',
             showCancelButton: true,
             confirmButtonColor: '#006A63',
@@ -429,6 +429,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
     const triggerScormCompletion = (status) => {
       const s = String(status || '').toLowerCase();
       if ((s === 'completed' || s === 'passed') && activeMateri?.materi_id && !activeMateri.is_read) {
+        window.postMessage({ type: 'scorm-completed', materiId: activeMateri.materi_id }, '*');
         handleMarkAsRead();
       }
     };

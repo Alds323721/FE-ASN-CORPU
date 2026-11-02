@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import {
   CheckCircle2,
@@ -8,16 +8,17 @@ import {
 } from 'lucide-react';
 import { isMateriVideo, getQuizBadges } from './courseHelpers';
 
-const SyllabusItem = ({ index, title, subtitle, duration, status, onClick, isActive, badge, typeBadges = [] }) => {
+const SyllabusItem = ({ index, title, subtitle, duration, status, onClick, isActive, badge, typeBadges = [], itemRef = null }) => {
   const getStatusIcon = () => {
-    if (status === 'completed') return <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-[#10B981]" />;
-    if (status === 'locked') return <Lock className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />;
-    if (status === 'pre_test_ready') return <HelpCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-500" />;
-    return <Circle className="w-4 h-4 md:w-5 md:h-5 text-gray-300" />;
+    if (status === 'completed') return <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-[#10B981]" aria-hidden="true" />;
+    if (status === 'locked') return <Lock className="w-4 h-4 md:w-5 md:h-5 text-gray-400" aria-hidden="true" />;
+    if (status === 'pre_test_ready') return <HelpCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-500" aria-hidden="true" />;
+    return <Circle className="w-4 h-4 md:w-5 md:h-5 text-gray-300" aria-hidden="true" />;
   };
 
   return (
     <div
+      ref={itemRef}
       className={`flex items-start gap-2 md:gap-3 py-2 md:py-3 cursor-pointer hover:bg-gray-50 transition-colors px-2 rounded ${
         isActive ? 'bg-[#F4F8FB] border-l-4 border-[#3FCDC1]' : 'border-l-4 border-transparent'
       }`}
@@ -59,6 +60,17 @@ export default function CourseOutlineSidebar({
   onSelectFeedbackSection,
   onOpenGraduationPage
 }) {
+  const activeItemRef = useRef(null);
+
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }, [activeMateri?.materi_id]);
+
   return (
     <aside className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 overflow-y-auto max-h-[650px] custom-scrollbar">
       <h2 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Silabus Pelatihan</h2>
@@ -71,6 +83,7 @@ export default function CourseOutlineSidebar({
               const hasPreTest = Boolean(mat.pre_test);
               const isPreTestDone = Boolean(mat.pre_test?.is_completed);
               const isPreTestReady = hasPreTest && !isPreTestDone && !mat.pre_test?.is_locked;
+              const isActiveItem = activeMateri?.materi_id === mat.materi_id;
 
               let status = 'pending';
               if (mat.is_read) {
@@ -91,13 +104,14 @@ export default function CourseOutlineSidebar({
               return (
                 <SyllabusItem
                   key={mat.materi_id}
+                  itemRef={isActiveItem ? activeItemRef : null}
                   index={i + 1}
                   title={mat.judul}
                   subtitle={`Tipe: ${mat.tipe === 'h5p' ? 'H5P Interaktif' : mat.tipe === 'scorm' ? 'SCORM Interaktif' : mat.tipe === 'tautan_web' ? 'Materi Web (Webview)' : isMateriVideo(mat) ? 'Video' : 'Materi Bacaan'}`}
                   duration={mat.durasi}
                   status={status}
                   badge={badge}
-                  isActive={activeMateri?.materi_id === mat.materi_id}
+                  isActive={isActiveItem}
                   onClick={() => {
                     if (mat.is_locked) {
                       if (isPreTestReady) {
@@ -317,11 +331,19 @@ export default function CourseOutlineSidebar({
               title="Halaman Kelulusan & Sertifikat"
               subtitle={
                 courseData?.kuesioner_selesai
-                  ? 'Klik untuk melihat nilai akhir & unduh sertifikat'
-                  : 'Terkunci — Isi Feedback Kursus terlebih dahulu'
+                  ? courseData?.sertifikat?.cooldown
+                    ? `Masa Tunggu Sertifikat KPK (Tersedia ${courseData.sertifikat.tersedia_pada_formatted || ''})`
+                    : 'Klik untuk melihat nilai akhir & unduh sertifikat'
+                  : 'Terkunci: Isi Feedback Kursus terlebih dahulu'
               }
               status={courseData?.kuesioner_selesai ? 'completed' : 'locked'}
-              badge={courseData?.kuesioner_selesai ? 'Terbuka' : null}
+              badge={
+                courseData?.kuesioner_selesai
+                  ? courseData?.sertifikat?.cooldown
+                    ? 'Masa Tunggu 3 Hari'
+                    : 'Terbuka'
+                  : null
+              }
               isActive={false}
               onClick={() => {
                 if (!courseData?.kuesioner_selesai) {

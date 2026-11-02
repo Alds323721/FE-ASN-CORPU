@@ -27,7 +27,7 @@ export default function QuestionNavigation({
   };
 
   return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 mt-6">
+    <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6">
       <h3 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Navigasi Soal</h3>
 
       <div className="grid grid-cols-5 gap-2">

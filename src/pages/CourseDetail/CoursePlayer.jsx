@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   ExternalLink,
@@ -12,7 +12,8 @@ import {
   Maximize2,
   Minimize2,
   Lock,
-  AlertCircle
+  Clock,
+  Info
 } from 'lucide-react';
 import PreTestLockedCard from './PreTestLockedCard';
 import { extractYouTubeId, getDocumentUrl, isMateriVideo, getHostFromUrl } from './courseHelpers';
@@ -28,6 +29,118 @@ export default function CoursePlayer({
   const [isWebExpanded, setIsWebExpanded] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+  const [isContentCompleted, setIsContentCompleted] = useState(Boolean(activeMateri?.is_read));
+  const maxTimeWatchedRef = useRef(0);
+
+  useEffect(() => {
+    setIsContentCompleted(Boolean(activeMateri?.is_read));
+    maxTimeWatchedRef.current = 0;
+  }, [activeMateri?.materi_id, activeMateri?.is_read]);
+
+  // Listen for completion events from H5P, SCORM, or YouTube iframe
+  useEffect(() => {
+    const handlePlayerMessage = (event) => {
+      if (!event.data) return;
+
+      if (typeof event.data === 'object') {
+        if (event.data.type === 'h5p-completed' || event.data.type === 'scorm-completed') {
+          setIsContentCompleted(true);
+        }
+        return;
+      }
+
+      if (typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          if (
+            data.type === 'h5p-completed' ||
+            data.type === 'scorm-completed' ||
+            (data.event === 'onStateChange' && data.info === 0)
+          ) {
+            setIsContentCompleted(true);
+          }
+        } catch {
+          // Ignore non-JSON postMessage payloads
+        }
+      }
+    };
+
+    window.addEventListener('message', handlePlayerMessage);
+    return () => window.removeEventListener('message', handlePlayerMessage);
+  }, [activeMateri?.materi_id]);
+
+  // Auto-pause video, YouTube, H5P, and SCORM when user switches tab or minimizes window
+  useEffect(() => {
+    const pauseAllActiveMedia = () => {
+      document.querySelectorAll('video, audio').forEach((media) => {
+        try {
+          if (!media.paused) media.pause();
+        } catch {
+          // Ignore media pause error
+        }
+      });
+
+      const ytIframe = document.getElementById('youtube-player');
+      if (ytIframe?.contentWindow) {
+        try {
+          ytIframe.contentWindow.postMessage(
+            JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
+            '*'
+          );
+        } catch {
+          // Ignore cross-origin postMessage error
+        }
+      }
+
+      ['h5p-interactive-player', 'scorm-interactive-player'].forEach((id) => {
+        const frame = document.getElementById(id);
+        if (!frame) return;
+        try {
+          frame.contentWindow?.postMessage({ action: 'pause' }, '*');
+          const innerDoc = frame.contentDocument || frame.contentWindow?.document;
+          innerDoc?.querySelectorAll('video, audio').forEach((m) => {
+            if (!m.paused) m.pause();
+          });
+        } catch {
+          // Cross-origin fallback handled via postMessage
+        }
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        pauseAllActiveMedia();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Wait briefly to see if focus moved into one of our own player iframes
+      setTimeout(() => {
+        const activeEl = document.activeElement;
+        const isPlayerIframeFocused =
+          activeEl &&
+          activeEl.tagName === 'IFRAME' &&
+          (activeEl.id === 'youtube-player' ||
+            activeEl.id === 'h5p-interactive-player' ||
+            activeEl.id === 'scorm-interactive-player' ||
+            activeEl.id === 'webview-material-player');
+
+        if (!isPlayerIframeFocused && document.hidden) {
+          pauseAllActiveMedia();
+        } else if (!isPlayerIframeFocused && !document.hasFocus()) {
+          pauseAllActiveMedia();
+        }
+      }, 150);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, []);
 
   if (!activeMateri) {
     return (
@@ -49,6 +162,9 @@ export default function CoursePlayer({
   const docUrl = getDocumentUrl(activeMateri.tautan);
   const domainHost = isWeb ? getHostFromUrl(activeMateri.tautan) : '';
 
+  const requiresCompletionGuard = isH5P || isScorm || isVideo;
+  const isLockedUntilComplete = requiresCompletionGuard && !activeMateri.is_read && !isContentCompleted;
+
   // URL embed via backend proxy agar terbebas dari X-Frame-Options & tampil langsung di card
   const webviewEmbedUrl = (isWeb && activeMateri?.tautan)
     ? `${getDocumentUrl('/api/webview-proxy')}?url=${encodeURIComponent(activeMateri.tautan)}`
@@ -63,19 +179,19 @@ export default function CoursePlayer({
           </h2>
           {isH5P && (
             <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold rounded-full flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" aria-hidden="true" />
               Video Interaktif (H5P)
             </span>
           )}
           {isScorm && (
             <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-full flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-amber-500" />
+              <Package className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
               Video Interaktif (SCORM)
             </span>
           )}
           {isWeb && (
             <span className="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 text-xs font-bold rounded-full flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-sky-600" />
+              <Globe className="w-3.5 h-3.5 text-sky-600" aria-hidden="true" />
               Materi Web / Webview
             </span>
           )}
@@ -93,7 +209,7 @@ export default function CoursePlayer({
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center">
-                <Sparkles className="w-12 h-12 mb-2 text-purple-400" />
+                <Sparkles className="w-12 h-12 mb-2 text-purple-400" aria-hidden="true" />
                 <p className="text-sm font-semibold text-white">Tautan video interaktif H5P tidak tersedia</p>
               </div>
             )}
@@ -110,7 +226,7 @@ export default function CoursePlayer({
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center">
-                <Package className="w-12 h-12 mb-2 text-amber-400" />
+                <Package className="w-12 h-12 mb-2 text-amber-400" aria-hidden="true" />
                 <p className="text-sm font-semibold text-white">Berkas SCORM tidak tersedia</p>
               </div>
             )}
@@ -122,7 +238,7 @@ export default function CoursePlayer({
             <div className="bg-slate-100/90 px-3 py-2 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 font-medium truncate max-w-sm sm:max-w-md shadow-2xs">
-                  <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <Lock className="w-3 h-3 text-emerald-600 shrink-0" aria-hidden="true" />
                   <span className="truncate">{activeMateri.tautan || 'https://...'}</span>
                 </span>
                 {domainHost && (
@@ -142,7 +258,7 @@ export default function CoursePlayer({
                   title="Muat Ulang Halaman (Reload)"
                   className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border border-slate-200 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-[11px]"
                 >
-                  <RotateCw className="w-3.5 h-3.5 text-slate-500" />
+                  <RotateCw className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                   <span className="hidden md:inline">Muat Ulang</span>
                 </button>
 
@@ -154,12 +270,12 @@ export default function CoursePlayer({
                 >
                   {isWebExpanded ? (
                     <>
-                      <Minimize2 className="w-3.5 h-3.5 text-slate-500" />
+                      <Minimize2 className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                       <span className="hidden md:inline">Tinggi Normal</span>
                     </>
                   ) : (
                     <>
-                      <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
+                      <Maximize2 className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                       <span className="hidden md:inline">Perluas Tampilan</span>
                     </>
                   )}
@@ -174,7 +290,7 @@ export default function CoursePlayer({
                     className="p-1.5 bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 hover:border-sky-300 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
                   >
                     <span>Buka Tab Baru</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
                   </a>
                 )}
               </div>
@@ -208,7 +324,7 @@ export default function CoursePlayer({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center text-gray-400 p-12 text-center h-full">
-                  <Globe className="w-12 h-12 mb-2 text-sky-400" />
+                  <Globe className="w-12 h-12 mb-2 text-sky-400" aria-hidden="true" />
                   <p className="text-sm font-semibold text-gray-700">Tautan web materi belum tersedia</p>
                 </div>
               )}
@@ -216,8 +332,11 @@ export default function CoursePlayer({
 
             {/* Sub-bar / Scroll helper tip */}
             <div className="bg-slate-50 px-3 py-1.5 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="flex items-center gap-1">
-                💡 <b>Petunjuk:</b> Gulir (*scroll down*) ke bawah pada card di atas untuk membaca seluruh isi materi web.
+              <span className="flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden="true" />
+                <span>
+                  <b>Petunjuk:</b> Gulir ke bawah pada kartu di atas untuk membaca seluruh isi materi web.
+                </span>
               </span>
               {activeMateri.tautan && (
                 <span className="hidden sm:inline text-[10px] text-slate-400">
@@ -235,13 +354,40 @@ export default function CoursePlayer({
                 src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&rel=0`}
                 title={activeMateri.judul}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                onLoad={(e) => {
+                  try {
+                    e.currentTarget.contentWindow?.postMessage(
+                      JSON.stringify({ event: 'listening', id: 'youtube-player' }),
+                      '*'
+                    );
+                  } catch {
+                    // Ignore cross-origin handshake error
+                  }
+                }}
               />
             ) : docUrl ? (
               <video
                 controls
+                controlsList="nodownload"
                 className="w-full h-full object-contain"
                 src={docUrl}
+                onTimeUpdate={(e) => {
+                  const video = e.currentTarget;
+                  if (!video.seeking && video.currentTime > maxTimeWatchedRef.current) {
+                    maxTimeWatchedRef.current = video.currentTime;
+                  }
+                  if (video.duration > 0 && video.currentTime >= video.duration * 0.95) {
+                    setIsContentCompleted(true);
+                  }
+                }}
+                onSeeking={(e) => {
+                  const video = e.currentTarget;
+                  if (!activeMateri.is_read && !isContentCompleted && video.currentTime > maxTimeWatchedRef.current + 1.5) {
+                    video.currentTime = maxTimeWatchedRef.current;
+                  }
+                }}
                 onEnded={() => {
+                  setIsContentCompleted(true);
                   if (!activeMateri.is_read) {
                     onMarkAsRead();
                   }
@@ -251,7 +397,7 @@ export default function CoursePlayer({
               </video>
             ) : (
               <div className="flex flex-col items-center justify-center text-gray-400 p-6 text-center">
-                <Video className="w-12 h-12 mb-2 text-gray-500" />
+                <Video className="w-12 h-12 mb-2 text-gray-500" aria-hidden="true" />
                 <p className="text-sm font-semibold text-white">Tautan video tidak tersedia</p>
               </div>
             )}
@@ -259,7 +405,7 @@ export default function CoursePlayer({
         ) : (
           <div className="p-8 md:p-12 bg-gray-50 flex items-center justify-center">
             <div className="text-center max-w-md">
-              <FileText className="w-16 h-16 text-teal-600/70 mx-auto mb-3" />
+              <FileText className="w-16 h-16 text-teal-600/70 mx-auto mb-3" aria-hidden="true" />
               <p className="text-gray-600 font-medium mb-5 text-sm md:text-base">
                 Silakan baca dokumen materi berikut
               </p>
@@ -270,9 +416,9 @@ export default function CoursePlayer({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#006A63] text-white rounded-lg font-bold text-sm hover:bg-[#00534D] active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4" aria-hidden="true" />
                   <span>Buka Materi</span>
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink className="w-4 h-4" aria-hidden="true" />
                 </a>
               ) : (
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold">
@@ -301,48 +447,58 @@ export default function CoursePlayer({
           <h3 className="text-base md:text-lg font-semibold text-[#1D315F] mb-1">Status Penyelesaian</h3>
           <p className="text-xs text-gray-500">
             {isH5P
-              ? 'Selesaikan seluruh kuis interaktif di dalam video atau klik tombol jika sudah selesai.'
+              ? 'Selesaikan seluruh interaksi dan kuis di dalam konten H5P hingga tuntas.'
               : isScorm
-                ? 'Selesaikan seluruh materi interaktif SCORM atau klik tombol jika sudah selesai.'
+                ? 'Selesaikan seluruh tahapan materi interaktif SCORM hingga mencapai status selesai.'
                 : isWeb
-                  ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di bawah untuk membuka materi selanjutnya.'
+                  ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di samping untuk membuka materi selanjutnya.'
                   : isVideo
-                    ? 'Tonton video hingga selesai atau klik tombol jika sudah selesai menonton materi ini.'
+                    ? 'Tonton video hingga selesai tanpa mempercepat bagian yang belum ditonton.'
                     : 'Tandai telah selesai jika Anda sudah membaca dan memahami materi ini.'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <button 
-            onClick={onMarkAsRead}
-            disabled={activeMateri.is_read}
-            className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
-              activeMateri.is_read 
-                ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200' 
-                : isH5P
-                  ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                  : isScorm
-                    ? 'bg-amber-600 text-white hover:bg-amber-700'
-                    : isWeb
-                      ? 'bg-teal-700 text-white hover:bg-teal-800 shadow-sm'
-                      : isVideo
-                        ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                        : 'bg-[#1D315F] text-white hover:bg-[#162847]'
-            }`}
-          >
-            {activeMateri.is_read ? (
-              <><CheckCircle2 className="w-5 h-5" /> {isVideo ? 'Selesai Ditonton' : isWeb ? 'Selesai Dibaca' : 'Selesai Dipelajari'}</>
-            ) : isH5P ? (
-              <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi H5P</>
-            ) : isScorm ? (
-              <><CheckCircle2 className="w-5 h-5" /> Selesaikan Materi SCORM</>
-            ) : isWeb ? (
-              <><CheckCircle2 className="w-5 h-5" /> Tandai Selesai Dibaca</>
-            ) : isVideo ? (
-              <><CheckCircle2 className="w-5 h-5" /> Tandai Telah Ditonton</>
-            ) : (
-              <><CheckCircle2 className="w-5 h-5" /> Tandai Telah Dibaca</>
-            )}
-          </button>
+          {isLockedUntilComplete ? (
+            <button
+              type="button"
+              disabled
+              className="px-5 py-2.5 rounded text-xs sm:text-sm font-semibold flex items-center gap-2 bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed"
+            >
+              <Clock className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />
+              <span>Materi Sedang Berlangsung: Selesaikan Konten Terlebih Dahulu</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onMarkAsRead}
+              disabled={activeMateri.is_read}
+              className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+                activeMateri.is_read
+                  ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
+                  : isH5P
+                    ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
+                    : isScorm
+                      ? 'bg-amber-600 text-white hover:bg-amber-700'
+                      : isWeb
+                        ? 'bg-teal-700 text-white hover:bg-teal-800 shadow-sm'
+                        : isVideo
+                          ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
+                          : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+              }`}
+            >
+              {activeMateri.is_read ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
+                  <span>{isVideo ? 'Selesai Ditonton' : isWeb ? 'Selesai Dibaca' : 'Selesai Dipelajari'}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
+                  <span>Tandai Telah Selesai</span>
+                </>
+              )}
+            </button>
+          )}
 
           {activeMateri.is_read && nextStepInfo?.type === 'same_modul_materi' && (
             <button
@@ -350,7 +506,7 @@ export default function CoursePlayer({
               className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             >
               <span>Materi Selanjutnya</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
 
@@ -369,7 +525,7 @@ export default function CoursePlayer({
               className="px-5 py-2.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             >
               <span>Kerjakan Kuis Modul</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
 
@@ -379,7 +535,7 @@ export default function CoursePlayer({
               className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             >
               <span>Lanjut Modul Berikutnya</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -387,4 +543,3 @@ export default function CoursePlayer({
     </div>
   );
 }
-

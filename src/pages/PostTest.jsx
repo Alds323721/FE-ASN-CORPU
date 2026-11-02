@@ -17,7 +17,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  Check
+  Check,
+  Send
 } from 'lucide-react';
 
 /* ── Navbar ─────────────────────────────────────────── */
@@ -223,7 +224,7 @@ const QuestionNavigation = ({ currentQuestion, totalQuestions, onNavigate, flagg
   };
 
   return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 mt-6">
+    <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6">
       <h3 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Navigasi Soal</h3>
 
       <div className="grid grid-cols-5 gap-2">
@@ -241,7 +242,19 @@ const QuestionNavigation = ({ currentQuestion, totalQuestions, onNavigate, flagg
   );
 };
 
-const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag, onAnswer, isDisabled, savedAnswer }) => {
+const QuestionCard = ({
+  questionNumber,
+  questionData,
+  onPrevious,
+  onNext,
+  onFlag,
+  onAnswer,
+  isDisabled,
+  savedAnswer,
+  isAllAnswered = false,
+  onSubmit = null,
+  submitting = false
+}) => {
   if (!questionData) return null;
 
   const handleSelectAnswer = (value) => {
@@ -260,7 +273,7 @@ const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag
           onClick={onFlag}
           className="flex items-center gap-2 text-gray-500 hover:text-[#F59E0B] transition-colors text-sm font-semibold"
         >
-          <Flag className="w-4 h-4" />
+          <Flag className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Tandai Ragu</span>
         </button>
       </div>
@@ -311,7 +324,7 @@ const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag
               <div className="shrink-0 self-start sm:self-center">
                 {isSelected ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
                     <span className="hidden sm:inline">Terpilih</span>
                   </div>
                 ) : (
@@ -330,7 +343,7 @@ const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag
           className={`px-6 py-2.5 border-2 border-[#1D315F] text-[#1D315F] font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${isDisabled.previous ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
             }`}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           Sebelumnya
         </button>
 
@@ -338,19 +351,33 @@ const QuestionCard = ({ questionNumber, questionData, onPrevious, onNext, onFlag
           onClick={onFlag}
           className="px-6 py-2.5 bg-[#F59E0B] text-white font-semibold rounded-md hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2"
         >
-          <Flag className="w-4 h-4" />
+          <Flag className="w-4 h-4" aria-hidden="true" />
           Ragu-ragu
         </button>
 
-        <button
-          onClick={onNext}
-          disabled={isDisabled.next}
-          className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
-            }`}
-        >
-          Selanjutnya
-          <ChevronLeft className="w-4 h-4 rotate-180" />
-        </button>
+        {isAllAnswered && onSubmit ? (
+          <button
+            type="button"
+            onClick={() => onSubmit(false)}
+            disabled={submitting}
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            <Check className="w-4 h-4" aria-hidden="true" />
+            <span>{submitting ? 'Mengumpulkan...' : 'Kumpulkan Jawaban'}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={isDisabled.next}
+            title={isDisabled.next ? 'Lengkapi seluruh soal untuk mengumpulkan' : undefined}
+            className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
+              }`}
+          >
+            <span>Selanjutnya</span>
+            <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -523,7 +550,7 @@ export default function PostTest({ onNavigate, onBack }) {
           <div class="text-left text-sm text-gray-600 space-y-2 pt-1">
             <p>Masih ada <b class="text-red-500">${unansweredCount} dari ${totalSoal} butir soal</b> yang belum Anda jawab.</p>
             <p class="text-xs text-amber-800 bg-amber-50 p-2.5 rounded border border-amber-200">
-              ⚠️ Post Test merupakan evaluasi akhir penentu kelulusan Anda. Soal yang tidak terjawab akan bernilai 0.
+              Catatan: Post Test merupakan evaluasi akhir penentu kelulusan Anda. Soal yang tidak terjawab akan bernilai 0.
             </p>
           </div>
         ` : `
@@ -574,12 +601,12 @@ export default function PostTest({ onNavigate, onBack }) {
         localStorage.setItem('userOpenCourseFeedback', 'true');
         await Swal.fire({
           icon: 'success',
-          title: '🎉 Selamat, Anda Lulus Post Test!',
+          title: 'Anda Lulus Post Test',
           html: `
             <div class="text-left text-sm text-gray-600 space-y-2.5 pt-1">
               <p>Jawaban Post Test Anda berhasil dikumpulkan dengan nilai akhir <b class="text-[#006A63]">${Math.round(resultPayload.nilai || 0)}/100</b> (<b>Lulus</b>).</p>
               <div class="p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-900 leading-relaxed">
-                📋 <b>Langkah Wajib Selanjutnya:</b><br/>
+                <b>Langkah Wajib Selanjutnya:</b><br/>
                 Silakan isi <b>Feedback & Evaluasi Kursus</b> terlebih dahulu pada halaman kursus untuk membuka <b>Halaman Kelulusan & Sertifikat Resmi</b>.
               </div>
             </div>
@@ -634,6 +661,7 @@ export default function PostTest({ onNavigate, onBack }) {
   );
 
   const currentQuestionData = testData.soal[currentQuestion - 1];
+  const isAllAnswered = testData.soal.length > 0 && answeredQuestionsSet.size >= testData.soal.length;
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
@@ -655,7 +683,7 @@ export default function PostTest({ onNavigate, onBack }) {
           </div>
 
           {/* Desktop Layout: QuestionCard + Navigation + Submit */}
-          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
             <div className="lg:col-span-8">
               <QuestionCard
                 questionNumber={currentQuestion}
@@ -665,6 +693,9 @@ export default function PostTest({ onNavigate, onBack }) {
                 onNext={handleNext}
                 onFlag={handleFlag}
                 onAnswer={handleAnswer}
+                isAllAnswered={isAllAnswered}
+                onSubmit={handleSubmit}
+                submitting={submitting}
                 isDisabled={{
                   previous: currentQuestion === 1,
                   next: currentQuestion === testData.soal.length,
@@ -688,8 +719,8 @@ export default function PostTest({ onNavigate, onBack }) {
                   disabled={submitting}
                   className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span className="text-lg">▶</span>
-                  {submitting ? 'Mengumpulkan...' : 'Submit Post Test'}
+                  <Send className="w-4 h-4" aria-hidden="true" />
+                  <span>{submitting ? 'Mengumpulkan...' : 'Submit Post Test'}</span>
                 </button>
               </div>
             </div>
@@ -697,7 +728,7 @@ export default function PostTest({ onNavigate, onBack }) {
 
           {/* Tablet & Mobile Layout: QuestionCard + Navigation */}
           <div className="lg:hidden">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
               {/* QuestionCard */}
               <div className="md:col-span-8">
                 <QuestionCard
@@ -708,6 +739,9 @@ export default function PostTest({ onNavigate, onBack }) {
                   onNext={handleNext}
                   onFlag={handleFlag}
                   onAnswer={handleAnswer}
+                  isAllAnswered={isAllAnswered}
+                  onSubmit={handleSubmit}
+                  submitting={submitting}
                   isDisabled={{
                     previous: currentQuestion === 1,
                     next: currentQuestion === testData.soal.length,
@@ -733,8 +767,8 @@ export default function PostTest({ onNavigate, onBack }) {
                 disabled={submitting}
                 className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <span className="text-lg">▶</span>
-                {submitting ? 'Mengumpulkan...' : 'Submit Post Test'}
+                <Send className="w-4 h-4" aria-hidden="true" />
+                <span>{submitting ? 'Mengumpulkan...' : 'Submit Post Test'}</span>
               </button>
             </div>
           </div>
