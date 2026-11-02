@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import { Lock, Clock, AlertCircle } from 'lucide-react';
@@ -14,6 +14,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeMateri, setActiveMateri] = useState(null);
+  const isMarkingReadRef = useRef(false);
 
   const courseId = localStorage.getItem('userCourseId');
 
@@ -255,8 +256,11 @@ export default function CourseDetail({ onNavigate, onBack }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleMarkAsRead = async () => {
+  const handleMarkAsRead = async (isManual = true) => {
     if (!activeMateri) return;
+    if (isManual === false && (activeMateri.is_read || isMarkingReadRef.current)) return;
+
+    isMarkingReadRef.current = true;
     try {
       await api.post(`/user/courses/${courseId}/materi/${activeMateri.materi_id}/read`);
       
@@ -265,6 +269,21 @@ export default function CourseDetail({ onNavigate, onBack }) {
       const updatedCourse = res.data?.data;
       if (updatedCourse) {
         setCourseData(updatedCourse);
+      }
+
+      // Jika penyelesaian dipicu otomatis dari dalam pemutar video/SCORM/H5P, jangan paksa unmount pemutar video
+      if (isManual === false) {
+        setActiveMateri(prev => (prev ? { ...prev, is_read: true } : prev));
+        Swal.fire({
+          icon: 'success',
+          toast: true,
+          position: 'top-end',
+          title: 'Materi Selesai Dipelajari',
+          text: 'Progres Anda telah tersimpan. Klik tombol Selanjutnya untuk beralih.',
+          timer: 3500,
+          showConfirmButton: false
+        });
+        return;
       }
 
       const allModuls = updatedCourse?.modul || courseData?.modul || [];
@@ -368,6 +387,8 @@ export default function CourseDetail({ onNavigate, onBack }) {
         text: error.response?.data?.message || 'Terjadi kesalahan saat menyimpan progres.',
         confirmButtonColor: '#006A63'
       });
+    } finally {
+      isMarkingReadRef.current = false;
     }
   };
 
@@ -383,22 +404,23 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
         if (!data) return;
 
-        // 1. Deteksi H5P selesai
+        // 1. Deteksi H5P selesai (hanya completed / passed, abaikan answered di tengah video)
         const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
         const isH5PCompleted =
-          (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed') || verb.includes('answered'))) ||
+          (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed'))) ||
           data?.event === 'h5p-completed' ||
+          data?.type === 'h5p-completed' ||
           data?.action === 'completed';
 
         if (isH5PCompleted && activeMateri?.materi_id && !activeMateri.is_read && activeMateri.tipe === 'h5p') {
-          handleMarkAsRead();
+          handleMarkAsRead(false);
           return;
         }
 
         // 2. Deteksi YouTube player selesai (state 0 = ENDED)
         if (data?.event === 'onStateChange' && Number(data?.info) === 0) {
           if (activeMateri?.materi_id && !activeMateri.is_read && isMateriVideo(activeMateri)) {
-            handleMarkAsRead();
+            handleMarkAsRead(false);
             return;
           }
         }
@@ -430,7 +452,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
       const s = String(status || '').toLowerCase();
       if ((s === 'completed' || s === 'passed') && activeMateri?.materi_id && !activeMateri.is_read) {
         window.postMessage({ type: 'scorm-completed', materiId: activeMateri.materi_id }, '*');
-        handleMarkAsRead();
+        handleMarkAsRead(false);
       }
     };
 

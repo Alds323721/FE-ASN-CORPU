@@ -31,11 +31,22 @@ export default function CoursePlayer({
   const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [isContentCompleted, setIsContentCompleted] = useState(Boolean(activeMateri?.is_read));
   const maxTimeWatchedRef = useRef(0);
+  const hasAutoMarkedRef = useRef(Boolean(activeMateri?.is_read));
 
   useEffect(() => {
-    setIsContentCompleted(Boolean(activeMateri?.is_read));
+    const alreadyRead = Boolean(activeMateri?.is_read);
+    setIsContentCompleted(alreadyRead);
+    hasAutoMarkedRef.current = alreadyRead;
     maxTimeWatchedRef.current = 0;
   }, [activeMateri?.materi_id, activeMateri?.is_read]);
+
+  const triggerAutoComplete = () => {
+    setIsContentCompleted(true);
+    if (!activeMateri?.is_read && !hasAutoMarkedRef.current) {
+      hasAutoMarkedRef.current = true;
+      onMarkAsRead(false);
+    }
+  };
 
   // Listen for completion events from H5P, SCORM, or YouTube iframe
   useEffect(() => {
@@ -43,8 +54,15 @@ export default function CoursePlayer({
       if (!event.data) return;
 
       if (typeof event.data === 'object') {
-        if (event.data.type === 'h5p-completed' || event.data.type === 'scorm-completed') {
-          setIsContentCompleted(true);
+        const verb = event.data?.statement?.verb?.id || event.data?.verb || event.data?.context?.verb;
+        if (
+          event.data.type === 'h5p-completed' ||
+          event.data.event === 'h5p-completed' ||
+          event.data.type === 'scorm-completed' ||
+          event.data.action === 'completed' ||
+          (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed')))
+        ) {
+          triggerAutoComplete();
         }
         return;
       }
@@ -52,12 +70,16 @@ export default function CoursePlayer({
       if (typeof event.data === 'string') {
         try {
           const data = JSON.parse(event.data);
+          const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
           if (
             data.type === 'h5p-completed' ||
+            data.event === 'h5p-completed' ||
             data.type === 'scorm-completed' ||
-            (data.event === 'onStateChange' && data.info === 0)
+            data.action === 'completed' ||
+            (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed'))) ||
+            (data.event === 'onStateChange' && Number(data.info) === 0)
           ) {
-            setIsContentCompleted(true);
+            triggerAutoComplete();
           }
         } catch {
           // Ignore non-JSON postMessage payloads
@@ -67,7 +89,118 @@ export default function CoursePlayer({
 
     window.addEventListener('message', handlePlayerMessage);
     return () => window.removeEventListener('message', handlePlayerMessage);
-  }, [activeMateri?.materi_id]);
+  }, [activeMateri?.materi_id, activeMateri?.is_read]);
+
+  // Direct DOM / H5P instance observer for H5P & SCORM iframes (handles nested .h5p-iframe & videos without endscreen)
+  useEffect(() => {
+    if (!activeMateri || (activeMateri.tipe !== 'h5p' && activeMateri.tipe !== 'scorm')) return;
+    if (activeMateri.is_read || isContentCompleted) return;
+
+    const canCompleteH5pInstance = (inst) => {
+      if (!inst) return true;
+      if (typeof inst.hasUncompletedRequiredInteractions === 'function') {
+        return !inst.hasUncompletedRequiredInteractions();
+      }
+      return true;
+    };
+
+    const inspectWindowAndBind = (win) => {
+      if (!win) return;
+      try {
+        const doc = win.document;
+        if (!doc) return;
+
+        // 1. Inspect H5P instances and externalDispatcher if available in this window
+        if (win.H5P) {
+          if (win.H5P.externalDispatcher && !win.__lmsH5pBound) {
+            win.__lmsH5pBound = true;
+            win.H5P.externalDispatcher.on('xAPI', (event) => {
+              try {
+                const stmt = event?.data?.statement;
+                if (!stmt) return;
+                const verbId = stmt?.verb?.id || '';
+                const isCompletedVerb = verbId.includes('completed') || verbId.includes('passed');
+                const isAnsweredVerb = verbId.includes('answered');
+                const isRootEvent = !stmt?.context?.contextActivities?.parent;
+
+                const categoryArr = stmt?.context?.contextActivities?.category || [];
+                const categoryId = Array.isArray(categoryArr) && categoryArr[0] ? categoryArr[0].id || '' : '';
+                const subContentId = stmt?.object?.definition?.extensions?.['http://h5p.org/x-api/h5p-subContentId'] || '';
+                const isSummaryInteraction =
+                  categoryId.includes('H5P.Summary') || subContentId === 'summary-subcontent-id';
+
+                if ((isCompletedVerb && isRootEvent) || ((isCompletedVerb || isAnsweredVerb) && isSummaryInteraction)) {
+                  const instances = win.H5P.instances || [];
+                  if (instances.every(canCompleteH5pInstance)) {
+                    triggerAutoComplete();
+                  }
+                }
+              } catch {
+                // Ignore dispatcher error
+              }
+            });
+          }
+
+          const instances = win.H5P.instances || [];
+          instances.forEach((inst) => {
+            if (inst?.video && typeof inst.video.on === 'function' && !inst.video.__lmsVideoBound) {
+              inst.video.__lmsVideoBound = true;
+              inst.video.on('stateChange', (event) => {
+                const state = event?.data;
+                const endedConst = win.H5P?.Video?.ENDED !== undefined ? win.H5P.Video.ENDED : 0;
+                if ((state === endedConst || state === 0) && canCompleteH5pInstance(inst)) {
+                  triggerAutoComplete();
+                }
+              });
+            }
+          });
+        }
+
+        // 2. Inspect HTML5 <video> elements inside this document
+        doc.querySelectorAll('video').forEach((vid) => {
+          const checkVideoEnded = () => {
+            if (vid.duration > 0 && (vid.ended || vid.currentTime >= vid.duration - 0.35)) {
+              const instances = win.H5P?.instances || [];
+              if (instances.every(canCompleteH5pInstance)) {
+                triggerAutoComplete();
+              }
+            }
+          };
+
+          if (!vid.__lmsDomVideoBound) {
+            vid.__lmsDomVideoBound = true;
+            vid.addEventListener('ended', checkVideoEnded);
+            vid.addEventListener('timeupdate', checkVideoEnded);
+          }
+          checkVideoEnded();
+        });
+
+        // 3. Recurse into nested iframes (e.g. .h5p-iframe)
+        doc.querySelectorAll('iframe').forEach((nestedFrame) => {
+          try {
+            if (nestedFrame.contentWindow) {
+              inspectWindowAndBind(nestedFrame.contentWindow);
+            }
+          } catch {
+            // Cross-origin nested iframe ignored
+          }
+        });
+      } catch {
+        // Cross-origin frame access ignored (handled by H5pService postMessage)
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      const playerFrame =
+        document.getElementById('h5p-interactive-player') ||
+        document.getElementById('scorm-interactive-player');
+      if (playerFrame?.contentWindow) {
+        inspectWindowAndBind(playerFrame.contentWindow);
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [activeMateri?.materi_id, activeMateri?.tipe, activeMateri?.is_read, isContentCompleted]);
 
   // Auto-pause video, YouTube, H5P, and SCORM when user switches tab or minimizes window
   useEffect(() => {
@@ -163,7 +296,8 @@ export default function CoursePlayer({
   const domainHost = isWeb ? getHostFromUrl(activeMateri.tautan) : '';
 
   const requiresCompletionGuard = isH5P || isScorm || isVideo;
-  const isLockedUntilComplete = requiresCompletionGuard && !activeMateri.is_read && !isContentCompleted;
+  const isMateriCompleted = Boolean(activeMateri.is_read || isContentCompleted);
+  const isLockedUntilComplete = requiresCompletionGuard && !isMateriCompleted;
 
   // URL embed via backend proxy agar terbebas dari X-Frame-Options & tampil langsung di card
   const webviewEmbedUrl = (isWeb && activeMateri?.tautan)
@@ -389,7 +523,7 @@ export default function CoursePlayer({
                 onEnded={() => {
                   setIsContentCompleted(true);
                   if (!activeMateri.is_read) {
-                    onMarkAsRead();
+                    onMarkAsRead(false);
                   }
                 }}
               >
@@ -446,15 +580,17 @@ export default function CoursePlayer({
         <div>
           <h3 className="text-base md:text-lg font-semibold text-[#1D315F] mb-1">Status Penyelesaian</h3>
           <p className="text-xs text-gray-500">
-            {isH5P
-              ? 'Selesaikan seluruh interaksi dan kuis di dalam konten H5P hingga tuntas.'
-              : isScorm
-                ? 'Selesaikan seluruh tahapan materi interaktif SCORM hingga mencapai status selesai.'
-                : isWeb
-                  ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di samping untuk membuka materi selanjutnya.'
-                  : isVideo
-                    ? 'Tonton video hingga selesai tanpa mempercepat bagian yang belum ditonton.'
-                    : 'Tandai telah selesai jika Anda sudah membaca dan memahami materi ini.'}
+            {isMateriCompleted
+              ? 'Materi ini telah selesai dipelajari. Silakan klik tombol Selanjutnya untuk beralih ke tahapan berikutnya.'
+              : isH5P
+                ? 'Selesaikan seluruh interaksi dan kuis di dalam konten H5P hingga tuntas.'
+                : isScorm
+                  ? 'Selesaikan seluruh tahapan materi interaktif SCORM hingga mencapai status selesai.'
+                  : isWeb
+                    ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di samping untuk membuka materi selanjutnya.'
+                    : isVideo
+                      ? 'Tonton video hingga selesai tanpa mempercepat bagian yang belum ditonton.'
+                      : 'Tandai telah selesai jika Anda sudah membaca dan memahami materi ini.'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -465,78 +601,88 @@ export default function CoursePlayer({
               className="px-5 py-2.5 rounded text-xs sm:text-sm font-semibold flex items-center gap-2 bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed"
             >
               <Clock className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />
-              <span>Materi Sedang Berlangsung: Selesaikan Konten Terlebih Dahulu</span>
+              <span>
+                {isH5P || isScorm
+                  ? 'Selesaikan Video Interaktif Dahulu'
+                  : 'Materi Sedang Berlangsung: Selesaikan Konten Terlebih Dahulu'}
+              </span>
             </button>
-          ) : (
+          ) : !isMateriCompleted ? (
             <button
               type="button"
-              onClick={onMarkAsRead}
-              disabled={activeMateri.is_read}
+              onClick={() => onMarkAsRead(true)}
               className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
-                activeMateri.is_read
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
-                  : isH5P
-                    ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                    : isScorm
-                      ? 'bg-amber-600 text-white hover:bg-amber-700'
-                      : isWeb
-                        ? 'bg-teal-700 text-white hover:bg-teal-800 shadow-sm'
-                        : isVideo
-                          ? 'bg-[#006A63] text-white hover:bg-[#00534D]'
-                          : 'bg-[#1D315F] text-white hover:bg-[#162847]'
+                isWeb
+                  ? 'bg-teal-700 text-white hover:bg-teal-800 shadow-sm'
+                  : 'bg-[#1D315F] text-white hover:bg-[#162847]'
               }`}
             >
-              {activeMateri.is_read ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-                  <span>{isVideo ? 'Selesai Ditonton' : isWeb ? 'Selesai Dibaca' : 'Selesai Dipelajari'}</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-                  <span>Tandai Telah Selesai</span>
-                </>
+              <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
+              <span>Tandai Telah Selesai</span>
+            </button>
+          ) : (
+            <>
+              <span className="px-4 py-2.5 rounded text-xs sm:text-sm font-bold flex items-center gap-2 bg-green-50 text-green-700 border border-green-200">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" aria-hidden="true" />
+                <span>{isVideo ? 'Selesai Ditonton' : isWeb ? 'Selesai Dibaca' : 'Selesai Dipelajari'}</span>
+              </span>
+
+              {nextStepInfo?.type === 'same_modul_materi' && (
+                <button
+                  type="button"
+                  onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
+                  className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Selanjutnya: Materi Berikutnya</span>
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </button>
               )}
-            </button>
-          )}
 
-          {activeMateri.is_read && nextStepInfo?.type === 'same_modul_materi' && (
-            <button
-              onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
-              className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-            >
-              <span>Materi Selanjutnya</span>
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          )}
+              {nextStepInfo?.type === 'modul_kuis' &&
+                !nextStepInfo?.kuis?.is_completed &&
+                !courseData?.post_test?.is_completed &&
+                courseData?.status_pendaftaran !== 'lulus' &&
+                courseData?.status_pendaftaran !== 'selesai' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('userModulId', nextStepInfo.modulId);
+                    localStorage.setItem('userKuisId', nextStepInfo.kuis.kuis_id);
+                    onNavigate('kuis');
+                  }}
+                  className="px-5 py-2.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Selanjutnya: Kerjakan Kuis Modul</span>
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </button>
+              )}
 
-          {activeMateri.is_read &&
-            nextStepInfo?.type === 'modul_kuis' &&
-            !nextStepInfo?.kuis?.is_completed &&
-            !courseData?.post_test?.is_completed &&
-            courseData?.status_pendaftaran !== 'lulus' &&
-            courseData?.status_pendaftaran !== 'selesai' && (
-            <button
-              onClick={() => {
-                localStorage.setItem('userModulId', nextStepInfo.modulId);
-                localStorage.setItem('userKuisId', nextStepInfo.kuis.kuis_id);
-                onNavigate('kuis');
-              }}
-              className="px-5 py-2.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-            >
-              <span>Kerjakan Kuis Modul</span>
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          )}
+              {nextStepInfo?.type === 'next_modul_materi' && (
+                <button
+                  type="button"
+                  onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
+                  className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Selanjutnya: Modul Berikutnya</span>
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </button>
+              )}
 
-          {activeMateri.is_read && nextStepInfo?.type === 'next_modul_materi' && (
-            <button
-              onClick={() => onNextMateri(nextStepInfo.materi, nextStepInfo.modulId)}
-              className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-            >
-              <span>Lanjut Modul Berikutnya</span>
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </button>
+              {nextStepInfo?.type === 'all_completed' &&
+                courseData?.post_test &&
+                !courseData?.post_test?.is_completed &&
+                courseData?.status_pendaftaran !== 'lulus' &&
+                courseData?.status_pendaftaran !== 'selesai' && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('post-test')}
+                  className="px-5 py-2.5 bg-[#006A63] text-white hover:bg-[#00534D] rounded text-sm font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Selanjutnya: Mulai Post Test</span>
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
