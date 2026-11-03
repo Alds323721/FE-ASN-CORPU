@@ -145,11 +145,30 @@ const LaporanProgress = ({ onNavigate, onLogout }) => {
       case 'sedang_berjalan':
         return 'bg-blue-100 text-blue-700';
       case 'menunggu_post_test':
-        return 'bg-amber-100 text-amber-700';
+        return 'bg-amber-100 text-amber-800';
       case 'tidak_lulus':
         return 'bg-red-100 text-red-700';
       default:
         return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'menunggu_post_test':
+        return 'Menunggu Post Test';
+      case 'sedang_berjalan':
+        return 'Sedang Berjalan';
+      case 'lulus':
+        return 'Lulus';
+      case 'tidak_lulus':
+        return 'Tidak Lulus';
+      case 'selesai':
+        return 'Selesai';
+      case 'terdaftar':
+        return 'Terdaftar';
+      default:
+        return (status || 'Terdaftar').replaceAll('_', ' ');
     }
   };
 
@@ -336,8 +355,8 @@ const LaporanProgress = ({ onNavigate, onLogout }) => {
                             {row.nilai_post_test !== null ? row.nilai_post_test : '-'}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full capitalize ${getStatusBadge(row.status)}`}>
-                              {(row.status || 'terdaftar').replace('_', ' ')}
+                            <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${getStatusBadge(row.status)}`}>
+                              {getStatusLabel(row.status)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">

@@ -212,7 +212,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         course: user.judul_pembelajaran || 'Belum terdaftar',
         community: user.nama_komunitas || 'BKPSDM',
         progress: user.progres ?? 0,
-        status: user.status_pendaftaran === 'lulus' ? 'Lulus' : (user.progres > 0 ? 'Sedang Berjalan' : 'Belum Mulai'),
+        status: user.status_pendaftaran === 'lulus' || user.status_pendaftaran === 'selesai'
+          ? 'Lulus'
+          : (user.status_pendaftaran === 'menunggu_post_test'
+            ? 'Menunggu Post Test'
+            : (user.progres > 0 ? 'Sedang Berjalan' : 'Belum Mulai')),
         hasCertificate: !!user.has_sertifikat,
         certificateId: user.sertifikat?.sertifikat_id,
         certificateUrl: user.sertifikat?.download_url,
@@ -425,7 +429,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Lulus':
+      case 'Selesai':
         return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 border border-green-200 text-green-700">Lulus</span>;
+      case 'Menunggu Post Test':
+        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800">Menunggu Post Test</span>;
       case 'Sedang Berjalan':
         return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 border border-orange-200 text-orange-700">Sedang Berjalan</span>;
       case 'Belum Mulai':
