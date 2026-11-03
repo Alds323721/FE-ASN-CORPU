@@ -70,16 +70,31 @@ export default function AuthModal({
       }
     }
 
-    const savedOtpLockoutUntil = sessionStorage.getItem('bkpsdm_otp_lockout_until');
+    // Bersihkan legacy un-scoped OTP lockout jika ada
+    sessionStorage.removeItem('bkpsdm_otp_lockout_until');
+  }, []);
+
+  // Sinkronisasi status lockout OTP khusus per NIP yang sedang aktif diinput
+  useEffect(() => {
+    const cleanNip = resetNip.trim();
+    if (!cleanNip) {
+      setOtpLockoutCountdown(0);
+      return;
+    }
+    const key = `bkpsdm_otp_lockout_until_${cleanNip}`;
+    const savedOtpLockoutUntil = sessionStorage.getItem(key);
     if (savedOtpLockoutUntil) {
       const remaining = Math.ceil((parseInt(savedOtpLockoutUntil, 10) - Date.now()) / 1000);
       if (remaining > 0) {
         setOtpLockoutCountdown(remaining);
       } else {
-        sessionStorage.removeItem('bkpsdm_otp_lockout_until');
+        sessionStorage.removeItem(key);
+        setOtpLockoutCountdown(0);
       }
+    } else {
+      setOtpLockoutCountdown(0);
     }
-  }, []);
+  }, [resetNip]);
 
   useEffect(() => {
     let timer;
@@ -105,7 +120,10 @@ export default function AuthModal({
       timer = setTimeout(() => {
         setOtpLockoutCountdown((prev) => {
           if (prev <= 1) {
-            sessionStorage.removeItem('bkpsdm_otp_lockout_until');
+            const cleanNip = resetNip.trim();
+            if (cleanNip) {
+              sessionStorage.removeItem(`bkpsdm_otp_lockout_until_${cleanNip}`);
+            }
             return 0;
           }
           return prev - 1;
@@ -113,7 +131,7 @@ export default function AuthModal({
       }, 1000);
     }
     return () => clearTimeout(timer);
-  }, [otpLockoutCountdown]);
+  }, [otpLockoutCountdown, resetNip]);
 
   const formatCountdown = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -278,7 +296,10 @@ export default function AuthModal({
       if (err.response?.status === 429) {
         const retryAfter = Number(resData?.retry_after) || 1800;
         setOtpLockoutCountdown(retryAfter);
-        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+        const cleanNip = resetNip.trim();
+        if (cleanNip) {
+          sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
+        }
         setResetError(resData?.message || 'Batas pengiriman ulang OTP telah tercapai (3 kali). Akses dibatasi selama 30 menit.');
       } else {
         setResetError(resData?.message || 'Gagal mengirim ulang kode OTP.');
@@ -480,7 +501,10 @@ export default function AuthModal({
                             if (err.response?.status === 429) {
                               const retryAfter = Number(resData?.retry_after) || 1800;
                               setOtpLockoutCountdown(retryAfter);
-                              sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+                              const cleanNip = resetNip.trim();
+                              if (cleanNip) {
+                                sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
+                              }
                               setResetError(resData?.message || 'Batas pengiriman OTP telah tercapai. Akses dibatasi selama 30 menit.');
                             } else {
                               setResetError(resData?.message || 'Terjadi kesalahan saat memproses permintaan.');
@@ -536,7 +560,7 @@ export default function AuthModal({
                                   }
                                 }}
                                 required
-                                disabled={resetLoading || otpLockoutCountdown > 0}
+                                disabled={resetLoading}
                                 className={`w-full pl-10 sm:pl-12 pr-12 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
                                   isNipError || nipLookupError
                                     ? 'border-red-400 focus:ring-red-300 focus:border-red-500 bg-red-50/20'
@@ -696,6 +720,7 @@ export default function AuthModal({
                               setNipCheckLoading(false);
                               setResetCaptchaToken('');
                               setLoginCaptchaToken('');
+                              setOtpLockoutCountdown(0);
                               resetRecaptchaRef.current?.reset();
                               loginRecaptchaRef.current?.reset();
                             }}
@@ -733,7 +758,10 @@ export default function AuthModal({
                       if (err.response?.status === 429) {
                         const retryAfter = Number(err.response?.data?.retry_after) || 1800;
                         setOtpLockoutCountdown(retryAfter);
-                        sessionStorage.setItem('bkpsdm_otp_lockout_until', String(Date.now() + retryAfter * 1000));
+                        const cleanNip = resetNip.trim();
+                        if (cleanNip) {
+                          sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
+                        }
                         setResetError(err.response?.data?.message || 'Anda telah 3 kali salah memasukkan kode OTP. Akses dibatasi selama 30 menit.');
                       } else {
                         setResetError(err.response?.data?.message || 'Kode OTP tidak valid atau kedaluwarsa.');
@@ -857,7 +885,10 @@ export default function AuthModal({
                         password_baru_confirmation: resetConfirmPassword
                       });
 
-                      const savedNip = resetNip;
+                      const savedNip = resetNip.trim();
+                      if (savedNip) {
+                        sessionStorage.removeItem(`bkpsdm_otp_lockout_until_${savedNip}`);
+                      }
                       sessionStorage.removeItem('bkpsdm_otp_lockout_until');
                       setOtpLockoutCountdown(0);
                       setResetSuccess(response.data?.message || 'Kata sandi berhasil dibuat. Silakan masuk dengan kata sandi baru Anda.');
