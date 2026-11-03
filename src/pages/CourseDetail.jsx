@@ -404,10 +404,8 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
         if (!data) return;
 
-        // 1. Deteksi H5P selesai (hanya completed / passed, abaikan answered di tengah video)
-        const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
+        // 1. Deteksi H5P selesai (hanya dari sinyal eksplisit h5p-completed yang sudah melewati validasi durasi akhir video)
         const isH5PCompleted =
-          (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed'))) ||
           data?.event === 'h5p-completed' ||
           data?.type === 'h5p-completed' ||
           data?.action === 'completed';
@@ -418,7 +416,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
 
         // 2. Deteksi YouTube player selesai (state 0 = ENDED)
-        if (data?.event === 'onStateChange' && Number(data?.info) === 0) {
+        if (data?.event === 'onStateChange' && typeof data?.info === 'number' && data.info === 0) {
           if (activeMateri?.materi_id && !activeMateri.is_read && isMateriVideo(activeMateri)) {
             handleMarkAsRead(false);
             return;

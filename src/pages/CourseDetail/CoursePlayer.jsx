@@ -54,13 +54,11 @@ export default function CoursePlayer({
       if (!event.data) return;
 
       if (typeof event.data === 'object') {
-        const verb = event.data?.statement?.verb?.id || event.data?.verb || event.data?.context?.verb;
         if (
           event.data.type === 'h5p-completed' ||
           event.data.event === 'h5p-completed' ||
           event.data.type === 'scorm-completed' ||
-          event.data.action === 'completed' ||
-          (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed')))
+          event.data.action === 'completed'
         ) {
           triggerAutoComplete();
         }
@@ -70,14 +68,12 @@ export default function CoursePlayer({
       if (typeof event.data === 'string') {
         try {
           const data = JSON.parse(event.data);
-          const verb = data?.statement?.verb?.id || data?.verb || data?.context?.verb;
           if (
             data.type === 'h5p-completed' ||
             data.event === 'h5p-completed' ||
             data.type === 'scorm-completed' ||
             data.action === 'completed' ||
-            (typeof verb === 'string' && (verb.includes('completed') || verb.includes('passed'))) ||
-            (data.event === 'onStateChange' && Number(data.info) === 0)
+            (data.event === 'onStateChange' && typeof data.info === 'number' && data.info === 0)
           ) {
             triggerAutoComplete();
           }
@@ -98,10 +94,69 @@ export default function CoursePlayer({
 
     const canCompleteH5pInstance = (inst) => {
       if (!inst) return true;
-      if (typeof inst.hasUncompletedRequiredInteractions === 'function') {
-        return !inst.hasUncompletedRequiredInteractions();
+      try {
+        if (typeof inst.hasUncompletedRequiredInteractions === 'function' && inst.hasUncompletedRequiredInteractions()) {
+          return false;
+        }
+        if (Array.isArray(inst.interactions)) {
+          for (let i = 0; i < inst.interactions.length; i++) {
+            const inter = inst.interactions[i];
+            if (inter && typeof inter.getRequiresCompletion === 'function' && inter.getRequiresCompletion()) {
+              if (typeof inter.hasFullScore === 'function' && !inter.hasFullScore()) {
+                return false;
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore inspection error
       }
       return true;
+    };
+
+    const isFrameVideoAtEnd = (win, doc) => {
+      if (!win || !doc) return false;
+      try {
+        const inst = Array.isArray(win.H5P?.instances) ? win.H5P.instances[0] : null;
+        const vidEl = doc.querySelector('video');
+        const hasH5pVideo = Boolean(inst && inst.video);
+
+        if (!hasH5pVideo && !vidEl) {
+          return true;
+        }
+
+        let duration = 0;
+        let currentTime = 0;
+
+        if (inst && typeof inst.getDuration === 'function') {
+          duration = Number(inst.getDuration()) || 0;
+        }
+        if (!duration && inst?.video && typeof inst.video.getDuration === 'function') {
+          duration = Number(inst.video.getDuration()) || 0;
+        }
+        if (!duration && vidEl && vidEl.duration > 0 && Number.isFinite(vidEl.duration)) {
+          duration = Number(vidEl.duration) || 0;
+        }
+
+        if (inst?.video && typeof inst.video.getCurrentTime === 'function') {
+          currentTime = Number(inst.video.getCurrentTime()) || 0;
+        }
+        if (vidEl && vidEl.currentTime > currentTime) {
+          currentTime = Number(vidEl.currentTime) || 0;
+        }
+
+        if (duration <= 0) {
+          return false;
+        }
+
+        if (vidEl && vidEl.ended && currentTime >= duration - 2) {
+          return true;
+        }
+
+        return currentTime >= duration - 1.5;
+      } catch {
+        return false;
+      }
     };
 
     const inspectWindowAndBind = (win) => {
@@ -116,20 +171,28 @@ export default function CoursePlayer({
             win.__lmsH5pBound = true;
             win.H5P.externalDispatcher.on('xAPI', (event) => {
               try {
+                // Gerbang Mutlak: Tolak semua xAPI jika video belum mencapai menit akhir
+                if (!isFrameVideoAtEnd(win, doc)) return;
+
                 const stmt = event?.data?.statement;
                 if (!stmt) return;
                 const verbId = stmt?.verb?.id || '';
                 const isCompletedVerb = verbId.includes('completed') || verbId.includes('passed');
-                const isAnsweredVerb = verbId.includes('answered');
-                const isRootEvent = !stmt?.context?.contextActivities?.parent;
+                const subContentId = stmt?.object?.definition?.extensions?.['http://h5p.org/x-api/h5p-subContentId'] || '';
+                const isRootEvent = !subContentId && !stmt?.context?.contextActivities?.parent;
 
                 const categoryArr = stmt?.context?.contextActivities?.category || [];
                 const categoryId = Array.isArray(categoryArr) && categoryArr[0] ? categoryArr[0].id || '' : '';
-                const subContentId = stmt?.object?.definition?.extensions?.['http://h5p.org/x-api/h5p-subContentId'] || '';
                 const isSummaryInteraction =
-                  categoryId.includes('H5P.Summary') || subContentId === 'summary-subcontent-id';
+                  categoryId.includes('H5P.Summary') || String(subContentId).includes('summary');
+                const isSummaryCompleted = Boolean(
+                  stmt?.result && (
+                    stmt.result.completion === true ||
+                    (stmt.result.score && Number(stmt.result.score.scaled) >= 1)
+                  )
+                );
 
-                if ((isCompletedVerb && isRootEvent) || ((isCompletedVerb || isAnsweredVerb) && isSummaryInteraction)) {
+                if ((isCompletedVerb && isRootEvent) || (isSummaryInteraction && isSummaryCompleted)) {
                   const instances = win.H5P.instances || [];
                   if (instances.every(canCompleteH5pInstance)) {
                     triggerAutoComplete();
@@ -148,7 +211,12 @@ export default function CoursePlayer({
               inst.video.on('stateChange', (event) => {
                 const state = event?.data;
                 const endedConst = win.H5P?.Video?.ENDED !== undefined ? win.H5P.Video.ENDED : 0;
-                if ((state === endedConst || state === 0) && canCompleteH5pInstance(inst)) {
+                if (
+                  typeof state === 'number' &&
+                  (state === endedConst || state === 0) &&
+                  isFrameVideoAtEnd(win, doc) &&
+                  canCompleteH5pInstance(inst)
+                ) {
                   triggerAutoComplete();
                 }
               });
@@ -159,7 +227,11 @@ export default function CoursePlayer({
         // 2. Inspect HTML5 <video> elements inside this document
         doc.querySelectorAll('video').forEach((vid) => {
           const checkVideoEnded = () => {
-            if (vid.duration > 0 && (vid.ended || vid.currentTime >= vid.duration - 0.35)) {
+            if (
+              vid.duration > 0 &&
+              (vid.ended || vid.currentTime >= vid.duration - 0.5) &&
+              isFrameVideoAtEnd(win, doc)
+            ) {
               const instances = win.H5P?.instances || [];
               if (instances.every(canCompleteH5pInstance)) {
                 triggerAutoComplete();
