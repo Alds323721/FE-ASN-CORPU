@@ -1,5 +1,5 @@
 import React from 'react';
-import heroImg from '../../assets/BG_BKPSDM.jpg';
+import heroImg from '../../assets/BG_BKPSDM.webp';
 
 export default function HeroSection() {
   return (

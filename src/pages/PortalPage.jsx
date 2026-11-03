@@ -9,7 +9,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import portalBannerImg from '../assets/LANDING PAGE BKPSDM.jpg.jpeg';
+import portalBannerImg from '../assets/LANDING PAGE BKPSDM.webp';
 import logoBkpsdm from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
 
