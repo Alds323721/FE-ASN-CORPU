@@ -60,19 +60,33 @@ export default function CourseOutlineSidebar({
   onSelectFeedbackSection,
   onOpenGraduationPage
 }) {
+  const asideRef = useRef(null);
   const activeItemRef = useRef(null);
 
   useEffect(() => {
-    if (activeItemRef.current) {
-      activeItemRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest'
-      });
+    const container = asideRef.current;
+    const item = activeItemRef.current;
+    if (!container || !item) return;
+
+    const firstModul = courseData?.modul?.[0];
+    const firstMateri = firstModul?.materi?.[0];
+    if (firstMateri && String(activeMateri?.materi_id) === String(firstMateri.materi_id)) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
-  }, [activeMateri?.materi_id]);
+
+    const containerRect = container.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const offsetTop = itemRect.top - containerRect.top + container.scrollTop;
+    const targetTop = Math.max(0, offsetTop - container.clientHeight / 3);
+    container.scrollTo({
+      top: targetTop,
+      behavior: 'smooth'
+    });
+  }, [activeMateri?.materi_id, courseData?.modul]);
 
   return (
-    <aside className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 overflow-y-auto max-h-[650px] custom-scrollbar">
+    <aside ref={asideRef} className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6 overflow-y-auto max-h-[650px] custom-scrollbar">
       <h2 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Silabus Pelatihan</h2>
 
       {courseData?.modul?.map((modul) => (
@@ -297,21 +311,34 @@ export default function CourseOutlineSidebar({
             index="Feedback"
             title="Kuesioner Feedback Kursus"
             subtitle={
-              courseData?.kuesioner_selesai
-                ? 'Evaluasi kursus telah selesai diisi'
-                : 'Wajib diisi sebelum ke Halaman Kelulusan'
+              !courseData?.post_test?.is_completed && courseData?.status_pendaftaran !== 'lulus' && courseData?.status_pendaftaran !== 'selesai'
+                ? 'Terkunci: Selesaikan seluruh kurikulum & Post Test dahulu'
+                : courseData?.kuesioner_selesai
+                  ? 'Evaluasi kursus telah selesai diisi'
+                  : 'Wajib diisi sebelum ke Halaman Kelulusan'
             }
             status={
-              courseData?.kuesioner_selesai
-                ? 'completed'
-                : courseData?.post_test?.is_completed
-                  ? 'pre_test_ready'
-                  : 'locked'
+              !courseData?.post_test?.is_completed && courseData?.status_pendaftaran !== 'lulus' && courseData?.status_pendaftaran !== 'selesai'
+                ? 'locked'
+                : courseData?.kuesioner_selesai
+                  ? 'completed'
+                  : 'pre_test_ready'
             }
-            badge={courseData?.kuesioner_selesai ? 'Feedback Selesai' : 'Wajib Feedback'}
+            badge={
+              !courseData?.post_test?.is_completed && courseData?.status_pendaftaran !== 'lulus' && courseData?.status_pendaftaran !== 'selesai'
+                ? null
+                : courseData?.kuesioner_selesai
+                  ? 'Feedback Selesai'
+                  : 'Wajib Feedback'
+            }
             isActive={false}
             onClick={() => {
-              if (!courseData?.post_test?.is_completed && !courseData?.kuesioner_selesai) {
+              const isCurriculumDone = Boolean(
+                courseData?.post_test?.is_completed ||
+                courseData?.status_pendaftaran === 'lulus' ||
+                courseData?.status_pendaftaran === 'selesai'
+              );
+              if (!isCurriculumDone) {
                 if (onSelectFeedbackSection) onSelectFeedbackSection();
                 Swal.fire({
                   icon: 'info',

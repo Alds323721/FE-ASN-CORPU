@@ -13,10 +13,34 @@ import {
   Minimize2,
   Lock,
   Clock,
-  Info
+  Info,
+  Download
 } from 'lucide-react';
+import api from '../../api/axios';
 import PreTestLockedCard from './PreTestLockedCard';
 import { extractYouTubeId, getDocumentUrl, isMateriVideo, getHostFromUrl } from './courseHelpers';
+
+const buildPreviewDocumentUrl = (rawUrl, resolvedUrl) => {
+  if (!resolvedUrl) return '';
+  const trimmed = String(rawUrl || '').trim();
+
+  // Konversi tautan Google Drive / Docs agar bisa di-embed langsung
+  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
+  if (driveMatch && driveMatch[1]) {
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  }
+
+  const docsMatch = trimmed.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]+)/i);
+  if (docsMatch && docsMatch[1] && docsMatch[2]) {
+    return `https://docs.google.com/${docsMatch[1]}/d/${docsMatch[2]}/preview`;
+  }
+
+  if (/\.pdf(\?.*)?$/i.test(resolvedUrl) && !resolvedUrl.includes('#')) {
+    return `${resolvedUrl}#toolbar=1&navpanes=0&view=FitH`;
+  }
+
+  return resolvedUrl;
+};
 
 export default function CoursePlayer({
   activeMateri,
@@ -28,7 +52,10 @@ export default function CoursePlayer({
 }) {
   const [isWebExpanded, setIsWebExpanded] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [docIframeKey, setDocIframeKey] = useState(0);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+  const [isDocLoading, setIsDocLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isContentCompleted, setIsContentCompleted] = useState(Boolean(activeMateri?.is_read));
   const maxTimeWatchedRef = useRef(0);
   const hasAutoMarkedRef = useRef(Boolean(activeMateri?.is_read));
@@ -38,6 +65,8 @@ export default function CoursePlayer({
     setIsContentCompleted(alreadyRead);
     hasAutoMarkedRef.current = alreadyRead;
     maxTimeWatchedRef.current = 0;
+    setIsIframeLoading(true);
+    setIsDocLoading(true);
   }, [activeMateri?.materi_id, activeMateri?.is_read]);
 
   const triggerAutoComplete = () => {
@@ -328,7 +357,8 @@ export default function CoursePlayer({
           (activeEl.id === 'youtube-player' ||
             activeEl.id === 'h5p-interactive-player' ||
             activeEl.id === 'scorm-interactive-player' ||
-            activeEl.id === 'webview-material-player');
+            activeEl.id === 'webview-material-player' ||
+            activeEl.id === 'document-material-player');
 
         if (!isPlayerIframeFocused && document.hidden) {
           pauseAllActiveMedia();
@@ -363,8 +393,10 @@ export default function CoursePlayer({
   const isScorm = activeMateri?.tipe === 'scorm';
   const isWeb = activeMateri?.tipe === 'tautan_web';
   const isVideo = !isH5P && !isScorm && !isWeb && isMateriVideo(activeMateri);
+  const isDocument = !isH5P && !isScorm && !isWeb && !isVideo;
   const youtubeId = isVideo ? extractYouTubeId(activeMateri.tautan) : null;
   const docUrl = getDocumentUrl(activeMateri.tautan);
+  const previewDocUrl = isDocument ? buildPreviewDocumentUrl(activeMateri.tautan, docUrl) : '';
   const domainHost = isWeb ? getHostFromUrl(activeMateri.tautan) : '';
 
   const requiresCompletionGuard = isH5P || isScorm || isVideo;
@@ -375,6 +407,66 @@ export default function CoursePlayer({
   const webviewEmbedUrl = (isWeb && activeMateri?.tautan)
     ? `${getDocumentUrl('/api/webview-proxy')}?url=${encodeURIComponent(activeMateri.tautan)}`
     : '';
+
+  const handleDownloadMateri = async () => {
+    if (!docUrl || isDownloading) return;
+
+    const rawPath = String(activeMateri?.tautan || '').trim();
+    const isLocalStorageFile =
+      rawPath.startsWith('/storage/') ||
+      rawPath.startsWith('storage/') ||
+      !rawPath.startsWith('http');
+
+    const extMatch = rawPath.match(/\.([a-zA-Z0-9]{2,5})(\?.*)?$/);
+    const ext = extMatch && extMatch[1] ? extMatch[1] : 'pdf';
+    const cleanTitle = String(activeMateri?.judul || 'materi-pembelajaran')
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, '-');
+    const fallbackFileName = `${cleanTitle || 'materi-pembelajaran'}.${ext}`;
+
+    setIsDownloading(true);
+    try {
+      if (isLocalStorageFile && courseData?.pembelajaran_id && activeMateri?.materi_id) {
+        const response = await api.get(
+          `/user/courses/${courseData.pembelajaran_id}/materi/${activeMateri.materi_id}/download`,
+          { responseType: 'blob' }
+        );
+        const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.setAttribute('download', fallbackFileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+        return;
+      }
+
+      const response = await fetch(docUrl);
+      if (!response.ok) throw new Error('Download langsung gagal');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', fallbackFileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      const link = document.createElement('a');
+      link.href = docUrl;
+      link.setAttribute('download', fallbackFileName);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -399,6 +491,12 @@ export default function CoursePlayer({
             <span className="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 text-xs font-bold rounded-full flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-sky-600" aria-hidden="true" />
               Materi Web / Webview
+            </span>
+          )}
+          {isDocument && (
+            <span className="px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-200 text-xs font-bold rounded-full flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-teal-600" aria-hidden="true" />
+              Dokumen Materi (PDF)
             </span>
           )}
         </div>
@@ -609,29 +707,99 @@ export default function CoursePlayer({
             )}
           </div>
         ) : (
-          <div className="p-8 md:p-12 bg-gray-50 flex items-center justify-center">
-            <div className="text-center max-w-md">
-              <FileText className="w-16 h-16 text-teal-600/70 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-gray-600 font-medium mb-5 text-sm md:text-base">
-                Silakan baca dokumen materi berikut
-              </p>
-              {docUrl ? (
-                <a
-                  href={docUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#006A63] text-white rounded-lg font-bold text-sm hover:bg-[#00534D] active:scale-95 transition-all shadow-sm cursor-pointer"
-                >
-                  <FileText className="w-4 h-4" aria-hidden="true" />
-                  <span>Buka Materi</span>
-                  <ExternalLink className="w-4 h-4" aria-hidden="true" />
-                </a>
-              ) : (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold">
-                  Dokumen materi belum tersedia
+          <div className="w-full border-t border-b border-gray-200 bg-slate-50 flex flex-col">
+            {docUrl ? (
+              <>
+                {/* Toolbar Preview & Download Dokumen */}
+                <div className="bg-slate-100/90 px-3 py-2.5 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap text-xs">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 font-medium truncate max-w-sm sm:max-w-md shadow-2xs">
+                      <FileText className="w-3.5 h-3.5 text-teal-600 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{activeMateri.judul || 'Dokumen Materi'}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDocLoading(true);
+                        setDocIframeKey((prev) => prev + 1);
+                      }}
+                      title="Muat Ulang Dokumen"
+                      className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border border-slate-200 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-[11px]"
+                    >
+                      <RotateCw className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                      <span className="hidden md:inline">Muat Ulang</span>
+                    </button>
+
+                    <a
+                      href={docUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Buka Materi di Tab Baru"
+                      className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                    >
+                      <span>Buka Tab Baru</span>
+                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    </a>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Area Preview Dokumen / PDF Langsung di Halaman */}
+                <div className="w-full relative transition-all duration-300 bg-slate-200/70 h-[620px] md:h-[700px]">
+                  {isDocLoading && (
+                    <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-2xs flex flex-col items-center justify-center z-10 text-slate-500 p-4 text-center">
+                      <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mb-3" />
+                      <p className="text-xs font-semibold text-slate-700">Memuat Pratinjau Materi...</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Menampilkan dokumen langsung di halaman</p>
+                    </div>
+                  )}
+
+                  <iframe
+                    key={docIframeKey}
+                    id="document-material-player"
+                    className="w-full h-full border-0 bg-white"
+                    src={previewDocUrl}
+                    title={activeMateri.judul || 'Pratinjau Dokumen Materi'}
+                    allow="fullscreen"
+                    onLoad={() => setIsDocLoading(false)}
+                    onError={() => setIsDocLoading(false)}
+                  />
+                </div>
+
+                {/* Footer Petunjuk & Aksi Cepat Download */}
+                <div className="bg-slate-50 px-3 py-2.5 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-teal-600 shrink-0" aria-hidden="true" />
+                    <span>
+                      <b>Petunjuk:</b> Gulir di dalam dokumen di atas untuk membaca materi, atau unduh dokumen untuk dibaca secara offline.
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleDownloadMateri}
+                      disabled={isDownloading}
+                      title="Download Berkas Materi"
+                      className="px-3 py-1.5 bg-[#006A63] hover:bg-[#00534D] disabled:opacity-60 text-white rounded-md transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-semibold shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>{isDownloading ? 'Mengunduh...' : 'Download Materi'}</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-8 md:p-12 bg-gray-50 flex items-center justify-center">
+                <div className="text-center max-w-md">
+                  <FileText className="w-16 h-16 text-teal-600/70 mx-auto mb-3" aria-hidden="true" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold">
+                    Dokumen materi belum tersedia
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

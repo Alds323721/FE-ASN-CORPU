@@ -18,8 +18,35 @@ export default function CourseDetail({ onNavigate, onBack }) {
 
   const courseId = localStorage.getItem('userCourseId');
 
+  const isMateriAccessible = (mat) => {
+    if (!mat) return false;
+    if (!mat.is_locked) return true;
+    if (mat.pre_test && !mat.pre_test.is_completed && !mat.pre_test.is_locked) {
+      return true;
+    }
+    return false;
+  };
+
   const resolveActiveMateri = (data, currentActive) => {
     if (!data?.modul || data.modul.length === 0) return null;
+
+    const sortedModuls = [...data.modul].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+    const currentCourseIdStr = String(data.pembelajaran_id || courseId || '');
+    const savedMateriCourseId = localStorage.getItem('userActiveMateriCourseId');
+
+    // Jika pindah ke pelatihan yang berbeda, bersihkan state materi dari pelatihan sebelumnya
+    if (savedMateriCourseId && currentCourseIdStr && String(savedMateriCourseId) !== currentCourseIdStr) {
+      localStorage.removeItem('userActiveMateriId');
+      localStorage.removeItem('userModulId');
+    }
+
+    // Cek apakah peserta baru saja bergabung (belum ada materi atau kuis yang diselesaikan sama sekali)
+    const hasAnyProgress = sortedModuls.some(
+      (m) =>
+        m.materi?.some((mat) => Boolean(mat.is_read || mat.pre_test?.is_completed)) ||
+        Boolean(m.kuis?.is_completed) ||
+        Boolean(m.kuis_berbobot?.is_completed)
+    );
 
     // A. Cek apakah user baru saja menyelesaikan Pre-Test
     const justCompletedPreTest = localStorage.getItem('userJustCompletedPreTest');
@@ -27,9 +54,9 @@ export default function CourseDetail({ onNavigate, onBack }) {
       localStorage.removeItem('userJustCompletedPreTest');
       const savedMateriId = localStorage.getItem('userActiveMateriId');
       if (savedMateriId) {
-        for (const m of data.modul) {
+        for (const m of sortedModuls) {
           const found = m.materi?.find(mat => String(mat.materi_id) === String(savedMateriId));
-          if (found) {
+          if (found && isMateriAccessible(found)) {
             Swal.fire({
               icon: 'success',
               title: 'Pre-Test Selesai!',
@@ -38,6 +65,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
               showConfirmButton: false
             });
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
             return { ...found, currentModulId: m.modul_id };
           }
         }
@@ -62,14 +90,16 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
       } catch (e) {}
 
-      const passedIdx = data.modul.findIndex(m => String(m.modul_id) === String(targetModulId));
+      const passedIdx = sortedModuls.findIndex(m => String(m.modul_id) === String(targetModulId));
       if (passedIdx !== -1) {
-        const curMod = data.modul[passedIdx];
+        const curMod = sortedModuls[passedIdx];
         
         // 1. Cek jika masih ada materi yang belum selesai di modul yang sama
-        const unreadInSameMod = curMod.materi?.find(mat => !mat.is_read && !mat.is_locked);
+        const sortedCurMateri = [...(curMod.materi || [])].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        const unreadInSameMod = sortedCurMateri.find(mat => !mat.is_read && isMateriAccessible(mat));
         if (unreadInSameMod) {
           localStorage.setItem('userActiveMateriId', unreadInSameMod.materi_id);
+          localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
           localStorage.setItem('userModulId', curMod.modul_id);
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return { ...unreadInSameMod, currentModulId: curMod.modul_id };
@@ -91,12 +121,13 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
 
         // 3. Lanjut ke materi pertama di modul berikutnya
-        if (passedIdx + 1 < data.modul.length) {
-          const nextMod = data.modul[passedIdx + 1];
+        if (passedIdx + 1 < sortedModuls.length) {
+          const nextMod = sortedModuls[passedIdx + 1];
           if (nextMod.materi && nextMod.materi.length > 0) {
             const sortedMateri = [...nextMod.materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
             const nextMat = sortedMateri[0];
             localStorage.setItem('userActiveMateriId', nextMat.materi_id);
+            localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
             localStorage.setItem('userModulId', nextMod.modul_id);
             Swal.fire({
               icon: 'success',
@@ -132,40 +163,74 @@ export default function CourseDetail({ onNavigate, onBack }) {
       }
     }
 
-    // C. Cek materi yang tersimpan di localStorage
+    // Jika peserta baru bergabung (belum ada progres sama sekali), selalu arahkan ke modul teratas & materi pertama yang terbuka
+    if (!hasAnyProgress) {
+      for (const m of sortedModuls) {
+        const sortedM = [...(m.materi || [])].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        const firstUnlocked = sortedM.find(mat => isMateriAccessible(mat));
+        if (firstUnlocked) {
+          localStorage.setItem('userActiveMateriId', firstUnlocked.materi_id);
+          localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
+          localStorage.setItem('userModulId', m.modul_id);
+          return { ...firstUnlocked, currentModulId: m.modul_id };
+        }
+      }
+      if (sortedModuls[0]?.materi?.[0]) {
+        const sortedFirst = [...sortedModuls[0].materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+        localStorage.setItem('userActiveMateriId', sortedFirst[0].materi_id);
+        localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
+        localStorage.setItem('userModulId', sortedModuls[0].modul_id);
+        return { ...sortedFirst[0], currentModulId: sortedModuls[0].modul_id };
+      }
+      return null;
+    }
+
+    // C. Cek materi yang tersimpan di localStorage (hanya jika milik kursus ini dan tidak terkunci)
     const savedMateriId = localStorage.getItem('userActiveMateriId');
-    if (savedMateriId) {
-      for (const m of data.modul) {
+    if (savedMateriId && (!savedMateriCourseId || String(savedMateriCourseId) === currentCourseIdStr)) {
+      for (const m of sortedModuls) {
         const found = m.materi?.find(mat => String(mat.materi_id) === String(savedMateriId));
         if (found) {
-          return { ...found, currentModulId: m.modul_id };
+          if (isMateriAccessible(found)) {
+            localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
+            return { ...found, currentModulId: m.modul_id };
+          }
+          // Jika materi yang tersimpan masih terkunci, hapus dari localStorage agar jatuh ke materi pertama yang terbuka
+          localStorage.removeItem('userActiveMateriId');
+          break;
         }
       }
     }
 
-    // D. Jika currentActive sudah ada di state, refresh status terbarunya dari data API
+    // D. Jika currentActive sudah ada di state, refresh status terbarunya dari data API (hanya jika tidak terkunci)
     if (currentActive) {
-      for (const m of data.modul) {
+      for (const m of sortedModuls) {
         const found = m.materi?.find(mat => String(mat.materi_id) === String(currentActive.materi_id));
-        if (found) {
+        if (found && isMateriAccessible(found)) {
           return { ...found, currentModulId: m.modul_id };
         }
       }
     }
 
-    // E. Cari materi pertama yang belum dibaca dan tidak terkunci
-    for (const m of data.modul) {
+    // E. Cari materi pertama yang belum dibaca dan sudah terbuka kuncinya (termasuk yang siap Pre-Test)
+    for (const m of sortedModuls) {
       const sortedM = [...(m.materi || [])].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
-      const firstUnread = sortedM.find(mat => !mat.is_read && !mat.is_locked);
+      const firstUnread = sortedM.find(mat => !mat.is_read && isMateriAccessible(mat));
       if (firstUnread) {
+        localStorage.setItem('userActiveMateriId', firstUnread.materi_id);
+        localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
+        localStorage.setItem('userModulId', m.modul_id);
         return { ...firstUnread, currentModulId: m.modul_id };
       }
     }
 
-    // F. Default: materi pertama di modul pertama
-    if (data.modul[0]?.materi?.[0]) {
-      const sortedFirst = [...data.modul[0].materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
-      return { ...sortedFirst[0], currentModulId: data.modul[0].modul_id };
+    // F. Default: materi pertama di modul teratas
+    if (sortedModuls[0]?.materi?.[0]) {
+      const sortedFirst = [...sortedModuls[0].materi].sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+      localStorage.setItem('userActiveMateriId', sortedFirst[0].materi_id);
+      localStorage.setItem('userActiveMateriCourseId', currentCourseIdStr);
+      localStorage.setItem('userModulId', sortedModuls[0].modul_id);
+      return { ...sortedFirst[0], currentModulId: sortedModuls[0].modul_id };
     }
 
     return null;
@@ -201,12 +266,23 @@ export default function CourseDetail({ onNavigate, onBack }) {
         const shouldScrollFeedback = localStorage.getItem('userOpenCourseFeedback');
         if (shouldScrollFeedback) {
           localStorage.removeItem('userOpenCourseFeedback');
-          setTimeout(() => {
-            const el = document.getElementById('course-feedback-section');
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }, 350);
+          const canOpenFeedback = Boolean(
+            fetchedData.post_test?.is_completed ||
+            fetchedData.status_pendaftaran === 'lulus' ||
+            fetchedData.status_pendaftaran === 'selesai'
+          );
+          if (canOpenFeedback) {
+            setTimeout(() => {
+              const el = document.getElementById('course-feedback-section');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 350);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+          }
+        } else {
+          window.scrollTo({ top: 0, behavior: 'auto' });
         }
       }
     } catch (error) {
@@ -231,6 +307,9 @@ export default function CourseDetail({ onNavigate, onBack }) {
     setActiveMateri(materiWithModul);
     if (materiWithModul?.materi_id) {
       localStorage.setItem('userActiveMateriId', materiWithModul.materi_id);
+      if (courseId) {
+        localStorage.setItem('userActiveMateriCourseId', String(courseId));
+      }
     }
     if (materiWithModul?.currentModulId) {
       localStorage.setItem('userModulId', materiWithModul.currentModulId);
@@ -534,7 +613,22 @@ export default function CourseDetail({ onNavigate, onBack }) {
     }
   };
 
+  const isCurriculumCompleted = Boolean(
+    courseData?.post_test?.is_completed ||
+    courseData?.status_pendaftaran === 'lulus' ||
+    courseData?.status_pendaftaran === 'selesai'
+  );
+
   const handleOpenGraduationPage = () => {
+    if (!isCurriculumCompleted) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Halaman Kelulusan Masih Terkunci',
+        text: 'Selesaikan seluruh materi modul, kuis evaluasi, dan lulus Post Test Akhir Pelatihan terlebih dahulu untuk membuka Halaman Kelulusan.',
+        confirmButtonColor: '#006A63'
+      });
+      return;
+    }
     if (!courseData?.kuesioner_selesai) {
       handleScrollToFeedback();
       Swal.fire({

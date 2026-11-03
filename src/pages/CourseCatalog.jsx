@@ -232,7 +232,15 @@ const CatalogCard = ({
         ) : isEnrolled ? (
           <button
             onClick={() => {
-              if (id) localStorage.setItem('userCourseId', id);
+              if (id) {
+                const prevCourseId = localStorage.getItem('userCourseId');
+                if (String(prevCourseId) !== String(id)) {
+                  localStorage.removeItem('userActiveMateriId');
+                  localStorage.removeItem('userActiveMateriCourseId');
+                  localStorage.removeItem('userModulId');
+                }
+                localStorage.setItem('userCourseId', id);
+              }
               onNavigate('course-detail');
             }}
             className="w-full py-2.5 border-2 border-[#006A63] text-[#006A63] bg-white rounded-md text-[13px] font-bold hover:bg-[#EFF5F3] transition-colors cursor-pointer"
@@ -463,6 +471,14 @@ const CatalogContent = ({ onNavigate }) => {
       setEnrolling(true);
       const payload = kodeAkses ? { kode_akses: kodeAkses } : {};
       const res = await api.post(`/user/katalog/${id}/enroll`, payload);
+      localStorage.removeItem('userActiveMateriId');
+      localStorage.removeItem('userActiveMateriCourseId');
+      localStorage.removeItem('userModulId');
+      localStorage.removeItem('userCompletedKuisModulId');
+      localStorage.removeItem('userCompletedKuisId');
+      localStorage.removeItem('userJustPassedKuis');
+      localStorage.removeItem('userJustCompletedPreTest');
+      localStorage.removeItem('userOpenCourseFeedback');
       Swal.fire({
         icon: 'success',
         title: 'Pendaftaran Berhasil',
