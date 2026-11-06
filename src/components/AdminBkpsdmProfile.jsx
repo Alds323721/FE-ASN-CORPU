@@ -3,6 +3,7 @@ import { LogOut, ArrowLeftRight, Check, Shield, ChevronDown } from 'lucide-react
 import api from '../api/axios';
 import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
+import NotificationBell from './NotificationBell';
 
 const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,7 +93,9 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
 
   if (variant === 'header') {
     return (
-      <div className="relative" ref={dropdownRef}>
+      <div className="flex items-center gap-2">
+        <NotificationBell onNavigate={onNavigate} />
+        <div className="relative" ref={dropdownRef}>
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
@@ -185,6 +188,7 @@ const AdminBkpsdmProfile = ({ currentUser, onNavigate, variant = 'sidebar' }) =>
             </div>
           </div>
         )}
+        </div>
       </div>
     );
   }

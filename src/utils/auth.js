@@ -1,4 +1,5 @@
 import api from '../api/axios';
+import { removeCurrentFcmToken } from '../services/pushNotificationService';
 
 export const AUTH_KEYS = [
   'access_token',
@@ -198,6 +199,7 @@ export const checkNewTabTimeout = () => {
 export const logout = (navigateCallback) => {
   // Opsional: Beritahu backend untuk revoke token secara fire-and-forget
   try {
+    removeCurrentFcmToken().catch(() => {});
     api.post('/logout').catch(() => {});
   } catch (e) {}
 

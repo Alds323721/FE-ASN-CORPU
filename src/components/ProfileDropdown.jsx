@@ -5,6 +5,7 @@ import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 import { PasswordRequirementsList, validatePasswordStrict } from './PasswordRequirements';
+import NotificationBell from './NotificationBell';
 
 const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const { t } = useLanguage();
@@ -117,6 +118,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
 
   return (
     <>
+      <NotificationBell onNavigate={onNavigate} />
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}

@@ -167,33 +167,6 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
           ID: {certificateId}
         </div>
 
-        {isSigned && (
-          <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
-            <div className="text-[11px] leading-tight font-medium">
-              <span className="font-bold text-emerald-950 block">TTE Resmi Terverifikasi</span>
-              <span className="text-emerald-700">Telah ditandatangani secara elektronik (BSrE BSSN)</span>
-            </div>
-          </div>
-        )}
-
-        {isCooldownActive && (
-          <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
-            <div className="font-bold flex items-center gap-1.5 text-amber-800">
-              <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              <span>Sedang Proses TTE Eksternal (B-Sign BSrE)</span>
-            </div>
-            <p className="text-[11px] text-amber-700 leading-relaxed">
-              Sertifikat kursus KPK sedang diproses tanda tangan elektronik resmi pimpinan melalui B-Sign BSrE BSSN.
-            </p>
-            {certData?.tersedia_pada_formatted && (
-              <p className="text-[11px] text-amber-800 font-semibold">
-                Estimasi rilis: <b>{cooldownInfo.label}</b> (Mulai {certData.tersedia_pada_formatted} WITA)
-              </p>
-            )}
-          </div>
-        )}
-
         <button
           onClick={() => onDownload?.(id, title, certData)}
           disabled={downloading || isCooldownActive}
@@ -208,7 +181,7 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
           {isCooldownActive ? (
             <>
               <Clock className="w-4 h-4" aria-hidden="true" />
-              <span>Menunggu TTE Resmi ({cooldownInfo.label})</span>
+              <span>Menunggu TTE Resmi</span>
             </>
           ) : isSigned ? (
             <>

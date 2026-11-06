@@ -293,7 +293,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
           {isCooldownActive ? (
             <>
               <Clock className="w-5 h-5" aria-hidden="true" />
-              <span>Menunggu TTE Resmi ({cooldownInfo.label})</span>
+              <span>Menunggu TTE Resmi</span>
             </>
           ) : isSigned ? (
             <>
