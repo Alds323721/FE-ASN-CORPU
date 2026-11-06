@@ -17,7 +17,8 @@ import {
   Star,
   Info,
   CheckCircle2,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 
 function getRemainingCooldownParts(tersediaPadaIso, tersediaPadaStr, fallbackSeconds = 0) {
@@ -112,7 +113,8 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
     ? getRemainingCooldownParts(sertifikat.tersedia_pada_iso, sertifikat.tersedia_pada, sertifikat.sisa_detik)
     : { totalSeconds: 0, label: '' };
 
-  const isCooldownActive = Boolean(sertifikat?.cooldown && cooldownInfo.totalSeconds > 0);
+  const isSigned = Boolean(sertifikat?.is_signed || sertifikat?.status_tte === 'signed');
+  const isCooldownActive = Boolean(!isSigned && sertifikat?.cooldown && cooldownInfo.totalSeconds > 0);
 
   const handleDownload = async () => {
     if (!sudahMengisiKuesioner) {
@@ -129,7 +131,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
       Swal.fire({
         icon: 'info',
         title: 'Masa Tunggu Sertifikat KPK',
-        text: sertifikat?.message || 'Sertifikat khusus kursus KPK baru dapat diunduh 3 hari setelah kursus diselesaikan.',
+        text: sertifikat?.cooldown_message || sertifikat?.message || 'Sertifikat khusus kursus KPK baru dapat diunduh setelah proses TTE B-Sign BSrE selesai.',
         confirmButtonColor: '#006A63'
       });
       return;
@@ -156,8 +158,16 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (sertifikat?.judul_pembelajaran || 'Pelatihan').replace(/[^a-zA-Z0-9_-]/g, '_');
-      a.download = `Sertifikat_${cleanTitle}.pdf`;
+
+      let downloadFilename = `Sertifikat_${(sertifikat?.judul_pembelajaran || 'Pelatihan').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          downloadFilename = match[1].replace(/['"]/g, '').trim();
+        }
+      }
+      a.download = downloadFilename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -212,12 +222,20 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
         {sertifikat?.judul_pembelajaran || 'Pelatihan'}
       </h2>
 
-      {sertifikat?.is_kpk && (
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold mb-6 shadow-sm">
-          <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-5 h-5 object-contain" />
-          <span>Program Kolaborasi Resmi KPK RI</span>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+        {sertifikat?.is_kpk && (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-bold shadow-sm">
+            <img src="/images/kpk_logo.png" alt="Logo KPK" className="w-5 h-5 object-contain" />
+            <span>Program Kolaborasi Resmi KPK RI</span>
+          </div>
+        )}
+        {isSigned && (
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+            <span>Telah Ditandatangani Secara Elektronik (TTE BSrE BSSN)</span>
+          </div>
+        )}
+      </div>
 
       <div className="mb-6 md:mb-8">
         <p className="text-sm md:text-base text-gray-600 font-semibold mb-2">Diberikan Kepada:</p>
@@ -249,12 +267,12 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
         <div className="mb-6 w-full max-w-md p-4 bg-amber-50 border border-amber-200 rounded-lg text-left text-amber-900 space-y-1.5">
           <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-800">
             <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span>Masa Tunggu Sertifikat KPK ({cooldownInfo.label})</span>
+            <span>Sedang Proses Penandatanganan Elektronik (TTE B-Sign BSrE)</span>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Sertifikat khusus kursus KPK memiliki masa tunggu verifikasi selama 3 hari (72 jam) sejak kursus diselesaikan.
+            Sertifikat untuk kursus KPK memerlukan tanda tangan digital resmi dari pimpinan melalui aplikasi B-Sign BSrE.
             {sertifikat?.tersedia_pada_formatted ? (
-              <> Sertifikat dapat diunduh mulai <b>{sertifikat.tersedia_pada_formatted}</b>.</>
+              <> Estimasi dapat diunduh: <b>{cooldownInfo.label}</b> (Mulai <b>{sertifikat.tersedia_pada_formatted} WITA</b>).</>
             ) : null}
           </p>
         </div>
@@ -266,14 +284,21 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
           disabled={downloading || !sudahMengisiKuesioner || isCooldownActive}
           className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
             !sudahMengisiKuesioner || isCooldownActive
-              ? 'bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed'
+              ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed'
+              : isSigned
+              ? 'bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer shadow-sm'
               : 'bg-[#006A63] text-white hover:bg-[#00534D] cursor-pointer'
           }`}
         >
           {isCooldownActive ? (
             <>
               <Clock className="w-5 h-5" aria-hidden="true" />
-              <span>Masa Tunggu 3 Hari KPK</span>
+              <span>Menunggu TTE Resmi ({cooldownInfo.label})</span>
+            </>
+          ) : isSigned ? (
+            <>
+              <Download className="w-5 h-5" aria-hidden="true" />
+              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat Ber-TTE (PDF)'}</span>
             </>
           ) : (
             <>

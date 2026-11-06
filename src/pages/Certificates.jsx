@@ -15,7 +15,8 @@ import {
   Download,
   Calendar,
   User,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 
 function getRemainingCooldownParts(tersediaPadaIso, tersediaPadaStr, fallbackSeconds = 0) {
@@ -121,7 +122,8 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
     ? getRemainingCooldownParts(certData.tersedia_pada_iso, certData.tersedia_pada, certData.sisa_detik)
     : { totalSeconds: 0, label: '' };
 
-  const isCooldownActive = Boolean(certData?.cooldown && cooldownInfo.totalSeconds > 0);
+  const isSigned = Boolean(certData?.is_signed || certData?.status_tte === 'signed');
+  const isCooldownActive = Boolean(!isSigned && certData?.cooldown && cooldownInfo.totalSeconds > 0);
 
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -135,7 +137,13 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
             e.currentTarget.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop';
           }}
         />
-        {isNew && (
+        {isSigned && (
+          <span className="absolute top-3 left-3 bg-emerald-700/95 backdrop-blur-sm text-white px-2.5 py-1 text-[10px] font-bold rounded-md shadow-sm flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>TTE BSrE</span>
+          </span>
+        )}
+        {isNew && !isSigned && (
           <span className="absolute top-3 left-3 bg-[#F59E0B] text-white px-2.5 py-1 text-[10px] font-bold rounded-full shadow-sm">
             {t('certificates.new')}
           </span>
@@ -159,15 +167,28 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
           ID: {certificateId}
         </div>
 
+        {isSigned && (
+          <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+            <div className="text-[11px] leading-tight font-medium">
+              <span className="font-bold text-emerald-950 block">TTE Resmi Terverifikasi</span>
+              <span className="text-emerald-700">Telah ditandatangani secara elektronik (BSrE BSSN)</span>
+            </div>
+          </div>
+        )}
+
         {isCooldownActive && (
           <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
             <div className="font-bold flex items-center gap-1.5 text-amber-800">
               <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              <span>Masa Tunggu Sertifikat KPK ({cooldownInfo.label})</span>
+              <span>Sedang Proses TTE Eksternal (B-Sign BSrE)</span>
             </div>
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              Sertifikat kursus KPK sedang diproses tanda tangan elektronik resmi pimpinan melalui B-Sign BSrE BSSN.
+            </p>
             {certData?.tersedia_pada_formatted && (
-              <p className="text-[11px] text-amber-700">
-                Dapat diunduh mulai: <b>{certData.tersedia_pada_formatted}</b>
+              <p className="text-[11px] text-amber-800 font-semibold">
+                Estimasi rilis: <b>{cooldownInfo.label}</b> (Mulai {certData.tersedia_pada_formatted} WITA)
               </p>
             )}
           </div>
@@ -178,14 +199,21 @@ const CertificateCard = ({ id, image, title, institution, date, certificateId, i
           disabled={downloading || isCooldownActive}
           className={`w-full py-2.5 text-sm font-bold rounded-md transition-colors flex items-center justify-center gap-2 ${
             isCooldownActive
-              ? 'bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed'
+              ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed'
+              : isSigned
+              ? 'bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-sm'
               : 'bg-[#006A63] text-white hover:bg-[#00534D] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
           }`}
         >
           {isCooldownActive ? (
             <>
               <Clock className="w-4 h-4" aria-hidden="true" />
-              <span>Masa Tunggu 3 Hari KPK</span>
+              <span>Menunggu TTE Resmi ({cooldownInfo.label})</span>
+            </>
+          ) : isSigned ? (
+            <>
+              <Download className="w-4 h-4" aria-hidden="true" />
+              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat Ber-TTE (PDF)'}</span>
             </>
           ) : (
             <>
@@ -222,7 +250,8 @@ const CertificatesContent = () => {
   }, []);
 
   const handleDownloadCertificate = async (certificateId, title, certData) => {
-    if (certData?.cooldown) {
+    const isSigned = Boolean(certData?.is_signed || certData?.status_tte === 'signed');
+    if (!isSigned && certData?.cooldown) {
       Swal.fire({
         icon: 'info',
         title: 'Masa Tunggu Sertifikat KPK',
@@ -242,8 +271,16 @@ const CertificatesContent = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (title || 'Pelatihan').replace(/[^a-zA-Z0-9_-]/g, '_');
-      a.download = `Sertifikat_${cleanTitle}.pdf`;
+
+      let downloadFilename = `Sertifikat_${(title || 'Pelatihan').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          downloadFilename = match[1].replace(/['"]/g, '').trim();
+        }
+      }
+      a.download = downloadFilename;
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
+import JSZip from 'jszip';
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
 import { logout } from '../utils/auth';
@@ -8,7 +9,8 @@ import {
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Download, TrendingUp, Award, CheckCircle,
   Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
-  QrCode, ExternalLink, Smartphone, Laptop, Tablet
+  QrCode, ExternalLink, Smartphone, Laptop, Tablet, FileArchive, Check,
+  Upload, AlertCircle, FileCheck, RefreshCw, FileText, Send, UserCheck, UserX
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -140,6 +142,15 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [selectedKomunitas, setSelectedKomunitas] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // State Ekspor Sertifikat Khusus Kursus KPK
+  const [isExportKpkModalOpen, setIsExportKpkModalOpen] = useState(false);
+  const [kpkCoursesList, setKpkCoursesList] = useState([]);
+  const [selectedKpkCourse, setSelectedKpkCourse] = useState('all');
+  const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_signed'
+  const [exportKpkScope, setExportKpkScope] = useState('pending_tte'); // 'pending_tte' | 'all'
+  const [isExportingKpkZip, setIsExportingKpkZip] = useState(false);
+  const [loadingKpkCourses, setLoadingKpkCourses] = useState(false);
+
   // Pagination Peserta State (10 data per halaman)
   const [currentPage, setCurrentPage] = useState(1);
   const [paginationMeta, setPaginationMeta] = useState({
@@ -220,6 +231,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         hasCertificate: !!user.has_sertifikat,
         certificateId: user.sertifikat?.sertifikat_id,
         certificateUrl: user.sertifikat?.download_url,
+        statusTte: user.sertifikat?.status_tte || 'draft_ready',
+        isKpk: !!user.is_kpk,
         ulasan: user.ulasan || null
       })));
 
@@ -392,12 +405,463 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       const response = await api.get(`/admin-bkpsdm/sertifikat/${certId}/download`, {
         responseType: 'blob'
       });
+
+      let filename = '';
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      if (!filename) {
+        if (report?.isKpk && report?.nip && report.nip !== '-') {
+          filename = `${report.nip}.pdf`;
+        } else {
+          const cleanName = (report?.name || 'Peserta').replace(/\s+/g, '_');
+          filename = `Sertifikat_${cleanName}.pdf`;
+        }
+      }
+
       const fileUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      window.open(fileUrl, '_blank');
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(fileUrl), 1000);
     } catch (err) {
       console.error('Failed to download certificate:', err);
-      alert('Gagal mengunduh sertifikat.');
+      Swal.fire({
+        title: 'Gagal Mengunduh',
+        text: 'Terjadi kesalahan saat mengunduh sertifikat.',
+        icon: 'error',
+        confirmButtonColor: '#0F766E'
+      });
     }
+  };
+
+  const fetchKpkCourses = async () => {
+    try {
+      setLoadingKpkCourses(true);
+      const res = await api.get('/admin-bkpsdm/laporan/sertifikat/kpk-courses');
+      setKpkCoursesList(res.data?.data || []);
+    } catch (err) {
+      console.error('Gagal mengambil daftar kursus KPK:', err);
+    } finally {
+      setLoadingKpkCourses(false);
+    }
+  };
+
+  const handleOpenExportKpkModal = () => {
+    setIsExportKpkModalOpen(true);
+    setExportKpkScope('pending_tte');
+    fetchKpkCourses();
+  };
+
+  const handleDownloadKpkZip = async () => {
+    try {
+      setIsExportingKpkZip(true);
+      const params = {
+        format: exportKpkFormat,
+        scope: exportKpkScope,
+      };
+      if (selectedKpkCourse && selectedKpkCourse !== 'all') {
+        params.pembelajaran_id = selectedKpkCourse;
+      }
+
+      const response = await api.get('/admin-bkpsdm/laporan/sertifikat/export-kpk-zip', {
+        params,
+        responseType: 'blob'
+      });
+
+      let filename = '';
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+      if (!filename) {
+        filename = `Sertifikat_KPK_${new Date().toISOString().slice(0, 10)}.zip`;
+      }
+
+      const fileUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(fileUrl), 1000);
+
+      setIsExportKpkModalOpen(false);
+
+      Swal.fire({
+        title: 'Ekspor Berhasil',
+        text: `Arsip ZIP sertifikat KPK (${filename}) berhasil diunduh. Seluruh berkas PDF di dalamnya dinamai sesuai NIP peserta.`,
+        icon: 'success',
+        confirmButtonColor: '#0F766E'
+      });
+    } catch (err) {
+      console.error('Gagal mengunduh ZIP sertifikat KPK:', err);
+      let errorMsg = 'Terjadi kesalahan saat memproses arsip ZIP sertifikat KPK.';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.message) errorMsg = json.message;
+        } catch (_) {}
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+
+      Swal.fire({
+        title: 'Ekspor Gagal',
+        text: errorMsg,
+        icon: 'error',
+        confirmButtonColor: '#0F766E'
+      });
+    } finally {
+      setIsExportingKpkZip(false);
+    }
+  };
+
+  // Helper kalkulasi status kuota TTE kursus KPK terpilih (Rule Anti-Repetisi)
+  const selectedKpkCourseData = selectedKpkCourse === 'all'
+    ? {
+        total_lulus: kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0),
+        total_pending_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0),
+        total_signed_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_signed_tte || 0), 0),
+      }
+    : kpkCoursesList.find((c) => String(c.pembelajaran_id) === String(selectedKpkCourse)) || {
+        total_lulus: 0,
+        total_pending_tte: 0,
+        total_signed_tte: 0,
+      };
+
+  const isKpkPendingEmpty = (selectedKpkCourseData.total_pending_tte || 0) === 0;
+
+  // State Import Sertifikat TTE B-Sign
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [coursesForImport, setCoursesForImport] = useState([]);
+  const [loadingImportCourses, setLoadingImportCourses] = useState(false);
+  const [selectedImportCourse, setSelectedImportCourse] = useState('');
+  const [selectedUploadFiles, setSelectedUploadFiles] = useState([]);
+  const [isUploadingImport, setIsUploadingImport] = useState(false);
+
+  // State Ekstraksi ZIP & Pencocokan NIP Peserta di Sisi Peramban (Browser)
+  const [courseParticipants, setCourseParticipants] = useState([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [isExtractingZip, setIsExtractingZip] = useState(false);
+  const [extractionProgress, setExtractionProgress] = useState({ current: 0, total: 0 });
+  const [extractedPdfList, setExtractedPdfList] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // State Summary Report Hasil Import
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [importSummaryResult, setImportSummaryResult] = useState(null);
+
+  const fetchCourseParticipants = async (courseId) => {
+    if (!courseId) {
+      setCourseParticipants([]);
+      return [];
+    }
+    try {
+      setLoadingParticipants(true);
+      const res = await api.get(`/admin-bkpsdm/laporan/sertifikat/courses/${courseId}/participants`);
+      const participants = res.data?.data?.participants || [];
+      setCourseParticipants(participants);
+      return participants;
+    } catch (err) {
+      console.error('Gagal mengambil daftar peserta pelatihan:', err);
+      setCourseParticipants([]);
+      return [];
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  const fetchCoursesForImport = async () => {
+    try {
+      setLoadingImportCourses(true);
+      const res = await api.get('/admin-bkpsdm/laporan/sertifikat/courses-for-import');
+      const list = res.data?.data || [];
+      setCoursesForImport(list);
+      if (list.length > 0) {
+        const initialCourseId = list[0].pembelajaran_id;
+        setSelectedImportCourse(initialCourseId);
+        await fetchCourseParticipants(initialCourseId);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil daftar kursus untuk impor:', err);
+    } finally {
+      setLoadingImportCourses(false);
+    }
+  };
+
+  const handleSelectImportCourse = async (courseId) => {
+    setSelectedImportCourse(courseId);
+    const newParticipants = await fetchCourseParticipants(courseId);
+    if (extractedPdfList.length > 0) {
+      const updated = matchFilesWithParticipants(extractedPdfList, newParticipants);
+      setExtractedPdfList(updated);
+    }
+  };
+
+  const extractNipFromFilename = (filename) => {
+    const cleanName = filename.replace(/\.[^/.]+$/, '');
+    // 1. Pola standar: NIP(_signed)* (8 sampai 21 digit)
+    const matchStrict = cleanName.match(/^([0-9]{8,21})(?:_signed)*$/i);
+    if (matchStrict) return matchStrict[1];
+
+    // 2. Pola batas kata numerik
+    const matchBoundary = cleanName.match(/\b([0-9]{8,21})\b/);
+    if (matchBoundary) return matchBoundary[1];
+
+    // 3. Fallback digit berurutan
+    const matchDigits = cleanName.match(/([0-9]{8,21})/);
+    return matchDigits ? matchDigits[1] : null;
+  };
+
+  const matchFilesWithParticipants = (pdfEntries, participants) => {
+    const participantMap = new Map();
+    participants.forEach((p) => {
+      const clean = (p.clean_nip || p.nip || '').replace(/[^0-9]/g, '');
+      if (clean) participantMap.set(clean, p);
+    });
+
+    return pdfEntries.map((entry) => {
+      const detectedNip = entry.extracted_nip || extractNipFromFilename(entry.filename);
+      const cleanDetectedNip = detectedNip ? detectedNip.replace(/[^0-9]/g, '') : null;
+      const matched = cleanDetectedNip ? participantMap.get(cleanDetectedNip) : null;
+
+      return {
+        ...entry,
+        extracted_nip: detectedNip,
+        is_matched: !!matched,
+        participant: matched || null,
+        error_reason: !matched
+          ? (detectedNip ? 'NIP tidak terdaftar pada peserta pelatihan ini' : 'Nomor NIP tidak terdeteksi dari nama berkas')
+          : null,
+      };
+    });
+  };
+
+  const handleProcessFiles = async (fileList) => {
+    if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
+    const zipFile = files.find((f) => f.name.toLowerCase().endsWith('.zip'));
+
+    if (zipFile) {
+      try {
+        setIsExtractingZip(true);
+        setExtractedPdfList([]);
+        const zip = new JSZip();
+        const loadedZip = await zip.loadAsync(zipFile);
+
+        const pdfKeys = Object.keys(loadedZip.files).filter((path) => {
+          const item = loadedZip.files[path];
+          const lower = path.toLowerCase();
+          return !item.dir && lower.endsWith('.pdf') && !lower.includes('__macosx') && !lower.split('/').pop().startsWith('.');
+        });
+
+        if (pdfKeys.length === 0) {
+          Swal.fire({
+            title: 'Tidak Ada Berkas PDF',
+            text: 'Arsip ZIP yang dipilih tidak memuat berkas berekstensi .pdf di dalamnya.',
+            icon: 'warning',
+            confirmButtonColor: '#0F766E'
+          });
+          return;
+        }
+
+        setExtractionProgress({ current: 0, total: pdfKeys.length });
+        const extracted = [];
+
+        for (let i = 0; i < pdfKeys.length; i++) {
+          const key = pdfKeys[i];
+          const zipEntry = loadedZip.files[key];
+          const blob = await zipEntry.async('blob');
+          const cleanFilename = key.split('/').pop().split('\\').pop();
+          const pdfFile = new File([blob], cleanFilename, { type: 'application/pdf' });
+          const detectedNip = extractNipFromFilename(cleanFilename);
+
+          extracted.push({
+            file: pdfFile,
+            filename: cleanFilename,
+            extracted_nip: detectedNip,
+          });
+
+          setExtractionProgress({ current: i + 1, total: pdfKeys.length });
+        }
+
+        const matchedResults = matchFilesWithParticipants(extracted, courseParticipants);
+        setExtractedPdfList(matchedResults);
+      } catch (err) {
+        console.error('Gagal mengekstrak berkas ZIP di browser:', err);
+        Swal.fire({
+          title: 'Ekstraksi ZIP Gagal',
+          text: 'Gagal mengekstrak berkas ZIP di peramban. Pastikan berkas arsip valid atau gunakan berkas PDF langsung.',
+          icon: 'error',
+          confirmButtonColor: '#0F766E'
+        });
+      } finally {
+        setIsExtractingZip(false);
+      }
+    } else {
+      const pdfFiles = files.filter((f) => f.name.toLowerCase().endsWith('.pdf'));
+      if (pdfFiles.length === 0) {
+        Swal.fire({
+          title: 'Format Berkas Tidak Sesuai',
+          text: 'Silakan pilih berkas arsip .ZIP atau kumpulan berkas .PDF.',
+          icon: 'warning',
+          confirmButtonColor: '#0F766E'
+        });
+        return;
+      }
+
+      const pdfEntries = pdfFiles.map((f) => ({
+        file: f,
+        filename: f.name,
+        extracted_nip: extractNipFromFilename(f.name),
+      }));
+
+      const matchedResults = matchFilesWithParticipants(pdfEntries, courseParticipants);
+      setExtractedPdfList(matchedResults);
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setIsImportModalOpen(true);
+    setSelectedUploadFiles([]);
+    setExtractedPdfList([]);
+    fetchCoursesForImport();
+  };
+
+  const handleFileChange = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleProcessFiles(files);
+    }
+    // Reset file input agar memilih ulang berkas yang sama tetap memicu event onChange
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleProcessFiles(files);
+    }
+  };
+
+  const handleSubmitImport = async (e) => {
+    e.preventDefault();
+    if (!selectedImportCourse) {
+      Swal.fire({
+        title: 'Pilih Pelatihan',
+        text: 'Silakan pilih pelatihan target terlebih dahulu.',
+        icon: 'warning',
+        confirmButtonColor: '#0F766E'
+      });
+      return;
+    }
+
+    const matchedItems = extractedPdfList.filter((item) => item.is_matched);
+
+    if (matchedItems.length === 0) {
+      Swal.fire({
+        title: 'Tidak Ada Berkas yang Cocok',
+        text: 'Tidak ada berkas PDF yang sesuai dengan NIP peserta terdaftar pada pelatihan ini.',
+        icon: 'warning',
+        confirmButtonColor: '#0F766E'
+      });
+      return;
+    }
+
+    const confirmResult = await Swal.fire({
+      title: 'Kirim Sertifikat ke Peserta?',
+      text: `Sistem akan mengirimkan ${matchedItems.length} berkas sertifikat yang cocok dengan NIP peserta langsung ke akun masing-masing peserta.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: `Kirim ke ${matchedItems.length} Peserta`,
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#0F766E',
+      cancelButtonColor: '#6B7280',
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      setIsUploadingImport(true);
+      const formData = new FormData();
+      formData.append('pembelajaran_id', selectedImportCourse);
+
+      matchedItems.forEach((item) => {
+        formData.append('files[]', item.file, item.filename);
+      });
+
+      const res = await api.post('/admin-bkpsdm/laporan/sertifikat/import-tte', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setIsImportModalOpen(false);
+      setExtractedPdfList([]);
+      setImportSummaryResult(res.data);
+      setIsSummaryModalOpen(true);
+
+      // Refresh data tabel laporan peserta
+      fetchReports(currentPage);
+    } catch (err) {
+      console.error('Gagal mengirim berkas sertifikat TTE:', err);
+      const msg = err.response?.data?.message || 'Terjadi kesalahan saat mengunggah berkas TTE.';
+      Swal.fire({
+        title: 'Pengiriman Gagal',
+        text: msg,
+        icon: 'error',
+        confirmButtonColor: '#0F766E'
+      });
+    } finally {
+      setIsUploadingImport(false);
+    }
+  };
+
+  const handleDownloadFailureCsv = () => {
+    if (!importSummaryResult?.failures || importSummaryResult.failures.length === 0) return;
+
+    const headers = ['Nama Berkas', 'NIP Terdeteksi', 'Kode Kesalahan', 'Alasan'];
+    const rows = importSummaryResult.failures.map(f => [
+      `"${(f.filename || '').replace(/"/g, '""')}"`,
+      `"${(f.extracted_nip || '-').replace(/"/g, '""')}"`,
+      `"${(f.error_code || '').replace(/"/g, '""')}"`,
+      `"${(f.reason || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Daftar_Gagal_Import_TTE_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleShowReviewModal = (personName, nip, course, ulasan) => {
@@ -675,10 +1139,32 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               </form>
 
               {activeTabReport === 'peserta' && (
-                <button onClick={handleExport} className="bg-white border-2 border-teal-600 text-teal-700 hover:bg-teal-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 w-full lg:w-auto justify-center">
-                  <Download className="w-4 h-4" />
-                  Ekspor Laporan
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                  <button
+                    onClick={handleExport}
+                    className="bg-white border-2 border-teal-600 text-teal-700 hover:bg-teal-50 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 justify-center flex-1 sm:flex-initial"
+                    title="Ekspor rekap tabular seluruh data peserta ke berkas CSV"
+                  >
+                    <Download className="w-4 h-4" />
+                    Ekspor CSV
+                  </button>
+                  <button
+                    onClick={handleOpenExportKpkModal}
+                    className="bg-teal-700 text-white hover:bg-teal-800 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 justify-center shadow-sm flex-1 sm:flex-initial"
+                    title="Ekspor seluruh berkas sertifikat khusus kursus KPK dalam arsip ZIP berbasis NIP"
+                  >
+                    <FileArchive className="w-4 h-4 text-teal-200" />
+                    Export Sertifikat KPK (.ZIP)
+                  </button>
+                  <button
+                    onClick={handleOpenImportModal}
+                    className="bg-emerald-700 text-white hover:bg-emerald-800 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 justify-center shadow-sm flex-1 sm:flex-initial"
+                    title="Impor kumpulan berkas sertifikat ber-TTE B-Sign (ZIP atau Multi-PDF)"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-200" />
+                    Import Sertifikat TTE
+                  </button>
+                </div>
               )}
             </div>
 
@@ -713,7 +1199,14 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                           <p className="text-sm text-gray-500">{report.nip} • {report.unitKerja}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="font-bold text-gray-800 text-sm">{report.course}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {report.isKpk && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0" title="Kategori Kursus Antikorupsi (KPK)">
+                                KPK
+                              </span>
+                            )}
+                            <p className="font-bold text-gray-800 text-sm">{report.course}</p>
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-bold text-gray-700 text-sm">{report.community}</p>
@@ -731,13 +1224,32 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                         </td>
                         <td className="px-6 py-4">
                           {report.hasCertificate ? (
-                            <button
-                              onClick={() => handleViewCertificate(report)}
-                              className="text-teal-700 hover:text-teal-800 font-bold text-sm flex items-center gap-1.5 transition-colors"
-                            >
-                              <Award className="w-4 h-4" />
-                              Lihat Sertifikat
-                            </button>
+                            <div className="flex flex-col items-start gap-1">
+                              {/* Badge Status TTE */}
+                              {report.statusTte === 'signed' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                  Ber-TTE Resmi
+                                </span>
+                              ) : report.statusTte === 'exported_for_tte' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                  Menunggu TTE
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                  Draft Siap
+                                </span>
+                              )}
+
+                              <button
+                                onClick={() => handleViewCertificate(report)}
+                                className="text-teal-700 hover:text-teal-800 font-bold text-xs flex items-center gap-1.5 transition-colors mt-0.5"
+                                title={report.isKpk ? `Unduh Sertifikat Berbasis NIP: ${report.nip}.pdf` : 'Unduh Sertifikat'}
+                              >
+                                <Award className="w-3.5 h-3.5" />
+                                <span>{report.isKpk ? 'Sertifikat (NIP)' : 'Lihat Sertifikat'}</span>
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-gray-400 font-bold">-</span>
                           )}
@@ -1075,6 +1587,710 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
         </div>
       </div>
+
+      {/* Modal Ekspor Sertifikat Khusus Kursus KPK */}
+      {isExportKpkModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-teal-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <FileArchive className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Ekspor Sertifikat Kursus KPK</h3>
+                  <p className="text-xs text-gray-500">Unduh seluruh berkas PDF dalam format NIP (.ZIP)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !isExportingKpkZip && setIsExportKpkModalOpen(false)}
+                disabled={isExportingKpkZip}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              {/* Pilihan Pelatihan KPK */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Pilih Kursus KPK
+                </label>
+                {loadingKpkCourses ? (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Memuat daftar pelatihan KPK...</span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedKpkCourse}
+                    onChange={(e) => setSelectedKpkCourse(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                  >
+                    <option value="all">
+                      Semua Kursus KPK ({kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0)} Belum TTE / {kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0)} Total Lulus)
+                    </option>
+                    {kpkCoursesList.map((course) => (
+                      <option key={course.pembelajaran_id} value={course.pembelajaran_id}>
+                        {course.judul_pembelajaran} ({course.total_pending_tte || 0} Belum TTE, {course.total_signed_tte || 0} Selesai Ber-TTE)
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Cakupan Berkas (Proteksi Anti-Repetisi) */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Cakupan Berkas (Proteksi Anti-Repetisi)
+                </label>
+                <div className="space-y-2">
+                  <label
+                    onClick={() => setExportKpkScope('pending_tte')}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      exportKpkScope === 'pending_tte'
+                        ? 'border-emerald-600 bg-emerald-50/50 text-gray-900'
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="exportKpkScope"
+                      value="pending_tte"
+                      checked={exportKpkScope === 'pending_tte'}
+                      onChange={() => setExportKpkScope('pending_tte')}
+                      className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="text-xs flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-gray-800">Hanya yang Belum Ber-TTE (Menunggu B-Sign)</p>
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          Rekomendasi
+                        </span>
+                      </div>
+                      <p className="text-gray-500 mt-0.5">
+                        Menyaring hanya peserta yang membutuhkan TTE. Berkas yang sudah ber-TTE resmi otomatis dilewati agar tidak terjadi pengajuan repetitif ke B-Sign.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    onClick={() => setExportKpkScope('all')}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      exportKpkScope === 'all'
+                        ? 'border-amber-600 bg-amber-50/50 text-gray-900'
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="exportKpkScope"
+                      value="all"
+                      checked={exportKpkScope === 'all'}
+                      onChange={() => setExportKpkScope('all')}
+                      className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div className="text-xs flex-1">
+                      <p className="font-bold text-gray-800">Semua Peserta Lulus (Termasuk yang Sudah Ber-TTE)</p>
+                      <p className="text-gray-500 mt-0.5">
+                        Mengemas seluruh berkas sertifikat untuk kebutuhan arsip/cadangan. Jangan diajukan ulang ke B-Sign jika sertifikat sudah ber-TTE.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Pilihan Format Nama File */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Format Penamaan Berkas PDF di Dalam ZIP
+                </label>
+                <div className="space-y-2">
+                  <label
+                    onClick={() => setExportKpkFormat('nip')}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      exportKpkFormat === 'nip'
+                        ? 'border-teal-600 bg-teal-50/50 text-gray-900'
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="exportKpkFormat"
+                      value="nip"
+                      checked={exportKpkFormat === 'nip'}
+                      onChange={() => setExportKpkFormat('nip')}
+                      className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                    />
+                    <div className="text-xs">
+                      <p className="font-bold text-gray-800">[NIP].pdf (Standar)</p>
+                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001.pdf</code></p>
+                    </div>
+                  </label>
+
+                  <label
+                    onClick={() => setExportKpkFormat('nip_signed')}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      exportKpkFormat === 'nip_signed'
+                        ? 'border-teal-600 bg-teal-50/50 text-gray-900'
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="exportKpkFormat"
+                      value="nip_signed"
+                      checked={exportKpkFormat === 'nip_signed'}
+                      onChange={() => setExportKpkFormat('nip_signed')}
+                      className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                    />
+                    <div className="text-xs">
+                      <p className="font-bold text-gray-800">[NIP]_signed.pdf (Format TTE B-Sign BSrE)</p>
+                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001_signed.pdf</code></p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Status Banner Proteksi Anti-Repetisi */}
+              {exportKpkScope === 'pending_tte' && isKpkPendingEmpty && !loadingKpkCourses ? (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-emerald-900">Seluruh Sertifikat Telah Ber-TTE Resmi</p>
+                    <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
+                      Semua peserta lulus pada kursus KPK yang dipilih ({selectedKpkCourseData.total_signed_tte} peserta) telah memiliki sertifikat resmi ber-TTE B-Sign. Tidak ada berkas baru yang perlu diajukan kembali ke B-Sign.
+                    </p>
+                  </div>
+                </div>
+              ) : exportKpkScope === 'pending_tte' && !isKpkPendingEmpty ? (
+                <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-teal-900">Proteksi Anti-Repetisi Aktif</p>
+                    <p className="text-teal-800 text-[11px] mt-0.5 leading-relaxed">
+                      Sistem hanya akan mengemas <strong>{selectedKpkCourseData.total_pending_tte} berkas</strong> yang belum ber-TTE. Sebanyak <strong>{selectedKpkCourseData.total_signed_tte} berkas</strong> yang telah ditandatangani resmi otomatis dilewati dari arsip ZIP.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-amber-900">Mode Ekspor Seluruh Berkas</p>
+                    <p className="text-amber-800 text-[11px] mt-0.5 leading-relaxed">
+                      Arsip ZIP akan memuat seluruh berkas ({selectedKpkCourseData.total_lulus} berkas), termasuk yang telah sah ber-TTE. Harap tidak mengajukan ulang berkas yang sudah sah ke B-Sign.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsExportKpkModalOpen(false)}
+                disabled={isExportingKpkZip}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-semibold text-gray-600 hover:bg-white hover:text-gray-800 transition-colors disabled:opacity-40"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadKpkZip}
+                disabled={
+                  isExportingKpkZip ||
+                  loadingKpkCourses ||
+                  kpkCoursesList.length === 0 ||
+                  (exportKpkScope === 'pending_tte' && isKpkPendingEmpty)
+                }
+                className="bg-teal-700 hover:bg-teal-800 text-white px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isExportingKpkZip ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Mengemas ZIP...</span>
+                  </>
+                ) : exportKpkScope === 'pending_tte' && isKpkPendingEmpty ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Semua Sudah Ber-TTE</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>
+                      {exportKpkScope === 'pending_tte' && selectedKpkCourseData.total_pending_tte > 0
+                        ? `Unduh ${selectedKpkCourseData.total_pending_tte} Berkas .ZIP`
+                        : 'Unduh Berkas .ZIP'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Unggah Berkas Sertifikat TTE (B-Sign) */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-emerald-800 to-teal-800 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-emerald-200" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg">Unggah Sertifikat TTE B-Sign</h3>
+                  <p className="text-xs text-emerald-100/90">Impor berkas sertifikat yang telah ditandatangani elektronik</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isUploadingImport && setIsImportModalOpen(false)}
+                disabled={isUploadingImport}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmitImport} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* Pilihan Pelatihan Target */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Pilih Pelatihan Target <span className="text-rose-500">*</span>
+                  </label>
+                  {loadingParticipants && (
+                    <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
+                      <div className="w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                      Memuat data peserta...
+                    </span>
+                  )}
+                </div>
+                {loadingImportCourses ? (
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-500">
+                    <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                    Memuat daftar pelatihan...
+                  </div>
+                ) : coursesForImport.length === 0 ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    Belum ada pelatihan yang memiliki data kelulusan peserta.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedImportCourse}
+                    onChange={(e) => handleSelectImportCourse(e.target.value)}
+                    disabled={isUploadingImport || isExtractingZip}
+                    className="w-full text-xs sm:text-sm px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-gray-800 font-medium disabled:bg-gray-100"
+                  >
+                    {coursesForImport.map((c) => (
+                      <option key={c.pembelajaran_id} value={c.pembelajaran_id}>
+                        {c.judul_pembelajaran} ({c.total_lulus} Peserta Lulus) {c.is_kpk ? '[KPK]' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span>
+                    {courseParticipants.length > 0
+                      ? `Terdapat ${courseParticipants.length} data peserta lulus yang siap diverifikasi dengan NIP berkas.`
+                      : 'Memuat data NIP peserta pelatihan ini...'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Sedang Mengekstrak ZIP */}
+              {isExtractingZip && (
+                <div className="border border-emerald-200 bg-emerald-50/50 rounded-xl p-8 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 animate-pulse">
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-950">
+                      Mengekstrak Berkas ZIP di Browser...
+                    </h4>
+                    <p className="text-xs text-emerald-700 mt-1">
+                      {extractionProgress.total > 0
+                        ? `Memproses ${extractionProgress.current} dari ${extractionProgress.total} berkas PDF...`
+                        : 'Membaca struktur direktori arsip...'}
+                    </p>
+                  </div>
+                  {extractionProgress.total > 0 && (
+                    <div className="w-full max-w-xs mx-auto bg-emerald-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-emerald-600 h-2 transition-all duration-200"
+                        style={{ width: `${Math.round((extractionProgress.current / extractionProgress.total) * 100)}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Dropzone Upload */}
+              {!isExtractingZip && extractedPdfList.length === 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                    Berkas ZIP / Kumpulan PDF Hasil TTE <span className="text-rose-500">*</span>
+                  </label>
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('tteFileInput')?.click()}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+                      isDragOver
+                        ? 'border-emerald-600 bg-emerald-50/60 scale-[1.01]'
+                        : 'border-gray-300 hover:border-emerald-500 bg-gray-50/70 hover:bg-emerald-50/20'
+                    }`}
+                  >
+                    <input
+                      id="tteFileInput"
+                      type="file"
+                      multiple
+                      accept=".zip,.pdf,application/pdf,application/zip,application/x-zip-compressed"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      disabled={isUploadingImport || isExtractingZip}
+                    />
+                    <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100/70 flex items-center justify-center text-emerald-700 mb-3">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-800 mb-1">
+                      Pilih atau Tarik Berkas .ZIP ke Sini
+                    </p>
+                    <p className="text-[11px] text-gray-500 max-w-md mx-auto leading-relaxed">
+                      Sistem akan langsung mengekstrak arsip <strong>.ZIP</strong> di peramban, mengenali nomor NIP pada nama berkas, dan memvalidasinya terhadap data peserta pelatihan target.
+                    </p>
+                    <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-500 font-mono">
+                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200">[NIP]_signed.pdf</span>
+                      <span>atau</span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200">[NIP].pdf</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Hasil Ekstraksi & Pencocokan NIP */}
+              {!isExtractingZip && extractedPdfList.length > 0 && (
+                <div className="space-y-4">
+                  {/* Stat Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total PDF</p>
+                      <p className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">{extractedPdfList.length}</p>
+                      <p className="text-[10px] text-gray-500">berkas diekstrak</p>
+                    </div>
+
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+                      <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Cocok dg Peserta</p>
+                      <p className="text-xl sm:text-2xl font-black text-emerald-800 mt-0.5">
+                        {extractedPdfList.filter((item) => item.is_matched).length}
+                      </p>
+                      <p className="text-[10px] text-emerald-600 font-medium">siap dikirim</p>
+                    </div>
+
+                    <div className={`border rounded-xl p-3 text-center ${
+                      extractedPdfList.some((item) => !item.is_matched)
+                        ? 'bg-amber-50 border-amber-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <p className={`text-[11px] font-semibold uppercase tracking-wider ${
+                        extractedPdfList.some((item) => !item.is_matched) ? 'text-amber-700' : 'text-gray-500'
+                      }`}>
+                        Tidak Cocok
+                      </p>
+                      <p className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                        extractedPdfList.some((item) => !item.is_matched) ? 'text-amber-800' : 'text-gray-800'
+                      }`}>
+                        {extractedPdfList.filter((item) => !item.is_matched).length}
+                      </p>
+                      <p className={`text-[10px] ${
+                        extractedPdfList.some((item) => !item.is_matched) ? 'text-amber-600' : 'text-gray-500'
+                      }`}>
+                        dilewati / bukan peserta
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Header & Reset Button */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileCheck className="w-4 h-4 text-emerald-600" />
+                      Pratinjau Hasil Ekstraksi & Pencocokan NIP
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setExtractedPdfList([])}
+                      disabled={isUploadingImport}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Ganti Berkas / Ekstrak Ulang</span>
+                    </button>
+                  </div>
+
+                  {/* Table of Extracted Files */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-100 text-gray-700 font-semibold sticky top-0 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3 py-2">Nama Berkas</th>
+                          <th className="px-3 py-2">NIP Terdeteksi</th>
+                          <th className="px-3 py-2">Nama Peserta Terdaftar</th>
+                          <th className="px-3 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-gray-700">
+                        {extractedPdfList.map((item, idx) => (
+                          <tr key={idx} className={item.is_matched ? 'hover:bg-emerald-50/40' : 'bg-amber-50/20 hover:bg-amber-50/40'}>
+                            <td className="px-3 py-2 font-mono text-[11px] text-gray-900 truncate max-w-[140px]" title={item.filename}>
+                              <div className="flex items-center gap-1.5">
+                                <FileText className={`w-3.5 h-3.5 shrink-0 ${item.is_matched ? 'text-emerald-600' : 'text-gray-400'}`} />
+                                <span className="truncate">{item.filename}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[11px] text-gray-800">
+                              {item.extracted_nip || '-'}
+                            </td>
+                            <td className="px-3 py-2">
+                              {item.participant ? (
+                                <div className="leading-tight">
+                                  <div className="font-semibold text-gray-900 text-xs">{item.participant.nama_lengkap}</div>
+                                  <div className="text-[10px] text-emerald-600 font-medium">Status: {item.participant.status_pendaftaran}</div>
+                                </div>
+                              ) : (
+                                <span className="text-amber-700 italic text-[11px]">NIP Tidak Terdaftar</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {item.is_matched ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  Cocok (Siap Kirim)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold">
+                                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                                  Dilewati
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Catatan pengiriman */}
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    Hanya berkas dengan status <strong>Cocok (Siap Kirim)</strong> yang akan diunggah dan dikirimkan ke akun peserta. Berkas yang tidak cocok otomatis dilewati.
+                  </p>
+                </div>
+              )}
+
+              {/* Informative Guidance */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                  <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Mekanisme Keamanan & Validasi Otomatis:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-blue-800 text-[11px] leading-relaxed pl-1">
+                  <li>Validasi struktur PDF (%PDF- & %%EOF) dan proteksi path sanitization (anti Zip-Slip).</li>
+                  <li>Draft PDF internal akan otomatis dibersihkan dan digantikan berkas resmi ber-TTE.</li>
+                  <li>Membuka langsung akses unduh sertifikat bagi peserta tanpa masa tunggu pending cooldown 3 hari.</li>
+                </ul>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  disabled={isUploadingImport}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-semibold text-gray-600 hover:bg-white hover:text-gray-800 transition-colors disabled:opacity-40"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    isUploadingImport ||
+                    isExtractingZip ||
+                    extractedPdfList.filter((item) => item.is_matched).length === 0
+                  }
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUploadingImport ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Mengirim Berkas ke Peserta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>
+                        {extractedPdfList.filter((item) => item.is_matched).length > 0
+                          ? `Kirim File ke ${extractedPdfList.filter((item) => item.is_matched).length} Peserta`
+                          : 'Kirim File ke Peserta'}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ringkasan Hasil Impor TTE */}
+      {isSummaryModalOpen && importSummaryResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-900 to-slate-800 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <FileCheck className="w-5 h-5 text-emerald-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg">Ringkasan Hasil Impor TTE</h3>
+                  <p className="text-xs text-gray-300">Laporan verifikasi dan pemrosesan berkas sertifikat B-Sign</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSummaryModalOpen(false)}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-center">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Berkas</p>
+                  <p className="text-2xl font-black text-gray-900">{importSummaryResult.total_files || 0}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">diperiksa dari unggahan</p>
+                </div>
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 text-center">
+                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Berhasil Diperbarui</p>
+                  <p className="text-2xl font-black text-emerald-800">{importSummaryResult.success_count || 0}</p>
+                  <p className="text-[11px] text-emerald-600 mt-0.5">status TTE: signed</p>
+                </div>
+                <div className={`border rounded-xl p-3.5 text-center ${
+                  importSummaryResult.failed_count > 0
+                    ? 'bg-amber-50/70 border-amber-200'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                    importSummaryResult.failed_count > 0 ? 'text-amber-700' : 'text-gray-500'
+                  }`}>
+                    Gagal / Dilewati
+                  </p>
+                  <p className={`text-2xl font-black ${
+                    importSummaryResult.failed_count > 0 ? 'text-amber-800' : 'text-gray-800'
+                  }`}>
+                    {importSummaryResult.failed_count || 0}
+                  </p>
+                  <p className={`text-[11px] mt-0.5 ${
+                    importSummaryResult.failed_count > 0 ? 'text-amber-600' : 'text-gray-500'
+                  }`}>
+                    tidak cocok / berkas rusak
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              {importSummaryResult.failed_count === 0 ? (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900">
+                  <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Seluruh berkas sertifikat berhasil diverifikasi dan disinkronkan ke akun peserta pelatihan.</span>
+                </div>
+              ) : (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Perhatian: </span>
+                    <span>Terdapat {importSummaryResult.failed_count} berkas yang gagal diproses. Berkas yang gagal tidak memengaruhi berkas yang telah berhasil diimpor.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Detail Failure Table */}
+              {importSummaryResult.failures && importSummaryResult.failures.length > 0 && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                      Daftar Berkas Gagal ({importSummaryResult.failures.length})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleDownloadFailureCsv}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Unduh Laporan Gagal (.CSV)</span>
+                    </button>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-100 text-gray-700 font-semibold sticky top-0 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3 py-2">Nama Berkas</th>
+                          <th className="px-3 py-2">NIP Terdeteksi</th>
+                          <th className="px-3 py-2">Kode Masalah</th>
+                          <th className="px-3 py-2">Keterangan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-gray-700">
+                        {importSummaryResult.failures.map((f, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50/80">
+                            <td className="px-3 py-2 font-mono text-[11px] text-gray-900 truncate max-w-[140px]" title={f.filename}>
+                              {f.filename}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[11px]">{f.extracted_nip || '-'}</td>
+                            <td className="px-3 py-2">
+                              <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-semibold">
+                                {f.error_code}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">{f.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsSummaryModalOpen(false)}
+                className="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors"
+              >
+                Selesai & Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
