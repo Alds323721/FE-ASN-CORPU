@@ -148,6 +148,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [selectedKpkCourse, setSelectedKpkCourse] = useState('all');
   const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_signed'
   const [exportKpkScope, setExportKpkScope] = useState('pending_tte'); // 'pending_tte' | 'all'
+  const [exportKpkBatchMode, setExportKpkBatchMode] = useState('batch'); // 'batch' (per 10) | 'all'
+  const [exportKpkBatchNumber, setExportKpkBatchNumber] = useState(1);
   const [isExportingKpkZip, setIsExportingKpkZip] = useState(false);
   const [loadingKpkCourses, setLoadingKpkCourses] = useState(false);
 
@@ -458,15 +460,20 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const handleOpenExportKpkModal = () => {
     setIsExportKpkModalOpen(true);
     setExportKpkScope('pending_tte');
+    setExportKpkBatchMode('batch');
+    setExportKpkBatchNumber(1);
     fetchKpkCourses();
   };
 
   const handleDownloadKpkZip = async () => {
     try {
       setIsExportingKpkZip(true);
+      const isBatchMode = totalBatches > 1 && exportKpkBatchMode === 'batch';
       const params = {
         format: exportKpkFormat,
         scope: exportKpkScope,
+        batch_size: 10,
+        batch_number: isBatchMode ? exportKpkBatchNumber : 'all',
       };
       if (selectedKpkCourse && selectedKpkCourse !== 'all') {
         params.pembelajaran_id = selectedKpkCourse;
@@ -486,7 +493,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         }
       }
       if (!filename) {
-        filename = `Sertifikat_KPK_${new Date().toISOString().slice(0, 10)}.zip`;
+        filename = isBatchMode
+          ? `Sertifikat_KPK_Batch_${exportKpkBatchNumber}_dari_${totalBatches}_${new Date().toISOString().slice(0, 10)}.zip`
+          : `Sertifikat_KPK_${new Date().toISOString().slice(0, 10)}.zip`;
       }
 
       const fileUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
@@ -500,9 +509,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
       setIsExportKpkModalOpen(false);
 
+      const batchLabel = isBatchMode ? ` (Batch ${exportKpkBatchNumber} dari ${totalBatches})` : '';
+
       Swal.fire({
         title: 'Ekspor Berhasil',
-        text: `Arsip ZIP sertifikat KPK (${filename}) berhasil diunduh. Seluruh berkas PDF di dalamnya dinamai sesuai NIP peserta.`,
+        text: `Arsip ZIP sertifikat KPK${batchLabel} (${filename}) berhasil diunduh. Berkas PDF di dalamnya dinamai sesuai NIP peserta.`,
         icon: 'success',
         confirmButtonColor: '#0F766E'
       });
@@ -544,6 +555,13 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       };
 
   const isKpkPendingEmpty = (selectedKpkCourseData.total_pending_tte || 0) === 0;
+
+  // Rule Batching: per 10 sertifikat agar ekspor ringan di server & praktis di B-Sign
+  const targetExportCount = exportKpkScope === 'pending_tte'
+    ? (selectedKpkCourseData.total_pending_tte || 0)
+    : (selectedKpkCourseData.total_lulus || 0);
+
+  const totalBatches = Math.max(1, Math.ceil(targetExportCount / 10));
 
   // State Import Sertifikat TTE B-Sign
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1591,9 +1609,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       {/* Modal Ekspor Sertifikat Khusus Kursus KPK */}
       {isExportKpkModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92vh]">
             {/* Modal Header */}
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-teal-50/50">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-teal-50/50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-sm">
                   <FileArchive className="w-5 h-5 text-white" />
@@ -1613,7 +1631,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Pilihan Pelatihan KPK */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
@@ -1627,7 +1645,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 ) : (
                   <select
                     value={selectedKpkCourse}
-                    onChange={(e) => setSelectedKpkCourse(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedKpkCourse(e.target.value);
+                      setExportKpkBatchNumber(1);
+                    }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
                   >
                     <option value="all">
@@ -1649,7 +1670,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </label>
                 <div className="space-y-2">
                   <label
-                    onClick={() => setExportKpkScope('pending_tte')}
+                    onClick={() => {
+                      setExportKpkScope('pending_tte');
+                      setExportKpkBatchNumber(1);
+                    }}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkScope === 'pending_tte'
                         ? 'border-emerald-600 bg-emerald-50/50 text-gray-900'
@@ -1661,7 +1685,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       name="exportKpkScope"
                       value="pending_tte"
                       checked={exportKpkScope === 'pending_tte'}
-                      onChange={() => setExportKpkScope('pending_tte')}
+                      onChange={() => {
+                        setExportKpkScope('pending_tte');
+                        setExportKpkBatchNumber(1);
+                      }}
                       className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
                     />
                     <div className="text-xs flex-1">
@@ -1678,7 +1705,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </label>
 
                   <label
-                    onClick={() => setExportKpkScope('all')}
+                    onClick={() => {
+                      setExportKpkScope('all');
+                      setExportKpkBatchNumber(1);
+                    }}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkScope === 'all'
                         ? 'border-amber-600 bg-amber-50/50 text-gray-900'
@@ -1690,7 +1720,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       name="exportKpkScope"
                       value="all"
                       checked={exportKpkScope === 'all'}
-                      onChange={() => setExportKpkScope('all')}
+                      onChange={() => {
+                        setExportKpkScope('all');
+                        setExportKpkBatchNumber(1);
+                      }}
                       className="mt-0.5 text-amber-600 focus:ring-amber-500"
                     />
                     <div className="text-xs flex-1">
@@ -1755,6 +1788,124 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </div>
               </div>
 
+              {/* Opsi Pembagian Batch Ekspor (Aturan per 10 Sertifikat) */}
+              {targetExportCount > 10 ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Aturan Ekspor per 10 Sertifikat (Ringan)
+                    </label>
+                    <span className="text-[11px] font-semibold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">
+                      Total: {targetExportCount} Berkas ({totalBatches} Batch)
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      onClick={() => setExportKpkBatchMode('batch')}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                        exportKpkBatchMode === 'batch'
+                          ? 'border-teal-600 bg-teal-50/50 text-gray-900'
+                          : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="exportKpkBatchMode"
+                        value="batch"
+                        checked={exportKpkBatchMode === 'batch'}
+                        onChange={() => setExportKpkBatchMode('batch')}
+                        className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                      />
+                      <div className="text-xs flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-gray-800">Ekspor per Batch 10 Berkas</p>
+                          <span className="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            Rekomendasi B-Sign
+                          </span>
+                        </div>
+                        <p className="text-gray-500 mt-0.5">
+                          Membatasi per 10 sertifikat agar beban server sangat ringan dan praktis untuk proses batch signing di aplikasi B-Sign.
+                        </p>
+
+                        {exportKpkBatchMode === 'batch' && (
+                          <div className="mt-3 pt-2.5 border-t border-teal-100">
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1.5">
+                              Pilih Batch Berkas yang Ingin Diunduh:
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-0.5">
+                              {Array.from({ length: totalBatches }, (_, i) => {
+                                const bNum = i + 1;
+                                const startIdx = (bNum - 1) * 10 + 1;
+                                const endIdx = Math.min(bNum * 10, targetExportCount);
+                                const count = endIdx - startIdx + 1;
+                                const isSelected = exportKpkBatchNumber === bNum;
+
+                                return (
+                                  <button
+                                    key={bNum}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setExportKpkBatchNumber(bNum);
+                                    }}
+                                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold border text-center transition-all ${
+                                      isSelected
+                                        ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:border-teal-400 hover:bg-teal-50/50'
+                                    }`}
+                                  >
+                                    <div>Batch {bNum}</div>
+                                    <div className={`text-[10px] font-normal ${isSelected ? 'text-teal-100' : 'text-gray-500'}`}>
+                                      {startIdx}-{endIdx} ({count} berkas)
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+
+                    <label
+                      onClick={() => setExportKpkBatchMode('all')}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                        exportKpkBatchMode === 'all'
+                          ? 'border-amber-600 bg-amber-50/50 text-gray-900'
+                          : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="exportKpkBatchMode"
+                        value="all"
+                        checked={exportKpkBatchMode === 'all'}
+                        onChange={() => setExportKpkBatchMode('all')}
+                        className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                      />
+                      <div className="text-xs flex-1">
+                        <p className="font-bold text-gray-800">Ekspor Sekaligus Seluruh Berkas ({targetExportCount} Berkas)</p>
+                        <p className="text-gray-500 mt-0.5">
+                          Mengemas seluruh {targetExportCount} sertifikat dalam 1 arsip ZIP sekaligus tanpa pembagian batch.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : targetExportCount > 0 ? (
+                <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-teal-600 shrink-0" />
+                    <span>Total target: <strong>{targetExportCount} berkas</strong> (&le; 10, otomatis 1 batch ringkas).</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-teal-200/80 text-teal-900 px-2 py-0.5 rounded-full">
+                    Aturan 10/Batch
+                  </span>
+                </div>
+              ) : null}
+
               {/* Status Banner Proteksi Anti-Repetisi */}
               {exportKpkScope === 'pending_tte' && isKpkPendingEmpty && !loadingKpkCourses ? (
                 <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 flex items-start gap-2.5">
@@ -1790,7 +1941,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsExportKpkModalOpen(false)}
@@ -1824,9 +1975,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <>
                     <Download className="w-4 h-4" />
                     <span>
-                      {exportKpkScope === 'pending_tte' && selectedKpkCourseData.total_pending_tte > 0
-                        ? `Unduh ${selectedKpkCourseData.total_pending_tte} Berkas .ZIP`
-                        : 'Unduh Berkas .ZIP'}
+                      {totalBatches > 1 && exportKpkBatchMode === 'batch'
+                        ? `Unduh Batch ${exportKpkBatchNumber} (${Math.min(10, targetExportCount - (exportKpkBatchNumber - 1) * 10)} Berkas .ZIP)`
+                        : `Unduh ${targetExportCount} Berkas .ZIP`}
                     </span>
                   </>
                 )}
