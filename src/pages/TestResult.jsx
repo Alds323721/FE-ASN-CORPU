@@ -229,7 +229,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
             <span>Program Kolaborasi Resmi KPK RI</span>
           </div>
         )}
-        {isSigned && (
+        {sertifikat?.is_kpk && isSigned && (
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-sm">
             <ShieldCheck className="w-4 h-4 text-emerald-600" aria-hidden="true" />
             <span>Telah Ditandatangani Secara Elektronik (TTE BSrE BSSN)</span>
@@ -285,7 +285,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
           className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
             !sudahMengisiKuesioner || isCooldownActive
               ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed'
-              : isSigned
+              : sertifikat?.is_kpk && isSigned
               ? 'bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer shadow-sm'
               : 'bg-[#006A63] text-white hover:bg-[#00534D] cursor-pointer'
           }`}
@@ -294,11 +294,6 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
             <>
               <Clock className="w-5 h-5" aria-hidden="true" />
               <span>Menunggu TTE Resmi</span>
-            </>
-          ) : isSigned ? (
-            <>
-              <Download className="w-5 h-5" aria-hidden="true" />
-              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat (PDF)'}</span>
             </>
           ) : (
             <>
