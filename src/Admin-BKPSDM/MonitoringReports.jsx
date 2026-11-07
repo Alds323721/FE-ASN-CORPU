@@ -223,7 +223,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         nip: user.nip || '-',
         unitKerja: user.unit_kerja || user.instansi || '-',
         course: user.judul_pembelajaran || 'Belum terdaftar',
-        community: user.nama_komunitas || 'BKPSDM',
+        community: (!user.nama_komunitas || user.nama_komunitas === 'BKPSDM' || user.nama_komunitas === '-') ? '-' : user.nama_komunitas,
         progress: user.progres ?? 0,
         status: user.status_pendaftaran === 'lulus' || user.status_pendaftaran === 'selesai'
           ? 'Lulus'
@@ -1399,7 +1399,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                           <td className="px-6 py-4">
                             <p className="font-bold text-gray-800 text-sm">{rev.pembelajaran?.judul_pembelajaran || '-'}</p>
                             <span className="inline-block mt-1 text-xs text-teal-700 bg-teal-50 px-2 py-0.5 rounded font-medium">
-                              {rev.pembelajaran?.nama_komunitas || 'Komunitas BKPSDM'}
+                              {(!rev.pembelajaran?.nama_komunitas || rev.pembelajaran?.nama_komunitas === 'BKPSDM' || rev.pembelajaran?.nama_komunitas === 'Komunitas BKPSDM') ? '-' : rev.pembelajaran.nama_komunitas}
                             </span>
                           </td>
                           <td className="px-6 py-4">
