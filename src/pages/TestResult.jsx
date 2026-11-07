@@ -298,7 +298,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
           ) : isSigned ? (
             <>
               <Download className="w-5 h-5" aria-hidden="true" />
-              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat Ber-TTE (PDF)'}</span>
+              <span>{downloading ? 'Mengunduh...' : 'Unduh Sertifikat (PDF)'}</span>
             </>
           ) : (
             <>

@@ -607,7 +607,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     try {
       setLoadingImportCourses(true);
       const res = await api.get('/admin-bkpsdm/laporan/sertifikat/courses-for-import');
-      const list = res.data?.data || [];
+      const list = (res.data?.data || []).filter((c) => c.is_kpk !== false);
       setCoursesForImport(list);
       if (list.length > 0) {
         const initialCourseId = list[0].pembelajaran_id;
@@ -1998,8 +1998,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <Upload className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg">Unggah Sertifikat TTE B-Sign</h3>
-                  <p className="text-xs text-emerald-100/90">Impor berkas sertifikat yang telah ditandatangani elektronik</p>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Unggah Sertifikat TTE B-Sign</h3>
+                  <p className="text-xs text-emerald-100 font-medium">Impor berkas sertifikat yang telah ditandatangani elektronik</p>
                 </div>
               </div>
               <button
@@ -2018,7 +2018,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Pilih Pelatihan Target <span className="text-rose-500">*</span>
+                    Pilih Pelatihan Target (Khusus KPK) <span className="text-rose-500">*</span>
                   </label>
                   {loadingParticipants && (
                     <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
@@ -2030,11 +2030,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 {loadingImportCourses ? (
                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-500">
                     <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                    Memuat daftar pelatihan...
+                    Memuat daftar pelatihan KPK...
                   </div>
                 ) : coursesForImport.length === 0 ? (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                    Belum ada pelatihan yang memiliki data kelulusan peserta.
+                    Belum ada pelatihan KPK yang memiliki data kelulusan peserta.
                   </div>
                 ) : (
                   <select
@@ -2045,7 +2045,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   >
                     {coursesForImport.map((c) => (
                       <option key={c.pembelajaran_id} value={c.pembelajaran_id}>
-                        {c.judul_pembelajaran} ({c.total_lulus} Peserta Lulus) {c.is_kpk ? '[KPK]' : ''}
+                        {c.judul_pembelajaran} ({c.total_lulus} Peserta Lulus) [KPK]
                       </option>
                     ))}
                   </select>
@@ -2314,8 +2314,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <FileCheck className="w-5 h-5 text-emerald-300" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg">Ringkasan Hasil Impor TTE</h3>
-                  <p className="text-xs text-gray-300">Laporan verifikasi dan pemrosesan berkas sertifikat B-Sign</p>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Ringkasan Hasil Impor TTE</h3>
+                  <p className="text-xs text-gray-200 font-medium">Laporan verifikasi dan pemrosesan berkas sertifikat B-Sign</p>
                 </div>
               </div>
               <button
