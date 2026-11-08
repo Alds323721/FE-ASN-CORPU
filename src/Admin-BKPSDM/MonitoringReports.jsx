@@ -704,7 +704,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
           const key = pdfKeys[i];
           const zipEntry = loadedZip.files[key];
           const blob = await zipEntry.async('blob');
-          const cleanFilename = key.split('/').pop().split('\\').pop();
+          const rawFilename = key.split('/').pop().split('\\').pop();
+          const cleanFilename = rawFilename.trim().replace(/[\r\n"']/g, '');
           const pdfFile = new File([blob], cleanFilename, { type: 'application/pdf' });
           const detectedNip = extractNipFromFilename(cleanFilename);
 
@@ -2304,81 +2305,86 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       )}
 
       {/* Modal Ringkasan Hasil Impor TTE */}
-      {isSummaryModalOpen && importSummaryResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
-            {/* Header */}
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-900 to-slate-800 text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <FileCheck className="w-5 h-5 text-emerald-300" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white">Ringkasan Hasil Impor TTE</h3>
-                  <p className="text-xs text-gray-200 font-medium">Laporan verifikasi dan pemrosesan berkas sertifikat B-Sign</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSummaryModalOpen(false)}
-                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {isSummaryModalOpen && importSummaryResult && (() => {
+        const totalFilesCount = importSummaryResult.total_files ?? importSummaryResult.summary?.total_diproses ?? 0;
+        const successFilesCount = importSummaryResult.success_count ?? importSummaryResult.summary?.total_berhasil ?? 0;
+        const failedFilesCount = importSummaryResult.failed_count ?? importSummaryResult.summary?.total_gagal ?? (importSummaryResult.failures?.length || 0);
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-center">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Berkas</p>
-                  <p className="text-2xl font-black text-gray-900">{importSummaryResult.total_files || 0}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">diperiksa dari unggahan</p>
-                </div>
-                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 text-center">
-                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Berhasil Diperbarui</p>
-                  <p className="text-2xl font-black text-emerald-800">{importSummaryResult.success_count || 0}</p>
-                  <p className="text-[11px] text-emerald-600 mt-0.5">status TTE: signed</p>
-                </div>
-                <div className={`border rounded-xl p-3.5 text-center ${
-                  importSummaryResult.failed_count > 0
-                    ? 'bg-amber-50/70 border-amber-200'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
-                    importSummaryResult.failed_count > 0 ? 'text-amber-700' : 'text-gray-500'
-                  }`}>
-                    Gagal / Dilewati
-                  </p>
-                  <p className={`text-2xl font-black ${
-                    importSummaryResult.failed_count > 0 ? 'text-amber-800' : 'text-gray-800'
-                  }`}>
-                    {importSummaryResult.failed_count || 0}
-                  </p>
-                  <p className={`text-[11px] mt-0.5 ${
-                    importSummaryResult.failed_count > 0 ? 'text-amber-600' : 'text-gray-500'
-                  }`}>
-                    tidak cocok / berkas rusak
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Banner */}
-              {importSummaryResult.failed_count === 0 ? (
-                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900">
-                  <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>Seluruh berkas sertifikat berhasil diverifikasi dan disinkronkan ke akun peserta pelatihan.</span>
-                </div>
-              ) : (
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
-                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
+              {/* Header */}
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-900 to-slate-800 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <FileCheck className="w-5 h-5 text-emerald-300" />
+                  </div>
                   <div>
-                    <span className="font-bold">Perhatian: </span>
-                    <span>Terdapat {importSummaryResult.failed_count} berkas yang gagal diproses. Berkas yang gagal tidak memengaruhi berkas yang telah berhasil diimpor.</span>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Ringkasan Hasil Impor TTE</h3>
+                    <p className="text-xs text-gray-200 font-medium">Laporan verifikasi dan pemrosesan berkas sertifikat B-Sign</p>
                   </div>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setIsSummaryModalOpen(false)}
+                  className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+                {/* Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-center">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Berkas</p>
+                    <p className="text-2xl font-black text-gray-900">{totalFilesCount}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">diperiksa dari unggahan</p>
+                  </div>
+                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 text-center">
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Berhasil Diperbarui</p>
+                    <p className="text-2xl font-black text-emerald-800">{successFilesCount}</p>
+                    <p className="text-[11px] text-emerald-600 mt-0.5">status TTE: signed</p>
+                  </div>
+                  <div className={`border rounded-xl p-3.5 text-center ${
+                    failedFilesCount > 0
+                      ? 'bg-amber-50/70 border-amber-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                      failedFilesCount > 0 ? 'text-amber-700' : 'text-gray-500'
+                    }`}>
+                      Gagal / Dilewati
+                    </p>
+                    <p className={`text-2xl font-black ${
+                      failedFilesCount > 0 ? 'text-amber-800' : 'text-gray-800'
+                    }`}>
+                      {failedFilesCount}
+                    </p>
+                    <p className={`text-[11px] mt-0.5 ${
+                      failedFilesCount > 0 ? 'text-amber-600' : 'text-gray-500'
+                    }`}>
+                      tidak cocok / berkas rusak
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Banner */}
+                {failedFilesCount === 0 ? (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900">
+                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <span>Seluruh berkas sertifikat berhasil diverifikasi dan disinkronkan ke akun peserta pelatihan.</span>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Perhatian: </span>
+                      <span>Terdapat {failedFilesCount} berkas yang gagal diproses. Berkas yang gagal tidak memengaruhi berkas yang telah berhasil diimpor.</span>
+                    </div>
+                  </div>
+                )}
 
               {/* Detail Failure Table */}
               {importSummaryResult.failures && importSummaryResult.failures.length > 0 && (
@@ -2441,7 +2447,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
