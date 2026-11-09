@@ -146,7 +146,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [isExportKpkModalOpen, setIsExportKpkModalOpen] = useState(false);
   const [kpkCoursesList, setKpkCoursesList] = useState([]);
   const [selectedKpkCourse, setSelectedKpkCourse] = useState('all');
-  const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_signed'
+  const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_sign'
   const [exportKpkScope, setExportKpkScope] = useState('pending_tte'); // 'pending_tte' | 'all'
   const [exportKpkBatchMode, setExportKpkBatchMode] = useState('batch'); // 'batch' (per 10) | 'all'
   const [exportKpkBatchNumber, setExportKpkBatchNumber] = useState(1);
@@ -631,13 +631,13 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   };
 
   const extractNipFromFilename = (filename) => {
-    const cleanName = filename.replace(/\.[^/.]+$/, '');
-    // 1. Pola standar: NIP(_signed)* (8 sampai 21 digit)
-    const matchStrict = cleanName.match(/^([0-9]{8,21})(?:_signed)*$/i);
+    const cleanName = filename.replace(/\.[^/.]+$/, '').trim();
+    // 1. Pola standar: [NIP] atau [NIP]_sign (8 sampai 21 digit, kompatibel mundur dengan _signed)
+    const matchStrict = cleanName.match(/^([0-9]{8,21})(?:_(?:sign|signed))*\s*(?:\(\d+\)|_\d+)?$/i);
     if (matchStrict) return matchStrict[1];
 
-    // 2. Pola batas kata numerik
-    const matchBoundary = cleanName.match(/\b([0-9]{8,21})\b/);
+    // 2. Pola batas digit numerik (aman terhadap pemisah underscore '_')
+    const matchBoundary = cleanName.match(/(?:^|\D)([0-9]{8,21})(?!\d)/);
     if (matchBoundary) return matchBoundary[1];
 
     // 3. Fallback digit berurutan
@@ -1766,9 +1766,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </label>
 
                   <label
-                    onClick={() => setExportKpkFormat('nip_signed')}
+                    onClick={() => setExportKpkFormat('nip_sign')}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                      exportKpkFormat === 'nip_signed'
+                      exportKpkFormat === 'nip_sign'
                         ? 'border-teal-600 bg-teal-50/50 text-gray-900'
                         : 'border-gray-200 hover:bg-gray-50 text-gray-700'
                     }`}
@@ -1776,14 +1776,14 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     <input
                       type="radio"
                       name="exportKpkFormat"
-                      value="nip_signed"
-                      checked={exportKpkFormat === 'nip_signed'}
-                      onChange={() => setExportKpkFormat('nip_signed')}
+                      value="nip_sign"
+                      checked={exportKpkFormat === 'nip_sign'}
+                      onChange={() => setExportKpkFormat('nip_sign')}
                       className="mt-0.5 text-teal-600 focus:ring-teal-500"
                     />
                     <div className="text-xs">
-                      <p className="font-bold text-gray-800">[NIP]_signed.pdf (Format TTE B-Sign BSrE)</p>
-                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001_signed.pdf</code></p>
+                      <p className="font-bold text-gray-800">[NIP]_sign.pdf (Format TTE B-Sign BSrE)</p>
+                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001_sign.pdf</code></p>
                     </div>
                   </label>
                 </div>
@@ -2124,7 +2124,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       Sistem akan langsung mengekstrak arsip <strong>.ZIP</strong> di peramban, mengenali nomor NIP pada nama berkas, dan memvalidasinya terhadap data peserta pelatihan target.
                     </p>
                     <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-500 font-mono">
-                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200">[NIP]_signed.pdf</span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200">[NIP]_sign.pdf</span>
                       <span>atau</span>
                       <span className="bg-white px-2 py-0.5 rounded border border-gray-200">[NIP].pdf</span>
                     </div>
