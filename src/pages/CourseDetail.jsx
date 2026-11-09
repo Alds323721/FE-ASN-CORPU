@@ -452,7 +452,10 @@ export default function CourseDetail({ onNavigate, onBack }) {
         } else {
           Swal.fire({
             icon: 'success',
-            title: isMateriVideo(activeMateri) ? 'Video Selesai Ditonton!' : 'Materi Selesai!',
+            title:
+              isMateriVideo(activeMateri) || activeMateri?.tipe === 'h5p' || activeMateri?.tipe === 'scorm'
+                ? 'Video Selesai Ditonton!'
+                : 'Materi Selesai!',
             text: 'Progres belajar Anda telah tersimpan.',
             timer: 1500,
             showConfirmButton: false
@@ -471,7 +474,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
     }
   };
 
-  // Listener event postMessage / xAPI dari player H5P dan YouTube Player
+  // Listener event postMessage dari YouTube Player
   useEffect(() => {
     const handleWindowMessage = (event) => {
       try {
@@ -483,18 +486,7 @@ export default function CourseDetail({ onNavigate, onBack }) {
         }
         if (!data) return;
 
-        // 1. Deteksi H5P selesai (hanya dari sinyal eksplisit h5p-completed yang sudah melewati validasi durasi akhir video)
-        const isH5PCompleted =
-          data?.event === 'h5p-completed' ||
-          data?.type === 'h5p-completed' ||
-          data?.action === 'completed';
-
-        if (isH5PCompleted && activeMateri?.materi_id && !activeMateri.is_read && activeMateri.tipe === 'h5p') {
-          handleMarkAsRead(false);
-          return;
-        }
-
-        // 2. Deteksi YouTube player selesai (state 0 = ENDED)
+        // Deteksi YouTube player selesai (state 0 = ENDED)
         if (data?.event === 'onStateChange' && typeof data?.info === 'number' && data.info === 0) {
           if (activeMateri?.materi_id && !activeMateri.is_read && isMateriVideo(activeMateri)) {
             handleMarkAsRead(false);
@@ -510,7 +502,8 @@ export default function CourseDetail({ onNavigate, onBack }) {
     return () => window.removeEventListener('message', handleWindowMessage);
   }, [activeMateri]);
 
-  // Listener & Runtime Bridge untuk Materi SCORM (SCORM 1.2 & SCORM 2004)
+  // Runtime Bridge untuk Materi SCORM (SCORM 1.2 & SCORM 2004) agar konten SCORM berjalan tanpa error API
+  // Penyelesaian materi SCORM dikontrol melalui tombol "Tandai Sudah Ditonton" sesuai durasi estimasi materi
   useEffect(() => {
     if (activeMateri?.tipe !== 'scorm') return;
 
@@ -525,35 +518,16 @@ export default function CourseDetail({ onNavigate, onBack }) {
       'cmi.score.raw': '0',
     };
 
-    const triggerScormCompletion = (status) => {
-      const s = String(status || '').toLowerCase();
-      if ((s === 'completed' || s === 'passed') && activeMateri?.materi_id && !activeMateri.is_read) {
-        window.postMessage({ type: 'scorm-completed', materiId: activeMateri.materi_id }, '*');
-        handleMarkAsRead(false);
-      }
-    };
-
     // SCORM 1.2 Runtime API Bridge
     window.API = {
       LMSInitialize: () => "true",
-      LMSFinish: () => {
-        const status = cmiData['cmi.core.lesson_status'];
-        triggerScormCompletion(status);
-        return "true";
-      },
+      LMSFinish: () => "true",
       LMSGetValue: (element) => cmiData[element] || "",
       LMSSetValue: (element, value) => {
         cmiData[element] = String(value);
-        if (element === 'cmi.core.lesson_status') {
-          triggerScormCompletion(value);
-        }
         return "true";
       },
-      LMSCommit: () => {
-        const status = cmiData['cmi.core.lesson_status'];
-        triggerScormCompletion(status);
-        return "true";
-      },
+      LMSCommit: () => "true",
       LMSGetLastError: () => "0",
       LMSGetErrorString: () => "No error",
       LMSGetDiagnostic: () => ""
@@ -562,24 +536,13 @@ export default function CourseDetail({ onNavigate, onBack }) {
     // SCORM 2004 Runtime API Bridge
     window.API_1484_11 = {
       Initialize: () => "true",
-      Terminate: () => {
-        const status = cmiData['cmi.completion_status'] || cmiData['cmi.success_status'];
-        triggerScormCompletion(status);
-        return "true";
-      },
+      Terminate: () => "true",
       GetValue: (element) => cmiData[element] || "",
       SetValue: (element, value) => {
         cmiData[element] = String(value);
-        if (element === 'cmi.completion_status' || element === 'cmi.success_status') {
-          triggerScormCompletion(value);
-        }
         return "true";
       },
-      Commit: () => {
-        const status = cmiData['cmi.completion_status'] || cmiData['cmi.success_status'];
-        triggerScormCompletion(status);
-        return "true";
-      },
+      Commit: () => "true",
       GetLastError: () => "0",
       GetErrorString: () => "No error",
       GetDiagnostic: () => ""

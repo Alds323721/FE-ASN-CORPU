@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Package, Clock, Video, Link2, PlayCircle, Globe, ExternalLink, Eye } from 'lucide-react';
+import { X, Sparkles, Package, Clock, Video, Link2, PlayCircle, Globe, ExternalLink, Eye, CheckCircle2 } from 'lucide-react';
 import { getStorageUrl } from '../../../utils/url';
 
 const MaterialModal = ({
@@ -542,23 +542,33 @@ const MaterialModal = ({
           {isEdit ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Durasi (Menit)
+                <label htmlFor="materi-durasi-menit" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Estimasi Durasi Materi (Menit)
                 </label>
                 <input
+                  id="materi-durasi-menit"
                   type="number"
                   min="1"
                   required
                   value={form.durasi_menit ?? 15}
-                  onChange={(e) => setForm({ ...form, durasi_menit: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const rawVal = e.target.value;
+                    const minutes = rawVal === '' ? '' : Math.max(1, Number(rawVal) || 1);
+                    setForm({
+                      ...form,
+                      durasi_menit: minutes,
+                      waktu_muncul_tombol_menit: minutes === '' ? 1 : minutes
+                    });
+                  }}
                   className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label htmlFor="materi-sifat-wajib" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                   Sifat Materi
                 </label>
                 <select
+                  id="materi-sifat-wajib"
                   value={form.apakah_wajib ? '1' : '0'}
                   onChange={(e) => setForm({ ...form, apakah_wajib: e.target.value === '1' })}
                   className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 bg-white"
@@ -570,17 +580,95 @@ const MaterialModal = ({
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+              <label htmlFor="materi-durasi-menit" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                 Estimasi Durasi Belajar (Menit)
               </label>
               <input
+                id="materi-durasi-menit"
                 type="number"
                 min="1"
                 required
                 value={form.durasi_menit ?? 15}
-                onChange={(e) => setForm({ ...form, durasi_menit: Number(e.target.value) })}
+                onChange={(e) => {
+                  const rawVal = e.target.value;
+                  const minutes = rawVal === '' ? '' : Math.max(1, Number(rawVal) || 1);
+                  setForm({
+                    ...form,
+                    durasi_menit: minutes,
+                    waktu_muncul_tombol_menit: minutes === '' ? 1 : minutes
+                  });
+                }}
                 className="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
               />
+            </div>
+          )}
+
+          {(form.tipe_materi === 'h5p' || form.tipe_materi === 'scorm') && (
+            <div className="p-3.5 rounded-lg border border-teal-200 bg-teal-50/50 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#0F766E] shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <h4 className="text-xs font-bold text-teal-950 uppercase tracking-wider">
+                      Aturan Tombol &quot;Tandai Sudah Ditonton&quot;
+                    </h4>
+                    <p className="text-[11px] text-teal-800 mt-0.5 leading-relaxed">
+                      Mengatur kemunculan tombol penyelesaian materi video interaktif ({form.tipe_materi === 'h5p' ? 'H5P' : 'SCORM'}) agar peserta tidak melewati materi terlalu cepat dan tidak terkendala saat menyelesaikan materi.
+                    </p>
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer shrink-0 select-none">
+                  <input
+                    type="checkbox"
+                    checked={form.gunakan_tombol_selesai !== false}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        gunakan_tombol_selesai: e.target.checked,
+                        waktu_muncul_tombol_menit: Math.max(1, Number(form.durasi_menit) || 15)
+                      })
+                    }
+                    className="w-4 h-4 accent-[#0F766E] rounded cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-[#0F766E]">Aktifkan Tombol</span>
+                </label>
+              </div>
+
+              {form.gunakan_tombol_selesai !== false && (
+                <div className="bg-white p-3 rounded-lg border border-teal-200/80 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label htmlFor="waktu-muncul-tombol-menit" className="text-xs font-semibold text-gray-800">
+                      Waktu Kemunculan Tombol (Sesuai Estimasi Materi):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="waktu-muncul-tombol-menit"
+                        type="number"
+                        min="1"
+                        required
+                        value={form.durasi_menit ?? 15}
+                        onChange={(e) => {
+                          const rawVal = e.target.value;
+                          const minutes = rawVal === '' ? '' : Math.max(1, Number(rawVal) || 1);
+                          setForm({
+                            ...form,
+                            durasi_menit: minutes,
+                            waktu_muncul_tombol_menit: minutes === '' ? 1 : minutes
+                          });
+                        }}
+                        className="w-24 px-2.5 py-1.5 border border-teal-300 rounded-md text-xs font-bold text-teal-900 bg-teal-50/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-center"
+                      />
+                      <span className="text-xs font-bold text-teal-900">Menit</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#0F766E] shrink-0" aria-hidden="true" />
+                    <span>
+                      Tombol <b>&quot;Tandai Sudah Ditonton&quot;</b> akan muncul kepada peserta tepat setelah <b>{Math.max(1, Number(form.durasi_menit) || 15)} menit</b> belajar.
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

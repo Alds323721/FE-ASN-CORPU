@@ -50,6 +50,17 @@ export default function CoursePlayer({
   onNextMateri,
   nextStepInfo
 }) {
+  const effectiveCourseId =
+    courseData?.pembelajaran_id ||
+    localStorage.getItem('userCourseId') ||
+    localStorage.getItem('userActiveMateriCourseId') ||
+    'course';
+  const effectiveMateriId =
+    activeMateri?.materi_id ||
+    localStorage.getItem('userActiveMateriId') ||
+    'materi';
+  const timerStorageKey = `lms_watch_timer_${effectiveCourseId}_${effectiveMateriId}`;
+
   const [isWebExpanded, setIsWebExpanded] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [docIframeKey, setDocIframeKey] = useState(0);
@@ -57,8 +68,33 @@ export default function CoursePlayer({
   const [isDocLoading, setIsDocLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isContentCompleted, setIsContentCompleted] = useState(Boolean(activeMateri?.is_read));
+  const [elapsedInteractiveSeconds, setElapsedInteractiveSeconds] = useState(() => {
+    try {
+      const cId =
+        courseData?.pembelajaran_id ||
+        localStorage.getItem('userCourseId') ||
+        localStorage.getItem('userActiveMateriCourseId') ||
+        'course';
+      const mId =
+        activeMateri?.materi_id ||
+        localStorage.getItem('userActiveMateriId') ||
+        'materi';
+      const saved = parseInt(localStorage.getItem(`lms_watch_timer_${cId}_${mId}`) || '0', 10);
+      return Number.isFinite(saved) ? Math.max(0, saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const maxTimeWatchedRef = useRef(0);
   const hasAutoMarkedRef = useRef(Boolean(activeMateri?.is_read));
+
+  const isInteractiveMateri = activeMateri?.tipe === 'h5p' || activeMateri?.tipe === 'scorm';
+  const useInteractiveTimerRule = activeMateri?.gunakan_tombol_selesai !== false;
+  const targetMinutes = Math.max(
+    1,
+    parseInt(activeMateri?.waktu_muncul_tombol_menit || activeMateri?.durasi || 1, 10) || 1
+  );
+  const targetSeconds = targetMinutes * 60;
 
   useEffect(() => {
     const alreadyRead = Boolean(activeMateri?.is_read);
@@ -67,7 +103,21 @@ export default function CoursePlayer({
     maxTimeWatchedRef.current = 0;
     setIsIframeLoading(true);
     setIsDocLoading(true);
-  }, [activeMateri?.materi_id, activeMateri?.is_read]);
+
+    if (alreadyRead) {
+      setElapsedInteractiveSeconds(targetSeconds);
+    } else if (isInteractiveMateri) {
+      try {
+        const saved = parseInt(localStorage.getItem(timerStorageKey) || '0', 10);
+        const clamped = Number.isFinite(saved) ? Math.min(targetSeconds, Math.max(0, saved)) : 0;
+        setElapsedInteractiveSeconds(clamped);
+      } catch {
+        setElapsedInteractiveSeconds(0);
+      }
+    } else {
+      setElapsedInteractiveSeconds(0);
+    }
+  }, [activeMateri?.materi_id, activeMateri?.is_read, isInteractiveMateri, targetSeconds, timerStorageKey]);
 
   const triggerAutoComplete = () => {
     setIsContentCompleted(true);
@@ -77,33 +127,38 @@ export default function CoursePlayer({
     }
   };
 
-  // Listen for completion events from H5P, SCORM, or YouTube iframe
+  // Timer kemunculan tombol "Tandai Sudah Ditonton" untuk H5P & SCORM sesuai estimasi durasi materi (menit)
+  useEffect(() => {
+    if (!activeMateri || !isInteractiveMateri) return;
+    if (activeMateri.is_read || isContentCompleted) return;
+
+    const intervalId = setInterval(() => {
+      if (document.hidden) return;
+
+      setElapsedInteractiveSeconds((prev) => {
+        if (prev >= targetSeconds) return prev;
+        const nextVal = prev + 1;
+        try {
+          localStorage.setItem(timerStorageKey, String(nextVal));
+        } catch {
+          // Ignore storage quota error
+        }
+        return nextVal;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [activeMateri?.materi_id, activeMateri?.is_read, isInteractiveMateri, isContentCompleted, targetSeconds, timerStorageKey]);
+
+  // Listen for completion events from YouTube iframe
   useEffect(() => {
     const handlePlayerMessage = (event) => {
-      if (!event.data) return;
-
-      if (typeof event.data === 'object') {
-        if (
-          event.data.type === 'h5p-completed' ||
-          event.data.event === 'h5p-completed' ||
-          event.data.type === 'scorm-completed' ||
-          event.data.action === 'completed'
-        ) {
-          triggerAutoComplete();
-        }
-        return;
-      }
+      if (!event.data || isInteractiveMateri) return;
 
       if (typeof event.data === 'string') {
         try {
           const data = JSON.parse(event.data);
-          if (
-            data.type === 'h5p-completed' ||
-            data.event === 'h5p-completed' ||
-            data.type === 'scorm-completed' ||
-            data.action === 'completed' ||
-            (data.event === 'onStateChange' && typeof data.info === 'number' && data.info === 0)
-          ) {
+          if (data.event === 'onStateChange' && typeof data.info === 'number' && data.info === 0) {
             triggerAutoComplete();
           }
         } catch {
@@ -114,194 +169,7 @@ export default function CoursePlayer({
 
     window.addEventListener('message', handlePlayerMessage);
     return () => window.removeEventListener('message', handlePlayerMessage);
-  }, [activeMateri?.materi_id, activeMateri?.is_read]);
-
-  // Direct DOM / H5P instance observer for H5P & SCORM iframes (handles nested .h5p-iframe & videos without endscreen)
-  useEffect(() => {
-    if (!activeMateri || (activeMateri.tipe !== 'h5p' && activeMateri.tipe !== 'scorm')) return;
-    if (activeMateri.is_read || isContentCompleted) return;
-
-    const canCompleteH5pInstance = (inst) => {
-      if (!inst) return true;
-      try {
-        if (typeof inst.hasUncompletedRequiredInteractions === 'function' && inst.hasUncompletedRequiredInteractions()) {
-          return false;
-        }
-        if (Array.isArray(inst.interactions)) {
-          for (let i = 0; i < inst.interactions.length; i++) {
-            const inter = inst.interactions[i];
-            if (inter && typeof inter.getRequiresCompletion === 'function' && inter.getRequiresCompletion()) {
-              if (typeof inter.hasFullScore === 'function' && !inter.hasFullScore()) {
-                return false;
-              }
-            }
-          }
-        }
-      } catch {
-        // Ignore inspection error
-      }
-      return true;
-    };
-
-    const isFrameVideoAtEnd = (win, doc) => {
-      if (!win || !doc) return false;
-      try {
-        const inst = Array.isArray(win.H5P?.instances) ? win.H5P.instances[0] : null;
-        const vidEl = doc.querySelector('video');
-        const hasH5pVideo = Boolean(inst && inst.video);
-
-        if (!hasH5pVideo && !vidEl) {
-          return true;
-        }
-
-        let duration = 0;
-        let currentTime = 0;
-
-        if (inst && typeof inst.getDuration === 'function') {
-          duration = Number(inst.getDuration()) || 0;
-        }
-        if (!duration && inst?.video && typeof inst.video.getDuration === 'function') {
-          duration = Number(inst.video.getDuration()) || 0;
-        }
-        if (!duration && vidEl && vidEl.duration > 0 && Number.isFinite(vidEl.duration)) {
-          duration = Number(vidEl.duration) || 0;
-        }
-
-        if (inst?.video && typeof inst.video.getCurrentTime === 'function') {
-          currentTime = Number(inst.video.getCurrentTime()) || 0;
-        }
-        if (vidEl && vidEl.currentTime > currentTime) {
-          currentTime = Number(vidEl.currentTime) || 0;
-        }
-
-        if (duration <= 0) {
-          return false;
-        }
-
-        if (vidEl && vidEl.ended && currentTime >= duration - 2) {
-          return true;
-        }
-
-        return currentTime >= duration - 1.5;
-      } catch {
-        return false;
-      }
-    };
-
-    const inspectWindowAndBind = (win) => {
-      if (!win) return;
-      try {
-        const doc = win.document;
-        if (!doc) return;
-
-        // 1. Inspect H5P instances and externalDispatcher if available in this window
-        if (win.H5P) {
-          if (win.H5P.externalDispatcher && !win.__lmsH5pBound) {
-            win.__lmsH5pBound = true;
-            win.H5P.externalDispatcher.on('xAPI', (event) => {
-              try {
-                // Gerbang Mutlak: Tolak semua xAPI jika video belum mencapai menit akhir
-                if (!isFrameVideoAtEnd(win, doc)) return;
-
-                const stmt = event?.data?.statement;
-                if (!stmt) return;
-                const verbId = stmt?.verb?.id || '';
-                const isCompletedVerb = verbId.includes('completed') || verbId.includes('passed');
-                const subContentId = stmt?.object?.definition?.extensions?.['http://h5p.org/x-api/h5p-subContentId'] || '';
-                const isRootEvent = !subContentId && !stmt?.context?.contextActivities?.parent;
-
-                const categoryArr = stmt?.context?.contextActivities?.category || [];
-                const categoryId = Array.isArray(categoryArr) && categoryArr[0] ? categoryArr[0].id || '' : '';
-                const isSummaryInteraction =
-                  categoryId.includes('H5P.Summary') || String(subContentId).includes('summary');
-                const isSummaryCompleted = Boolean(
-                  stmt?.result && (
-                    stmt.result.completion === true ||
-                    (stmt.result.score && Number(stmt.result.score.scaled) >= 1)
-                  )
-                );
-
-                if ((isCompletedVerb && isRootEvent) || (isSummaryInteraction && isSummaryCompleted)) {
-                  const instances = win.H5P.instances || [];
-                  if (instances.every(canCompleteH5pInstance)) {
-                    triggerAutoComplete();
-                  }
-                }
-              } catch {
-                // Ignore dispatcher error
-              }
-            });
-          }
-
-          const instances = win.H5P.instances || [];
-          instances.forEach((inst) => {
-            if (inst?.video && typeof inst.video.on === 'function' && !inst.video.__lmsVideoBound) {
-              inst.video.__lmsVideoBound = true;
-              inst.video.on('stateChange', (event) => {
-                const state = event?.data;
-                const endedConst = win.H5P?.Video?.ENDED !== undefined ? win.H5P.Video.ENDED : 0;
-                if (
-                  typeof state === 'number' &&
-                  (state === endedConst || state === 0) &&
-                  isFrameVideoAtEnd(win, doc) &&
-                  canCompleteH5pInstance(inst)
-                ) {
-                  triggerAutoComplete();
-                }
-              });
-            }
-          });
-        }
-
-        // 2. Inspect HTML5 <video> elements inside this document
-        doc.querySelectorAll('video').forEach((vid) => {
-          const checkVideoEnded = () => {
-            if (
-              vid.duration > 0 &&
-              (vid.ended || vid.currentTime >= vid.duration - 0.5) &&
-              isFrameVideoAtEnd(win, doc)
-            ) {
-              const instances = win.H5P?.instances || [];
-              if (instances.every(canCompleteH5pInstance)) {
-                triggerAutoComplete();
-              }
-            }
-          };
-
-          if (!vid.__lmsDomVideoBound) {
-            vid.__lmsDomVideoBound = true;
-            vid.addEventListener('ended', checkVideoEnded);
-            vid.addEventListener('timeupdate', checkVideoEnded);
-          }
-          checkVideoEnded();
-        });
-
-        // 3. Recurse into nested iframes (e.g. .h5p-iframe)
-        doc.querySelectorAll('iframe').forEach((nestedFrame) => {
-          try {
-            if (nestedFrame.contentWindow) {
-              inspectWindowAndBind(nestedFrame.contentWindow);
-            }
-          } catch {
-            // Cross-origin nested iframe ignored
-          }
-        });
-      } catch {
-        // Cross-origin frame access ignored (handled by H5pService postMessage)
-      }
-    };
-
-    const intervalId = setInterval(() => {
-      const playerFrame =
-        document.getElementById('h5p-interactive-player') ||
-        document.getElementById('scorm-interactive-player');
-      if (playerFrame?.contentWindow) {
-        inspectWindowAndBind(playerFrame.contentWindow);
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [activeMateri?.materi_id, activeMateri?.tipe, activeMateri?.is_read, isContentCompleted]);
+  }, [activeMateri?.materi_id, activeMateri?.is_read, isInteractiveMateri]);
 
   // Auto-pause video, YouTube, H5P, and SCORM when user switches tab or minimizes window
   useEffect(() => {
@@ -399,9 +267,12 @@ export default function CoursePlayer({
   const previewDocUrl = isDocument ? buildPreviewDocumentUrl(activeMateri.tautan, docUrl) : '';
   const domainHost = isWeb ? getHostFromUrl(activeMateri.tautan) : '';
 
-  const requiresCompletionGuard = isH5P || isScorm || isVideo;
+  const isInteractiveButtonReady =
+    !isInteractiveMateri || !useInteractiveTimerRule || elapsedInteractiveSeconds >= targetSeconds;
+  const remainingInteractiveSeconds = Math.max(0, targetSeconds - elapsedInteractiveSeconds);
   const isMateriCompleted = Boolean(activeMateri.is_read || isContentCompleted);
-  const isLockedUntilComplete = requiresCompletionGuard && !isMateriCompleted;
+  const isLockedUntilComplete =
+    !isMateriCompleted && ((isInteractiveMateri && !isInteractiveButtonReady) || isVideo);
 
   // URL embed via backend proxy agar terbebas dari X-Frame-Options & tampil langsung di card
   const webviewEmbedUrl = (isWeb && activeMateri?.tautan)
@@ -822,49 +693,53 @@ export default function CoursePlayer({
           <p className="text-xs text-gray-500">
             {isMateriCompleted
               ? 'Materi ini telah selesai dipelajari. Silakan klik tombol Selanjutnya untuk beralih ke tahapan berikutnya.'
-              : isH5P
-                ? 'Selesaikan seluruh interaksi dan kuis di dalam konten H5P hingga tuntas.'
-                : isScorm
-                  ? 'Selesaikan seluruh tahapan materi interaktif SCORM hingga mencapai status selesai.'
-                  : isWeb
-                    ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di samping untuk membuka materi selanjutnya.'
-                    : isVideo
-                      ? 'Tonton video hingga selesai tanpa mempercepat bagian yang belum ditonton.'
-                      : 'Tandai telah selesai jika Anda sudah membaca dan memahami materi ini.'}
+              : isH5P || isScorm
+                ? isInteractiveButtonReady
+                  ? 'Waktu belajar materi interaktif telah terpenuhi. Silakan klik tombol "Tandai Sudah Ditonton" untuk menyelesaikan materi.'
+                  : 'Pelajari dan selesaikan seluruh aktivitas materi pembelajaran interaktif ini hingga selesai.'
+                : isWeb
+                  ? 'Gulir dan baca seluruh isi materi web di atas. Setelah selesai membaca, klik tombol di samping untuk membuka materi selanjutnya.'
+                  : isVideo
+                    ? 'Tonton video hingga selesai tanpa mempercepat bagian yang belum ditonton.'
+                    : 'Tandai telah selesai jika Anda sudah membaca dan memahami materi ini.'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {isLockedUntilComplete ? (
-            <button
-              type="button"
-              disabled
-              className="px-5 py-2.5 rounded text-xs sm:text-sm font-semibold flex items-center gap-2 bg-slate-100 text-slate-600 border border-slate-200 cursor-not-allowed"
-            >
-              <Clock className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />
-              <span>
-                {isH5P || isScorm
-                  ? 'Selesaikan Video Interaktif Dahulu'
-                  : 'Materi Sedang Berlangsung: Selesaikan Konten Terlebih Dahulu'}
-              </span>
-            </button>
+            isInteractiveMateri ? null : (
+              <button
+                type="button"
+                disabled
+                className="px-5 py-2.5 rounded text-xs sm:text-sm font-semibold flex items-center gap-2 bg-slate-100 text-slate-700 border border-slate-300 cursor-not-allowed"
+              >
+                <Clock className="w-4 h-4 text-teal-700 shrink-0" aria-hidden="true" />
+                <span>Materi Sedang Berlangsung: Selesaikan Konten Terlebih Dahulu</span>
+              </button>
+            )
           ) : !isMateriCompleted ? (
             <button
               type="button"
               onClick={() => onMarkAsRead(true)}
               className={`px-6 py-2.5 rounded text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
-                isWeb
-                  ? 'bg-teal-700 text-white hover:bg-teal-800 shadow-sm'
+                isH5P || isScorm || isWeb
+                  ? 'bg-[#006A63] text-white hover:bg-[#00534D] shadow-xs'
                   : 'bg-[#1D315F] text-white hover:bg-[#162847]'
               }`}
             >
               <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-              <span>Tandai Telah Selesai</span>
+              <span>{isH5P || isScorm ? 'Tandai Sudah Ditonton' : 'Tandai Telah Selesai'}</span>
             </button>
           ) : (
             <>
               <span className="px-4 py-2.5 rounded text-xs sm:text-sm font-bold flex items-center gap-2 bg-green-50 text-green-700 border border-green-200">
                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" aria-hidden="true" />
-                <span>{isVideo ? 'Selesai Ditonton' : isWeb ? 'Selesai Dibaca' : 'Selesai Dipelajari'}</span>
+                <span>
+                  {isVideo || isH5P || isScorm
+                    ? 'Sudah Ditonton'
+                    : isWeb
+                      ? 'Selesai Dibaca'
+                      : 'Selesai Dipelajari'}
+                </span>
               </span>
 
               {nextStepInfo?.type === 'same_modul_materi' && (

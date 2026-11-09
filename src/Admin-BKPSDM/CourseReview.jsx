@@ -131,6 +131,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [course, setCourse] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showMateriModal, setShowMateriModal] = useState(false);
   const [note, setNote] = useState('');
@@ -141,7 +142,10 @@ const CourseReview = ({ onNavigate, onLogout }) => {
         setLoadingDetails(true);
         const response = await api.get(`/admin-bkpsdm/approval/${id}`);
         const cData = response.data?.data;
-        setCourse(cData);
+        if (cData) {
+          setCourse(cData);
+          localStorage.setItem('reviewCourseData', JSON.stringify(cData));
+        }
       } catch (error) {
         console.error('Failed to fetch course details:', error);
       } finally {
@@ -160,12 +164,15 @@ const CourseReview = ({ onNavigate, onLogout }) => {
   }, [onNavigate]);
 
   const handleAction = async (status) => {
+    if (isSubmitting || !course?.pembelajaran_id) return;
     try {
+      setIsSubmitting(true);
       const payload = {
         status_validasi: status,
         catatan: note
       };
       await api.post(`/admin-bkpsdm/approval/${course.pembelajaran_id}`, payload);
+      localStorage.removeItem('reviewCourseData');
       Toast.fire({
         icon: 'success',
         title: `Validasi berhasil disimpan: ${status}`
@@ -177,6 +184,8 @@ const CourseReview = ({ onNavigate, onLogout }) => {
         icon: 'error',
         title: error.response?.data?.message || 'Gagal menyimpan validasi'
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -403,15 +412,17 @@ const CourseReview = ({ onNavigate, onLogout }) => {
           <div className="flex flex-col sm:flex-row justify-end items-center gap-4 border-t border-gray-200 pt-6">
             <button
               onClick={() => setShowRejectModal(true)}
-              className="w-full sm:w-auto bg-white border border-gray-300 hover:bg-gray-50 text-red-600 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              disabled={isSubmitting || loadingDetails}
+              className="w-full sm:w-auto bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-red-600 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors"
             >
               Minta Revisi (Tolak)
             </button>
             <button
               onClick={() => handleAction('disetujui')}
-              className="w-full sm:w-auto bg-teal-700 hover:bg-teal-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+              disabled={isSubmitting || loadingDetails}
+              className="w-full sm:w-auto bg-teal-700 hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
             >
-              Setujui & Publikasikan
+              {isSubmitting ? 'Memproses...' : 'Setujui & Publikasikan'}
             </button>
           </div>
 
@@ -438,8 +449,8 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                     />
                   </div>
                   <div className="pt-4 flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowRejectModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Batal</button>
-                    <button onClick={() => handleAction('ditolak')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Kirim & Tolak</button>
+                    <button type="button" disabled={isSubmitting} onClick={() => setShowRejectModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                    <button disabled={isSubmitting} onClick={() => handleAction('ditolak')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">{isSubmitting ? 'Mengirim...' : 'Kirim & Tolak'}</button>
                   </div>
                 </div>
               </div>

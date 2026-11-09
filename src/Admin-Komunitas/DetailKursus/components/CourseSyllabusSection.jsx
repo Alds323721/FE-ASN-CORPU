@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Plus, BookOpen, ChevronDown, Edit, Edit2, Trash2, FileText, Sparkles, Package, Video, Eye, Globe
+  Plus, BookOpen, ChevronDown, Edit, Edit2, Trash2, FileText, Sparkles, Package, Video, Eye, Globe, Clock
 } from 'lucide-react';
 import { getStorageUrl } from '../../../utils/url';
 
@@ -231,6 +231,12 @@ const CourseSyllabusSection = ({
                                     ) : (
                                       <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">
                                         Tanpa Pre-test
+                                      </span>
+                                    )}
+                                    {(mat.tipe_materi === 'h5p' || mat.tipe_materi === 'scorm') && (
+                                      <span className="px-2 py-0.5 bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-bold rounded-full flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-teal-600" aria-hidden="true" />
+                                        Tombol Muncul: {mat.waktu_muncul_tombol_menit || mat.durasi_menit || 15} Menit
                                       </span>
                                     )}
                                   </div>

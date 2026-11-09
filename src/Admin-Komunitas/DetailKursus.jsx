@@ -62,6 +62,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     deskripsi: '',
     tipe_materi: 'pdf',
     durasi_menit: 15,
+    gunakan_tombol_selesai: true,
+    waktu_muncul_tombol_menit: 15,
     tautan_atau_berkas_embed: '',
     file_pdf: null,
     file_scorm: null,
@@ -78,6 +80,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     deskripsi: '',
     tipe_materi: 'pdf',
     durasi_menit: 15,
+    gunakan_tombol_selesai: true,
+    waktu_muncul_tombol_menit: 15,
     tautan_atau_berkas_embed: '',
     file_pdf: null,
     file_scorm: null,
@@ -609,6 +613,8 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
       deskripsi: '',
       tipe_materi: 'pdf',
       durasi_menit: 15,
+      gunakan_tombol_selesai: true,
+      waktu_muncul_tombol_menit: 15,
       tautan_atau_berkas_embed: '',
       file_pdf: null,
       file_scorm: null,
@@ -634,11 +640,14 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
 
     try {
+      const normalizedDurasi = Math.max(1, parseInt(materialForm.durasi_menit, 10) || 15);
       const formData = new FormData();
       formData.append('judul_materi', materialForm.judul_materi);
       formData.append('deskripsi', materialForm.deskripsi || '');
       formData.append('tipe_materi', materialForm.tipe_materi);
-      formData.append('durasi_menit', materialForm.durasi_menit);
+      formData.append('durasi_menit', normalizedDurasi);
+      formData.append('gunakan_tombol_selesai', materialForm.gunakan_tombol_selesai !== false ? '1' : '0');
+      formData.append('waktu_muncul_tombol_menit', normalizedDurasi);
 
       if (materialForm.tipe_materi === 'pdf') {
         if (!materialForm.file_pdf) {
@@ -832,11 +841,14 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     const isScormZip = materi.tipe_materi === 'scorm' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/scorm/');
     const isVideoFile = materi.tipe_materi === 'video_embed' && materi.tautan_atau_berkas && (materi.tautan_atau_berkas.includes('/storage/materi_video/') || /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(materi.tautan_atau_berkas));
     const isH5pFile = materi.tipe_materi === 'h5p' && materi.tautan_atau_berkas && materi.tautan_atau_berkas.includes('/storage/h5p/');
+    const durasiMenit = Math.max(1, parseInt(materi.durasi_menit, 10) || 15);
     setEditMaterialForm({
       judul_materi: materi.judul_materi || '',
       deskripsi: materi.deskripsi || '',
       tipe_materi: materi.tipe_materi || 'pdf',
-      durasi_menit: materi.durasi_menit || 15,
+      durasi_menit: durasiMenit,
+      gunakan_tombol_selesai: materi.gunakan_tombol_selesai !== undefined ? Boolean(materi.gunakan_tombol_selesai) : true,
+      waktu_muncul_tombol_menit: Math.max(1, parseInt(materi.waktu_muncul_tombol_menit || durasiMenit, 10) || durasiMenit),
       tautan_atau_berkas_embed: (materi.tipe_materi !== 'pdf' && !isScormZip && !isVideoFile && !isH5pFile) ? (materi.tautan_atau_berkas || '') : '',
       file_pdf: null,
       file_scorm: null,
@@ -886,11 +898,14 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
     }
 
     try {
+      const normalizedDurasi = Math.max(1, parseInt(editMaterialForm.durasi_menit, 10) || 15);
       const formData = new FormData();
       formData.append('judul_materi', editMaterialForm.judul_materi);
       formData.append('deskripsi', editMaterialForm.deskripsi || '');
       formData.append('tipe_materi', editMaterialForm.tipe_materi);
-      formData.append('durasi_menit', editMaterialForm.durasi_menit);
+      formData.append('durasi_menit', normalizedDurasi);
+      formData.append('gunakan_tombol_selesai', editMaterialForm.gunakan_tombol_selesai !== false ? '1' : '0');
+      formData.append('waktu_muncul_tombol_menit', normalizedDurasi);
       formData.append('apakah_wajib', editMaterialForm.apakah_wajib ? '1' : '0');
 
       if (editMaterialForm.tipe_materi === 'pdf') {
