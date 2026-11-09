@@ -219,7 +219,12 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       const rawData = response.data.data || [];
 
       setReports(rawData.map((user, idx) => ({
-        id: user.pendaftaran_id || user.pengguna_id || idx,
+        id: user.pendaftaran_id
+          ? `pendaftaran-${user.pendaftaran_id}`
+          : (user.pengguna_id ? `pengguna-${user.pengguna_id}-${idx}` : `row-${idx}`),
+        pendaftaranId: user.pendaftaran_id,
+        penggunaId: user.pengguna_id,
+        pembelajaranId: user.pembelajaran_id || user.pembelajaran?.pembelajaran_id,
         name: user.nama_lengkap,
         nip: user.nip || '-',
         unitKerja: user.unit_kerja || user.instansi || '-',
@@ -405,7 +410,18 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     const certId = report?.certificateId || report?.sertifikat_id || report;
     if (!certId) return;
     try {
+      const params = {
+        _t: Date.now()
+      };
+      if (report?.pembelajaranId) {
+        params.pembelajaran_id = report.pembelajaranId;
+      }
+      if (report?.pendaftaranId) {
+        params.pendaftaran_id = report.pendaftaranId;
+      }
+
       const response = await api.get(`/admin-bkpsdm/sertifikat/${certId}/download`, {
+        params,
         responseType: 'blob'
       });
 
@@ -468,7 +484,20 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     });
 
     try {
+      const params = {
+        preview: 1,
+        disposition: 'inline',
+        _t: Date.now()
+      };
+      if (report?.pembelajaranId) {
+        params.pembelajaran_id = report.pembelajaranId;
+      }
+      if (report?.pendaftaranId) {
+        params.pendaftaran_id = report.pendaftaranId;
+      }
+
       const response = await api.get(`/admin-bkpsdm/sertifikat/${certId}/download`, {
+        params,
         responseType: 'blob'
       });
 
@@ -680,14 +709,15 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const fetchCoursesForImport = async () => {
+  const fetchCoursesForImport = async (preferredCourseId = null) => {
     try {
       setLoadingImportCourses(true);
       const res = await api.get('/admin-bkpsdm/laporan/sertifikat/courses-for-import');
       const list = (res.data?.data || []).filter((c) => c.is_kpk !== false);
       setCoursesForImport(list);
       if (list.length > 0) {
-        const initialCourseId = list[0].pembelajaran_id;
+        const matched = preferredCourseId ? list.find(c => String(c.pembelajaran_id) === String(preferredCourseId)) : null;
+        const initialCourseId = matched ? matched.pembelajaran_id : list[0].pembelajaran_id;
         setSelectedImportCourse(initialCourseId);
         await fetchCourseParticipants(initialCourseId);
       }
@@ -835,7 +865,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     setIsImportModalOpen(true);
     setSelectedUploadFiles([]);
     setExtractedPdfList([]);
-    fetchCoursesForImport();
+    const preferredId = (selectedKpkCourse && selectedKpkCourse !== 'all') ? selectedKpkCourse : null;
+    fetchCoursesForImport(preferredId);
   };
 
   const handleFileChange = (e) => {
