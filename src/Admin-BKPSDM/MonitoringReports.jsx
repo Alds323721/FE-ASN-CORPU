@@ -10,7 +10,8 @@ import {
   Search, ChevronRight, Menu, X, Download, TrendingUp, Award, CheckCircle,
   Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
   QrCode, ExternalLink, Smartphone, Laptop, Tablet, FileArchive, Check,
-  Upload, AlertCircle, FileCheck, RefreshCw, FileText, Send, UserCheck, UserX
+  Upload, AlertCircle, FileCheck, RefreshCw, FileText, Send, UserCheck, UserX,
+  Eye, EyeOff
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -445,6 +446,78 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
+  const handleOpenPreviewCertificate = async (report) => {
+    const certId = report?.certificateId || report?.sertifikat_id;
+    if (!certId) return;
+
+    let initialFilename = '';
+    if (report?.isKpk && report?.nip && report.nip !== '-') {
+      initialFilename = `${report.nip}.pdf`;
+    } else {
+      const cleanName = (report?.name || 'Peserta').replace(/\s+/g, '_');
+      initialFilename = `Sertifikat_${cleanName}.pdf`;
+    }
+
+    setIsPreviewCertModalOpen(true);
+    setPreviewCertData({
+      report,
+      filename: initialFilename,
+      blobUrl: null,
+      loading: true,
+      error: null,
+    });
+
+    try {
+      const response = await api.get(`/admin-bkpsdm/sertifikat/${certId}/download`, {
+        responseType: 'blob'
+      });
+
+      let filename = initialFilename;
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      setPreviewCertData(prev => ({
+        ...prev,
+        blobUrl,
+        filename,
+        loading: false,
+      }));
+    } catch (err) {
+      console.error('Failed to load certificate preview:', err);
+      setPreviewCertData(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Gagal memuat berkas sertifikat dari server. Pastikan berkas sertifikat tersedia di storage.',
+      }));
+    }
+  };
+
+  const handleClosePreviewModal = () => {
+    if (previewCertData?.blobUrl) {
+      window.URL.revokeObjectURL(previewCertData.blobUrl);
+    }
+    setIsPreviewCertModalOpen(false);
+    setPreviewCertData(null);
+  };
+
+  const handleDownloadFromPreview = () => {
+    if (!previewCertData?.blobUrl) return;
+    const link = document.createElement('a');
+    link.href = previewCertData.blobUrl;
+    link.setAttribute('download', previewCertData.filename || 'Sertifikat.pdf');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const fetchKpkCourses = async () => {
     try {
       setLoadingKpkCourses(true);
@@ -582,6 +655,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   // State Summary Report Hasil Import
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [importSummaryResult, setImportSummaryResult] = useState(null);
+
+  // State Modal Preview Sertifikat Ber-TTE
+  const [isPreviewCertModalOpen, setIsPreviewCertModalOpen] = useState(false);
+  const [previewCertData, setPreviewCertData] = useState(null);
 
   const fetchCourseParticipants = async (courseId) => {
     if (!courseId) {
@@ -1198,7 +1275,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     </div>
                   </div>
                 )}
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+                <table className="w-full text-left border-collapse min-w-[1240px]">
                   <thead>
                     <tr className="bg-white border-b border-gray-100">
                       <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">NAMA PESERTA / NIP</th>
@@ -1208,6 +1285,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">STATUS POST TEST</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">SERTIFIKAT</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">RATING & ULASAN</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">PREVIEW SERTIFIKAT</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1292,11 +1370,34 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                             <span className="text-xs text-gray-400 font-medium">-</span>
                           )}
                         </td>
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          {report.hasCertificate && (report.statusTte === 'signed' || !report.isKpk) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPreviewCertificate(report)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-xs"
+                              title={report.isKpk ? `Pratinjau Sertifikat Ber-TTE Resmi (${report.nip}.pdf)` : 'Pratinjau Sertifikat'}
+                            >
+                              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Preview</span>
+                            </button>
+                          ) : report.hasCertificate && report.statusTte !== 'signed' ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed"
+                              title="Sertifikat masih dalam proses / menunggu TTE B-Sign BSrE"
+                            >
+                              <EyeOff className="w-3.5 h-3.5 text-gray-400" />
+                              <span>Belum TTE</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 font-bold">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     {reports.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                           {searchTerm ? 'Tidak ada laporan peserta yang sesuai dengan pencarian.' : 'Tidak ada laporan peserta.'}
                         </td>
                       </tr>
@@ -2449,6 +2550,140 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         </div>
         );
       })()}
+
+      {/* Modal Preview Sertifikat Ber-TTE */}
+      {isPreviewCertModalOpen && previewCertData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh]">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/20">
+                  <FileCheck className="w-5 h-5 text-emerald-300" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                      Pratinjau Sertifikat — {previewCertData.report?.name || 'Peserta'}
+                    </h3>
+                    {previewCertData.report?.statusTte === 'signed' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                        <ShieldCheck className="w-3 h-3 text-emerald-300" />
+                        Ber-TTE Resmi BSrE
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0">
+                        Sertifikat Terbit
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-300 truncate mt-0.5 font-medium">
+                    NIP: {previewCertData.report?.nip || '-'} • Kursus: {previewCertData.report?.course || '-'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons in Header */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
+                {previewCertData.blobUrl && (
+                  <>
+                    <a
+                      href={previewCertData.blobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 sm:px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+                      title="Buka sertifikat di tab browser baru"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Tab Baru</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleDownloadFromPreview}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 sm:px-3 py-1.5 rounded-lg shadow-sm transition-colors"
+                      title="Unduh salinan berkas PDF"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Unduh PDF</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={handleClosePreviewModal}
+                  className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                  title="Tutup pratinjau"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / PDF Viewer */}
+            <div className="flex-1 bg-gray-100 p-2 sm:p-4 overflow-hidden flex flex-col justify-center items-center relative min-h-[500px]">
+              {previewCertData.loading ? (
+                <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+                  <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm font-semibold text-gray-700">Memuat pratinjau dokumen sertifikat...</p>
+                  <p className="text-xs text-gray-500">Mengambil berkas PDF resmi dari penyimpanan sistem</p>
+                </div>
+              ) : previewCertData.error ? (
+                <div className="p-6 bg-white border border-rose-200 rounded-2xl max-w-md text-center space-y-3 shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">Gagal Memuat Pratinjau</h4>
+                    <p className="text-xs text-gray-600 mt-1">{previewCertData.error}</p>
+                  </div>
+                  <div className="pt-2 flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPreviewCertificate(previewCertData.report)}
+                      className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Coba Lagi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClosePreviewModal}
+                      className="px-3.5 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-semibold transition-colors"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+              ) : previewCertData.blobUrl ? (
+                <iframe
+                  src={`${previewCertData.blobUrl}#toolbar=1&navpanes=0`}
+                  title={`Sertifikat ${previewCertData.report?.name || ''}`}
+                  className="w-full h-full min-h-[70vh] rounded-xl border border-gray-300 shadow-inner bg-white"
+                />
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 sm:p-4 bg-white border-t border-gray-200 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2 text-[11px] text-gray-500 truncate">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="truncate">
+                  {previewCertData.report?.statusTte === 'signed'
+                    ? 'Dokumen resmi ber-TTE B-Sign BSrE BSSN • Berkas telah dikirimkan ke akun peserta'
+                    : 'Dokumen Sertifikat Digital LMS Buleleng ASN CORPU'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePreviewModal}
+                className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0"
+              >
+                Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
