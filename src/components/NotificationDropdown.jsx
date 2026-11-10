@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Info,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 
 const formatRelativeTime = (isoString) => {
@@ -59,9 +61,12 @@ export default function NotificationDropdown({
   loading,
   permissionState,
   enablingPush,
+  deletingId,
   onEnablePush,
   onMarkAsRead,
   onMarkAllAsRead,
+  onDeleteNotification,
+  onDeleteAllNotifications,
   onSelectNotification,
   hasMore,
   onLoadMore,
@@ -71,25 +76,41 @@ export default function NotificationDropdown({
     <div className="absolute right-0 top-full mt-2.5 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-[80] overflow-hidden">
       {/* Header Dropdown */}
       <div className="px-4 py-3 bg-[#F4F8FB] border-b border-gray-200 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-sm font-bold text-[#1D315F]">Notifikasi</h3>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 text-[11px] font-bold bg-[#006A63] text-white rounded-full">
+            <span className="px-2 py-0.5 text-[11px] font-bold bg-[#006A63] text-white rounded-full shrink-0">
               {unreadCount} Baru
             </span>
           )}
         </div>
 
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={onMarkAllAsRead}
-            className="text-xs font-semibold text-[#006A63] hover:text-[#00534D] inline-flex items-center gap-1 cursor-pointer"
-          >
-            <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Tandai semua dibaca</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={onMarkAllAsRead}
+              className="text-xs font-semibold text-[#006A63] hover:text-[#00534D] inline-flex items-center gap-1 cursor-pointer transition-colors"
+              title="Tandai semua dibaca"
+            >
+              <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Tandai semua dibaca</span>
+              <span className="sm:hidden">Dibaca</span>
+            </button>
+          )}
+
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={onDeleteAllNotifications}
+              className="text-xs font-semibold text-gray-400 hover:text-red-600 inline-flex items-center gap-1 cursor-pointer transition-colors px-1.5 py-1 rounded hover:bg-red-50"
+              title="Hapus semua notifikasi"
+            >
+              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Hapus semua</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Banner Eksplisit Izin Push Notification Browser */}
@@ -156,12 +177,31 @@ export default function NotificationDropdown({
                     >
                       {item.title}
                     </p>
-                    {isUnread && (
-                      <span
-                        className="w-2 h-2 rounded-full bg-[#006A63] shrink-0 mt-1"
-                        title="Belum dibaca"
-                      />
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0 -mt-0.5">
+                      {isUnread && (
+                        <span
+                          className="w-2 h-2 rounded-full bg-[#006A63] shrink-0"
+                          title="Belum dibaca"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        disabled={deletingId === item.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteNotification(item.id);
+                        }}
+                        className="text-gray-400 hover:text-red-600 disabled:opacity-40 p-1 -mr-1 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Hapus notifikasi ini"
+                        aria-label="Hapus notifikasi"
+                      >
+                        {deletingId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" aria-hidden="true" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <p className="text-[11px] text-gray-600 mt-1 leading-relaxed line-clamp-3">

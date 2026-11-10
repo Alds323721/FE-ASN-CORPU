@@ -7,6 +7,8 @@ import {
   fetchUnreadNotificationCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  deleteNotification,
+  deleteAllNotifications,
 } from '../services/notificationService';
 import {
   getNotificationPermissionState,
@@ -26,6 +28,7 @@ export default function NotificationBell({ onNavigate }) {
   const [lastPage, setLastPage] = useState(1);
   const [permissionState, setPermissionState] = useState(() => getNotificationPermissionState());
   const [enablingPush, setEnablingPush] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const containerRef = useRef(null);
 
@@ -218,6 +221,78 @@ export default function NotificationBell({ onNavigate }) {
     }
   };
 
+  const handleDeleteNotification = async (notificationId) => {
+    setDeletingId(notificationId);
+    try {
+      const res = await deleteNotification(notificationId);
+      setNotifications((prev) => prev.filter((item) => item.id !== notificationId));
+      if (res?.meta?.unread_count !== undefined) {
+        setUnreadCount(Number(res.meta.unread_count));
+      } else {
+        loadUnreadCount();
+      }
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Notifikasi dihapus',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: error.response?.data?.message || 'Gagal menghapus notifikasi',
+        timer: 3000,
+        showConfirmButton: false,
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    if (notifications.length === 0) return;
+
+    const result = await Swal.fire({
+      title: 'Hapus Semua Notifikasi?',
+      text: 'Seluruh riwayat notifikasi Anda akan dihapus secara permanen.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Ya, Hapus Semua',
+      cancelButtonText: 'Batal',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteAllNotifications();
+      setNotifications([]);
+      setUnreadCount(0);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Semua notifikasi berhasil dihapus',
+        timer: 2500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: error.response?.data?.message || 'Gagal menghapus notifikasi',
+        timer: 3000,
+        showConfirmButton: false,
+      });
+    }
+  };
+
   const handleNavigateFromPayload = (data = {}, fallbackUrl = '') => {
     const pembelajaranId = data?.pembelajaran_id || data?.module_id;
     const route = data?.route || '';
@@ -293,9 +368,12 @@ export default function NotificationBell({ onNavigate }) {
           loading={loading}
           permissionState={permissionState}
           enablingPush={enablingPush}
+          deletingId={deletingId}
           onEnablePush={handleEnablePush}
           onMarkAsRead={handleMarkAsRead}
           onMarkAllAsRead={handleMarkAllAsRead}
+          onDeleteNotification={handleDeleteNotification}
+          onDeleteAllNotifications={handleDeleteAllNotifications}
           onSelectNotification={handleSelectNotification}
           hasMore={currentPage < lastPage}
           loadingMore={loadingMore}
