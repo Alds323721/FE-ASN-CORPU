@@ -300,6 +300,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
         roles: currentRoles,
         status: selectedUser.status,
         email: selectedUser.email ? selectedUser.email.trim() : null,
+        jabatan: selectedUser.jabatan ? selectedUser.jabatan.trim() : null,
         rumpun_jabatan: selectedUser.rumpun_jabatan || 'JP',
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
@@ -538,12 +539,13 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   </div>
                 </div>
               )}
-              <table className="w-full text-left border-collapse min-w-[950px]">
+              <table className="w-full text-left border-collapse min-w-[1100px]">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">NAMA & NIP</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">EMAIL</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">PERAN</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">JABATAN</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">RUMPUN JABATAN</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">UNIT KERJA</th>
                     <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">STATUS</th>
@@ -575,6 +577,15 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       </td>
                       <td className="px-6 py-4">
                         {getRoleBadge(user.roles || user.peran)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {user.jabatan ? (
+                          <p className="text-sm text-gray-700 font-medium max-w-[200px] truncate" title={user.jabatan}>
+                            {user.jabatan}
+                          </p>
+                        ) : (
+                          <span className="text-sm text-gray-400 font-normal">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {user.rumpun_jabatan ? (
@@ -609,6 +620,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                               ...user, 
                               roles: userRoles, 
                               email: user.email || '', 
+                              jabatan: user.jabatan || '',
                               rumpun_jabatan: user.rumpun_jabatan || 'JP' 
                             });
                             setShowEditModal(true);
@@ -623,7 +635,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                         {searchTerm ? 'Tidak ada pengguna yang sesuai dengan pencarian.' : 'Belum ada pengguna terdaftar.'}
                       </td>
                     </tr>
@@ -799,7 +811,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   )}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Jabatan</label>
-                    <input type="text" value={formData.jabatan} onChange={e => setFormData({ ...formData, jabatan: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Pranata Komputer Ahli Pertama" />
+                    <input type="text" maxLength={150} value={formData.jabatan} onChange={e => setFormData({ ...formData, jabatan: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Pranata Komputer Ahli Pertama" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
@@ -939,6 +951,17 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Jabatan</label>
+                    <input
+                      type="text"
+                      maxLength={150}
+                      value={selectedUser.jabatan || ''}
+                      onChange={e => setSelectedUser({ ...selectedUser, jabatan: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      placeholder="Contoh: Pranata Komputer Ahli Pertama"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
                     <select
