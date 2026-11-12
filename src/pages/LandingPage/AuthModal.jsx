@@ -416,17 +416,21 @@ export default function AuthModal({
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="mb-5">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'email' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>1. Verifikasi Akun</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'email' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>1. Data Akun</span>
                     <span className="text-gray-300 text-xs">&rarr;</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'password' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>2. Kata Sandi Baru</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'otp' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>2. Verifikasi OTP</span>
+                    <span className="text-gray-300 text-xs">&rarr;</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${resetStep === 'password' ? 'bg-[#1D315F] text-white' : 'bg-gray-100 text-gray-500'}`}>3. Sandi Baru</span>
                   </div>
                   <h3 className="text-[#1D315F] font-bold text-lg mb-1">
-                    {resetStep === 'email' && 'Aktivasi / Atur Ulang Kata Sandi'}
+                    {resetStep === 'email' && 'Buat / Atur Ulang Kata Sandi'}
+                    {resetStep === 'otp' && 'Verifikasi Kode OTP'}
                     {resetStep === 'password' && 'Buat Kata Sandi Baru'}
                   </h3>
                   <p className="text-gray-500 text-xs font-semibold">
-                    {resetStep === 'email' && 'Masukkan NIP dan alamat email terdaftar di data kepegawaian untuk verifikasi identitas akun.'}
-                    {resetStep === 'password' && 'Buat kata sandi baru yang kuat untuk akun LMS ASN CORPU Anda.'}
+                    {resetStep === 'email' && 'Masukkan NIP dan email yang terdaftar di data kepegawaian untuk menerima kode OTP verifikasi.'}
+                    {resetStep === 'otp' && 'Masukkan 6 digit kode OTP yang telah dikirimkan ke email Anda. Kode berlaku 5 menit.'}
+                    {resetStep === 'password' && 'Buat kata sandi baru yang kuat untuk akun LMS Anda.'}
                   </p>
                 </div>
 
@@ -483,9 +487,10 @@ export default function AuthModal({
                               return;
                             }
                             setResetUniqueId(response.data.unique_id);
-                            setServerMessage(response.data?.message || 'Email terdaftar berhasil diverifikasi. Silakan buat kata sandi baru Anda.');
-                            setResetStep('password');
-                            setResetError('');
+                            setServerMessage(response.data?.message || 'Kode OTP telah dikirimkan ke email Anda.');
+                            setResetStep('otp');
+                            setResendCount(0);
+                            setResendCountdown(60);
                             setResetErrorType('');
                           } catch (err) {
                             resetRecaptchaRef.current?.reset();
@@ -500,7 +505,7 @@ export default function AuthModal({
                               if (cleanNip) {
                                 sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
                               }
-                              setResetError(resData?.message || 'Batas percobaan verifikasi telah tercapai. Akses dibatasi selama 30 menit.');
+                              setResetError(resData?.message || 'Batas pengiriman OTP telah tercapai. Akses dibatasi selama 30 menit.');
                             } else {
                               setResetError(resData?.message || 'Terjadi kesalahan saat memproses permintaan.');
                             }
@@ -512,10 +517,10 @@ export default function AuthModal({
                             <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
                               <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
                                 <Clock className="w-4 h-4 text-red-600 animate-pulse" />
-                                <span>Akses Verifikasi Dibatasi (30 Menit)</span>
+                                <span>Akses OTP Dibatasi (30 Menit)</span>
                               </div>
                               <p className="text-[11px] text-red-600">
-                                Telah mencapai batas 3 kali salah verifikasi email terdaftar. Silakan tunggu:
+                                Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
                               </p>
                               <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
                                 {formatCountdown(otpLockoutCountdown)}
@@ -608,7 +613,7 @@ export default function AuthModal({
                                     {nipInfo.has_email && nipInfo.masked_email ? (
                                       <div className="mt-2 space-y-1.5">
                                         <p className="text-xs text-gray-700 font-medium leading-relaxed">
-                                          Petunjuk Email Terdaftar: Silakan masukkan alamat email yang sesuai dengan petunjuk sensor berikut untuk memverifikasi identitas akun Anda:
+                                          Petunjuk Email Terdaftar: Silakan masukkan email yang sesuai dengan petunjuk terenkripsi berikut untuk menerima kode OTP:
                                         </p>
                                         
                                         <div className="p-2.5 bg-white rounded-lg border border-teal-300 shadow-xs flex items-center justify-between gap-2">
@@ -630,9 +635,9 @@ export default function AuthModal({
                                     ) : (
                                       <div className="mt-2 p-2.5 bg-amber-50/90 rounded-lg border border-amber-200 text-amber-800 text-xs leading-relaxed">
                                         <p className="font-semibold text-amber-900 mb-0.5">
-                                          Belum Ada Email Resmi Terdaftar
+                                          Belum Ada Email Terdaftar
                                         </p>
-                                        Akun ini belum memiliki email resmi di pangkalan data kepegawaian. Silakan hubungi Administrator BKPSDM untuk mendaftarkan email resmi Anda terlebih dahulu.
+                                        Akun ini belum memiliki email resmi di data kepegawaian. Silakan masukkan alamat email aktif Anda pada kolom di bawah untuk didaftarkan dan menerima kode OTP.
                                       </div>
                                     )}
                                   </div>
@@ -669,7 +674,7 @@ export default function AuthModal({
                                   }
                                 }}
                                 required
-                                disabled={resetLoading || otpLockoutCountdown > 0 || (nipInfo && !nipInfo.has_email)}
+                                disabled={resetLoading || otpLockoutCountdown > 0}
                                 className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
                                   isEmailError
                                     ? 'border-rose-400 focus:ring-rose-300 focus:border-rose-500 bg-rose-50/30'
@@ -697,10 +702,10 @@ export default function AuthModal({
 
                           <button
                             type="submit"
-                            disabled={resetLoading || otpLockoutCountdown > 0 || (nipInfo && !nipInfo.has_email)}
+                            disabled={resetLoading || otpLockoutCountdown > 0}
                             className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                           >
-                            {resetLoading ? 'Memverifikasi...' : 'Verifikasi & Lanjut Buat Sandi'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                            {resetLoading ? 'Mengirim...' : 'Kirim Kode OTP'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                           <button
                             type="button"
@@ -729,7 +734,131 @@ export default function AuthModal({
                   );
                 })()}
 
-                {/* STEP 2: Input Password Baru */}
+                {/* STEP 2: Input & Verify OTP */}
+                {resetStep === 'otp' && (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (otpLockoutCountdown > 0) {
+                      setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                      return;
+                    }
+                    setResetError('');
+                    setResetLoading(true);
+                    try {
+                      const response = await api.post('/forgot-password/verify', {
+                        unique_id: resetUniqueId,
+                        nip: resetNip,
+                        otp: resetOtp,
+                      });
+                      if (response.data?.unique_id) {
+                        setResetUniqueId(response.data.unique_id);
+                      }
+                      setResetStep('password');
+                    } catch (err) {
+                      if (err.response?.status === 429) {
+                        const retryAfter = Number(err.response?.data?.retry_after) || 1800;
+                        setOtpLockoutCountdown(retryAfter);
+                        const cleanNip = resetNip.trim();
+                        if (cleanNip) {
+                          sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
+                        }
+                        setResetError(err.response?.data?.message || 'Anda telah 3 kali salah memasukkan kode OTP. Akses dibatasi selama 30 menit.');
+                      } else {
+                        setResetError(err.response?.data?.message || 'Kode OTP tidak valid atau kedaluwarsa.');
+                      }
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}>
+                    {otpLockoutCountdown > 0 && (
+                      <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
+                          <Clock className="w-4 h-4 text-red-600 animate-pulse" />
+                          <span>Akses OTP Dibatasi (30 Menit)</span>
+                        </div>
+                        <p className="text-[11px] text-red-600">
+                          Telah mencapai batas 3 kali percobaan salah atau pengiriman OTP. Silakan tunggu:
+                        </p>
+                        <span className="font-mono text-base font-extrabold text-red-800 tracking-wider bg-red-100 px-3 py-0.5 rounded border border-red-300 mt-1">
+                          {formatCountdown(otpLockoutCountdown)}
+                        </span>
+                      </div>
+                    )}
+
+                    {serverMessage && !otpLockoutCountdown && (
+                      <div className="bg-teal-50 border border-teal-200 text-teal-800 p-2.5 rounded-lg text-xs mb-4">
+                        <p className="font-semibold">{serverMessage}</p>
+                        <p className="mt-1 text-[11px] text-teal-700">
+                          Periksa kotak masuk (inbox) atau folder spam email Anda.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mb-5">
+                      <label className="block text-[#1D315F] text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2 text-center">MASUKKAN KODE OTP (6 DIGIT)</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </div>
+                        <input
+                          type="text"
+                          name="reset-otp"
+                          autoComplete="one-time-code"
+                          value={resetOtp}
+                          onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          required
+                          maxLength={6}
+                          autoFocus
+                          disabled={resetLoading || otpLockoutCountdown > 0}
+                          className="w-full pl-10 sm:pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3FCDC1] focus:border-[#3FCDC1] text-lg text-gray-800 placeholder-gray-400 text-center tracking-[8px] font-mono font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                          placeholder="------"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-3 text-xs">
+                        <span className="text-gray-500">Tidak menerima kode?</span>
+                        {otpLockoutCountdown > 0 ? (
+                          <span className="text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 font-semibold text-[11px]">
+                            Dibatasi ({formatCountdown(otpLockoutCountdown)})
+                          </span>
+                        ) : resendCount >= 3 ? (
+                          <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">
+                            Batas kirim ulang habis (3x)
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={resendCountdown > 0 || resetLoading || resendCount >= 3 || otpLockoutCountdown > 0}
+                            className="text-teal-700 font-semibold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            {resendCountdown > 0 ? `Kirim ulang (${resendCountdown}s)` : `Kirim ulang kode (${resendCount}/3)`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={resetLoading || resetOtp.length !== 6 || otpLockoutCountdown > 0}
+                      className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {resetLoading ? 'Memverifikasi...' : 'Verifikasi OTP'} <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStep('email');
+                        setResendCount(0);
+                        setResetError('');
+                      }}
+                      className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
+                    >
+                      Kembali ke Input Email/NIP
+                    </button>
+                  </form>
+                )}
+
+                {/* STEP 3: Input Password Baru */}
                 {resetStep === 'password' && (
                   <form onSubmit={async (e) => {
                     e.preventDefault();
@@ -751,6 +880,7 @@ export default function AuthModal({
                       const response = await api.post('/reset-password', {
                         unique_id: resetUniqueId,
                         nip: resetNip,
+                        otp: resetOtp,
                         password_baru: newPassword,
                         password_baru_confirmation: resetConfirmPassword
                       });
@@ -781,7 +911,7 @@ export default function AuthModal({
                         const firstErr = Object.values(err.response.data.errors).flat()[0];
                         setResetError(firstErr || 'Validasi kata sandi gagal.');
                       } else {
-                        setResetError(err.response?.data?.message || 'Terjadi kesalahan saat membuat kata sandi.');
+                        setResetError(err.response?.data?.message || 'Terjadi kesalahan saat mereset kata sandi.');
                       }
                     } finally {
                       setResetLoading(false);
@@ -849,14 +979,10 @@ export default function AuthModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setResetStep('email');
-                        setResetError('');
-                        setResetErrorType('');
-                      }}
+                      onClick={() => setResetStep('otp')}
                       className="w-full bg-white text-gray-600 border border-gray-300 font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm cursor-pointer"
                     >
-                      Kembali ke Verifikasi Akun
+                      Kembali ke Input OTP
                     </button>
                   </form>
                 )}
