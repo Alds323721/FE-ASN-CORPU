@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 
@@ -21,8 +21,26 @@ import {
   TrendingUp, TrendingDown, ArrowRight, LayoutDashboard,
   ShieldCheck, BarChart3, HelpCircle, LogOut, Bell, Settings,
   Search, ChevronRight, Clock, Book, Menu, X, Plus,
-  ClipboardList, Edit, Download, ChevronLeft, Key, Layers
+  ClipboardList, Edit, Download, ChevronLeft, Key, Layers, Check, AlertCircle
 } from 'lucide-react';
+
+const ADMIN_ROLE_FILTERS = [
+  {
+    key: 'admin_komunitas',
+    label: 'Admin Komunitas',
+    activeClass: 'bg-emerald-100 border-emerald-400 text-emerald-900 shadow-sm',
+  },
+  {
+    key: 'admin_bkpsdm',
+    label: 'Admin BKPSDM',
+    activeClass: 'bg-red-100 border-red-400 text-red-900 shadow-sm',
+  },
+  {
+    key: 'root',
+    label: 'Admin Sistem',
+    activeClass: 'bg-indigo-100 border-indigo-400 text-indigo-900 shadow-sm',
+  },
+];
 
 const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
@@ -167,6 +185,10 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   });
   const [komunitasList, setKomunitasList] = useState([]);
   const [filterBelumAktivasi, setFilterBelumAktivasi] = useState(false);
+  const [selectedRoleFilters, setSelectedRoleFilters] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
+  const requestSeqRef = useRef(0);
+  const activeAbortRef = useRef(null);
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -181,16 +203,35 @@ const UserManagement = ({ onNavigate, onLogout }) => {
 
   // Debounce search agar tidak membebani server saat mengetik
   useEffect(() => {
+    if (searchTerm === debouncedSearch) return;
     const handler = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setCurrentPage(1);
     }, 400);
     return () => clearTimeout(handler);
-  }, [searchTerm]);
+  }, [searchTerm, debouncedSearch]);
 
-  const fetchUsers = async (page = currentPage, search = debouncedSearch, belumAktivasi = filterBelumAktivasi) => {
+  const fetchUsers = async (
+    page = currentPage,
+    search = debouncedSearch,
+    belumAktivasi = filterBelumAktivasi,
+    roleFilters = selectedRoleFilters,
+    externalSignal = null
+  ) => {
+    const requestId = ++requestSeqRef.current;
+    if (activeAbortRef.current) {
+      activeAbortRef.current.abort();
+      activeAbortRef.current = null;
+    }
+    const controller = externalSignal ? null : new AbortController();
+    if (controller) {
+      activeAbortRef.current = controller;
+    }
+    const signal = externalSignal || controller?.signal;
+
     try {
       setTableLoading(true);
+      setFetchError(null);
       const params = {
         page: page,
         per_page: 20,
@@ -201,24 +242,43 @@ const UserManagement = ({ onNavigate, onLogout }) => {
       if (belumAktivasi) {
         params.belum_aktivasi = 1;
       }
+      if (Array.isArray(roleFilters) && roleFilters.length > 0) {
+        params.peran = roleFilters.join(',');
+      }
 
-      const response = await api.get('/admin-bkpsdm/pengguna', { params });
+      const response = await api.get('/admin-bkpsdm/pengguna', { params, signal });
+      if (requestId !== requestSeqRef.current) return;
+
       const res = response.data;
       const resData = res?.data;
       setUsers(Array.isArray(resData) ? resData : []);
 
       if (res?.meta) {
         setPaginationMeta(res.meta);
+        const lastPage = Number(res.meta.last_page) || 1;
+        if (page > lastPage) {
+          setCurrentPage(lastPage);
+        }
       }
       if (res?.stats) {
         setUserStats(res.stats);
       }
     } catch (error) {
+      if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
+        return;
+      }
+      if (requestId !== requestSeqRef.current) return;
       console.error('Failed to fetch users:', error);
       setUsers([]);
+      setFetchError(error?.response?.data?.message || 'Gagal memuat daftar pengguna. Silakan coba lagi.');
     } finally {
-      setLoading(false);
-      setTableLoading(false);
+      if (controller && activeAbortRef.current === controller) {
+        activeAbortRef.current = null;
+      }
+      if (requestId === requestSeqRef.current) {
+        setLoading(false);
+        setTableLoading(false);
+      }
     }
   };
 
@@ -234,8 +294,10 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   };
 
   useEffect(() => {
-    fetchUsers(currentPage, debouncedSearch, filterBelumAktivasi);
-  }, [currentPage, debouncedSearch, filterBelumAktivasi]);
+    const controller = new AbortController();
+    fetchUsers(currentPage, debouncedSearch, filterBelumAktivasi, selectedRoleFilters, controller.signal);
+    return () => controller.abort();
+  }, [currentPage, debouncedSearch, filterBelumAktivasi, selectedRoleFilters]);
 
   useEffect(() => {
     fetchKomunitas();
@@ -418,6 +480,36 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   };
 
   const filteredUsers = Array.isArray(users) ? users : [];
+  const hasActiveFilters = filterBelumAktivasi || selectedRoleFilters.length > 0;
+  const hasActiveSearchOrFilters = Boolean(searchTerm.trim()) || hasActiveFilters;
+
+  const toggleRoleFilter = (roleKey) => {
+    setSelectedRoleFilters((prev) =>
+      prev.includes(roleKey)
+        ? prev.filter((item) => item !== roleKey)
+        : [...prev, roleKey]
+    );
+    setCurrentPage(1);
+  };
+
+  const resetFiltersOnly = () => {
+    setFilterBelumAktivasi(false);
+    setSelectedRoleFilters([]);
+    setCurrentPage(1);
+  };
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setFilterBelumAktivasi(false);
+    setSelectedRoleFilters([]);
+    setCurrentPage(1);
+  };
+
+  const filterButtonBaseClass =
+    'inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-[36px] rounded-lg text-xs font-semibold transition-colors border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600';
+  const filterButtonInactiveClass =
+    'bg-white border-gray-400 text-gray-700 hover:bg-gray-50 active:bg-gray-100';
 
   const getPageNumbers = () => {
     const totalPages = paginationMeta.last_page || 1;
@@ -505,28 +597,61 @@ const UserManagement = ({ onNavigate, onLogout }) => {
           {/* Table section */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
             <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex flex-wrap items-center gap-2.5 w-full">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Cari pengguna / rumpun..."
-                  className="border border-gray-200 rounded-lg px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 w-full sm:w-64"
+                  aria-label="Cari pengguna atau rumpun jabatan"
+                  className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 min-h-[44px] sm:min-h-[36px] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 w-full sm:w-64"
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilterBelumAktivasi(!filterBelumAktivasi);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors border ${
-                    filterBelumAktivasi
-                      ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {filterBelumAktivasi ? 'Filter Aktif: Belum Aktivasi' : 'Filter: Belum Aktivasi'}
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5" role="group" aria-label="Filter daftar pengguna">
+                  <button
+                    type="button"
+                    aria-pressed={filterBelumAktivasi}
+                    onClick={() => {
+                      setFilterBelumAktivasi(!filterBelumAktivasi);
+                      setCurrentPage(1);
+                    }}
+                    className={`${filterButtonBaseClass} ${
+                      filterBelumAktivasi
+                        ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
+                        : filterButtonInactiveClass
+                    }`}
+                  >
+                    {filterBelumAktivasi && <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
+                    <span>{filterBelumAktivasi ? 'Filter Aktif: Belum Aktivasi' : 'Filter: Belum Aktivasi'}</span>
+                  </button>
+
+                  {ADMIN_ROLE_FILTERS.map((roleFilter) => {
+                    const isActive = selectedRoleFilters.includes(roleFilter.key);
+                    return (
+                      <button
+                        key={roleFilter.key}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => toggleRoleFilter(roleFilter.key)}
+                        className={`${filterButtonBaseClass} ${
+                          isActive ? roleFilter.activeClass : filterButtonInactiveClass
+                        }`}
+                      >
+                        {isActive && <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
+                        <span>{isActive ? `Filter Aktif: ${roleFilter.label}` : `Filter: ${roleFilter.label}`}</span>
+                      </button>
+                    );
+                  })}
+
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={resetFiltersOnly}
+                      className="inline-flex items-center px-3 py-2 min-h-[44px] sm:min-h-[36px] rounded-lg text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-300 hover:bg-teal-100 active:bg-teal-200 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                    >
+                      Reset Filter
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -633,10 +758,43 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                       </td>
                     </tr>
                   ))}
-                  {filteredUsers.length === 0 && (
+                  {fetchError ? (
                     <tr>
-                      <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                        {searchTerm ? 'Tidak ada pengguna yang sesuai dengan pencarian.' : 'Belum ada pengguna terdaftar.'}
+                      <td colSpan="8" className="px-6 py-8 text-center">
+                        <div className="inline-flex flex-col items-center gap-3 max-w-md mx-auto">
+                          <div className="inline-flex items-center gap-2 text-red-800 text-sm font-semibold">
+                            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span>{fetchError}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => fetchUsers(currentPage, debouncedSearch, filterBelumAktivasi, selectedRoleFilters)}
+                            className="px-4 py-2 min-h-[44px] sm:min-h-[36px] rounded-lg text-xs font-semibold bg-teal-700 text-white hover:bg-teal-800 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                          >
+                            Coba Lagi
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-8 text-center text-gray-600">
+                        <div className="inline-flex flex-col items-center gap-3">
+                          <p className="text-sm">
+                            {hasActiveSearchOrFilters
+                              ? 'Tidak ada pengguna yang sesuai dengan filter atau pencarian.'
+                              : 'Belum ada pengguna terdaftar.'}
+                          </p>
+                          {hasActiveSearchOrFilters && (
+                            <button
+                              type="button"
+                              onClick={resetAllFilters}
+                              className="px-4 py-2 min-h-[44px] sm:min-h-[36px] rounded-lg text-xs font-semibold bg-white border border-gray-400 text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                            >
+                              Reset Filter
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -645,7 +803,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
             </div>
 
             {/* Pagination Controls */}
-            {paginationMeta.total > 0 && (
+            {!fetchError && paginationMeta.total > 0 && (
               <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50">
                 <div className="text-sm text-gray-500 text-center md:text-left">
                   Menampilkan <span className="font-semibold text-gray-700">{paginationMeta.from || 0}</span> - <span className="font-semibold text-gray-700">{paginationMeta.to || 0}</span> dari <span className="font-semibold text-gray-700">{paginationMeta.total?.toLocaleString('id-ID') || 0}</span> pengguna
