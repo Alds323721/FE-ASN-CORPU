@@ -22,6 +22,18 @@
   h1, h2, h3, h4, h5, h6 {
     @apply text-secondary font-semibold;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label[for],
+  a[href] {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {

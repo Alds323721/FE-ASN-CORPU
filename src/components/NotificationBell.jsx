@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Bell } from 'lucide-react';
 import Swal from 'sweetalert2';
 import NotificationDropdown from './NotificationDropdown';
@@ -29,8 +29,11 @@ export default function NotificationBell({ onNavigate }) {
   const [permissionState, setPermissionState] = useState(() => getNotificationPermissionState());
   const [enablingPush, setEnablingPush] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState(null);
 
   const containerRef = useRef(null);
+  const bellButtonRef = useRef(null);
+  const dropdownId = useId();
 
   const loadUnreadCount = useCallback(async () => {
     if (!isAuthenticated()) return;
@@ -38,7 +41,7 @@ export default function NotificationBell({ onNavigate }) {
       const count = await fetchUnreadNotificationCount();
       setUnreadCount(count);
     } catch {
-      // Abaikan jika gagal mengambil unread count sementara
+      // Abaikan kegagalan polling latar belakang agar tidak mengganggu UI utama
     }
   }, []);
 
@@ -49,6 +52,7 @@ export default function NotificationBell({ onNavigate }) {
         setLoadingMore(true);
       } else {
         setLoading(true);
+        setError(null);
       }
 
       const res = await fetchNotifications(page, 15);
@@ -59,19 +63,75 @@ export default function NotificationBell({ onNavigate }) {
       setUnreadCount(Number(meta.unread_count ?? 0));
       setCurrentPage(Number(meta.current_page ?? page));
       setLastPage(Number(meta.last_page ?? 1));
-    } catch {
-      // Abaikan error sementara
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        'Gagal memuat riwayat notifikasi. Periksa koneksi Anda lalu coba lagi.';
+      if (append) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: message,
+          timer: 3000,
+          showConfirmButton: false,
+        });
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   }, []);
 
+  const handleNavigateFromPayload = useCallback((data = {}, fallbackUrl = '') => {
+    const pembelajaranId = data?.pembelajaran_id || data?.module_id;
+    const route = data?.route || '';
+    const url = data?.url || fallbackUrl || '';
+
+    if (pembelajaranId) {
+      if (route === 'detail-kursus' || url.includes('/admin-komunitas/detail-kursus')) {
+        localStorage.setItem('adminKomunitasCourseId', String(pembelajaranId));
+      } else if (route === 'course-review' || url.includes('/admin/course-validation')) {
+        localStorage.setItem('reviewCourseId', String(pembelajaranId));
+      } else {
+        localStorage.setItem('userCourseId', String(pembelajaranId));
+      }
+    }
+
+    if (typeof onNavigate === 'function') {
+      if (route) {
+        onNavigate(route);
+        return;
+      }
+      if (url === '/admin-komunitas/detail-kursus') {
+        onNavigate('detail-kursus');
+        return;
+      }
+      if (url === '/admin/course-validation') {
+        onNavigate('course-validation');
+        return;
+      }
+      if (url === '/certificates') {
+        onNavigate('certificates');
+        return;
+      }
+      if (url === '/course-detail') {
+        onNavigate('course-detail');
+        return;
+      }
+    }
+
+    if (url && url.startsWith('/')) {
+      window.location.href = url;
+    }
+  }, [onNavigate]);
+
   // Sinkronisasi awal token FCM (jika izin sudah granted) & polling ringan unread count
   useEffect(() => {
     if (!isAuthenticated()) return;
 
-    setPermissionState(getNotificationPermissionState());
     syncExistingPermissionToken();
     loadUnreadCount();
 
@@ -137,18 +197,38 @@ export default function NotificationBell({ onNavigate }) {
         navigator.serviceWorker.removeEventListener('message', handleSwMessage);
       }
     };
-  }, [isOpen, loadNotifications, loadUnreadCount]);
+  }, [isOpen, loadNotifications, loadUnreadCount, handleNavigateFromPayload]);
 
-  // Tutup dropdown saat klik di luar
   useEffect(() => {
+    if (!isOpen) return undefined;
+
     const handleClickOutside = (event) => {
+      if (event.target?.closest?.('.swal2-container')) return;
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
+
+    const handleKeyDown = (event) => {
+      if (document.querySelector('.swal2-container')) return;
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        bellButtonRef.current?.focus();
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const handleCloseDropdown = () => {
+    setIsOpen(false);
+    bellButtonRef.current?.focus();
+  };
 
   const handleToggleDropdown = () => {
     const nextOpen = !isOpen;
@@ -205,8 +285,15 @@ export default function NotificationBell({ onNavigate }) {
       } else {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
-    } catch {
-      // Abaikan jika gagal
+    } catch (err) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: err?.response?.data?.message || 'Gagal menandai notifikasi sudah dibaca',
+        timer: 3000,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -216,8 +303,15 @@ export default function NotificationBell({ onNavigate }) {
       const nowIso = new Date().toISOString();
       setNotifications((prev) => prev.map((item) => ({ ...item, read_at: item.read_at || nowIso })));
       setUnreadCount(0);
-    } catch {
-      // Abaikan jika gagal
+    } catch (err) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: err?.response?.data?.message || 'Gagal menandai semua notifikasi dibaca',
+        timer: 3000,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -293,49 +387,6 @@ export default function NotificationBell({ onNavigate }) {
     }
   };
 
-  const handleNavigateFromPayload = (data = {}, fallbackUrl = '') => {
-    const pembelajaranId = data?.pembelajaran_id || data?.module_id;
-    const route = data?.route || '';
-    const url = data?.url || fallbackUrl || '';
-
-    if (pembelajaranId) {
-      if (route === 'detail-kursus' || url.includes('/admin-komunitas/detail-kursus')) {
-        localStorage.setItem('adminKomunitasCourseId', String(pembelajaranId));
-      } else if (route === 'course-review' || url.includes('/admin/course-validation')) {
-        localStorage.setItem('reviewCourseId', String(pembelajaranId));
-      } else {
-        localStorage.setItem('userCourseId', String(pembelajaranId));
-      }
-    }
-
-    if (typeof onNavigate === 'function') {
-      if (route) {
-        onNavigate(route);
-        return;
-      }
-      if (url === '/admin-komunitas/detail-kursus') {
-        onNavigate('detail-kursus');
-        return;
-      }
-      if (url === '/admin/course-validation') {
-        onNavigate('course-validation');
-        return;
-      }
-      if (url === '/certificates') {
-        onNavigate('certificates');
-        return;
-      }
-      if (url === '/course-detail') {
-        onNavigate('course-detail');
-        return;
-      }
-    }
-
-    if (url && url.startsWith('/')) {
-      window.location.href = url;
-    }
-  };
-
   const handleSelectNotification = async (item) => {
     if (!item.read_at) {
       await handleMarkAsRead(item.id);
@@ -347,15 +398,22 @@ export default function NotificationBell({ onNavigate }) {
   return (
     <div className="relative inline-flex items-center" ref={containerRef}>
       <button
+        ref={bellButtonRef}
         type="button"
         onClick={handleToggleDropdown}
-        className="relative p-2 text-gray-600 hover:text-[#006A63] hover:bg-gray-100 rounded-full transition-colors focus:outline-none cursor-pointer"
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-controls={isOpen ? dropdownId : undefined}
+        className="relative min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-gray-700 hover:text-[#006A63] hover:bg-gray-100 active:bg-gray-200 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006A63] focus-visible:ring-offset-2 cursor-pointer"
         title="Notifikasi"
-        aria-label="Notifikasi"
+        aria-label={unreadCount > 0 ? `Notifikasi (${unreadCount} belum dibaca)` : 'Notifikasi'}
       >
         <Bell className="w-5 h-5" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+          <span
+            aria-hidden="true"
+            className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -363,12 +421,16 @@ export default function NotificationBell({ onNavigate }) {
 
       {isOpen && (
         <NotificationDropdown
+          id={dropdownId}
           notifications={notifications}
           unreadCount={unreadCount}
           loading={loading}
+          error={error}
           permissionState={permissionState}
           enablingPush={enablingPush}
           deletingId={deletingId}
+          onClose={handleCloseDropdown}
+          onRetry={() => loadNotifications(1, false)}
           onEnablePush={handleEnablePush}
           onMarkAsRead={handleMarkAsRead}
           onMarkAllAsRead={handleMarkAllAsRead}

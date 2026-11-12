@@ -14,6 +14,115 @@ import {
   Eye, EyeOff
 } from 'lucide-react';
 
+const EXPORT_KPK_BATCH_SIZE = 20;
+const REVIEW_AND_AUDIT_PER_PAGE = 15;
+
+const buildPageNumbers = (currentPage, totalPages) => {
+  const safeTotal = Math.max(1, Number(totalPages) || 1);
+  const delta = 2;
+  const range = [];
+  const rangeWithDots = [];
+  let previousPage;
+
+  for (let i = 1; i <= safeTotal; i++) {
+    if (i === 1 || i === safeTotal || (i >= currentPage - delta && i <= currentPage + delta)) {
+      range.push(i);
+    }
+  }
+
+  for (const page of range) {
+    if (previousPage) {
+      if (page - previousPage === 2) {
+        rangeWithDots.push(previousPage + 1);
+      } else if (page - previousPage !== 1) {
+        rangeWithDots.push('...');
+      }
+    }
+    rangeWithDots.push(page);
+    previousPage = page;
+  }
+
+  return rangeWithDots;
+};
+
+const TablePagination = ({
+  currentPage,
+  lastPage,
+  total,
+  from,
+  to,
+  itemLabel,
+  loading,
+  onPageChange,
+}) => {
+  if (!total || total <= 0) return null;
+
+  const safeLastPage = Math.max(1, Number(lastPage) || 1);
+  const safeCurrentPage = Math.min(Math.max(1, Number(currentPage) || 1), safeLastPage);
+  const pages = buildPageNumbers(safeCurrentPage, safeLastPage);
+
+  return (
+    <nav
+      aria-label={`Navigasi halaman ${itemLabel}`}
+      className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/70"
+    >
+      <div className="text-xs sm:text-sm text-gray-600 text-center md:text-left">
+        Menampilkan <span className="font-semibold text-gray-800">{from || 0}</span> -{' '}
+        <span className="font-semibold text-gray-800">{to || 0}</span> dari{' '}
+        <span className="font-semibold text-gray-800">{total.toLocaleString('id-ID')}</span> {itemLabel}
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(safeCurrentPage - 1, 1))}
+          disabled={safeCurrentPage <= 1 || loading}
+          aria-label={`Halaman ${itemLabel} sebelumnya`}
+          className="min-h-11 lg:min-h-8 px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+        >
+          <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Sebelumnya</span>
+        </button>
+
+        {pages.map((pageItem, idx) =>
+          pageItem === '...' ? (
+            <span key={`dots-${idx}`} className="px-2 py-1 text-gray-600 text-sm select-none">
+              ...
+            </span>
+          ) : (
+            <button
+              key={pageItem}
+              type="button"
+              onClick={() => onPageChange(pageItem)}
+              disabled={loading}
+              aria-label={`Halaman ${pageItem}`}
+              aria-current={safeCurrentPage === pageItem ? 'page' : undefined}
+              className={`min-h-11 min-w-11 lg:min-h-8 lg:min-w-8 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 ${
+                safeCurrentPage === pageItem
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-gray-700 bg-white hover:bg-gray-50 hover:text-teal-700 border border-gray-200'
+              }`}
+            >
+              {pageItem}
+            </button>
+          )
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(safeCurrentPage + 1, safeLastPage))}
+          disabled={safeCurrentPage >= safeLastPage || loading}
+          aria-label={`Halaman ${itemLabel} berikutnya`}
+          className="min-h-11 lg:min-h-8 px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+        >
+          <span className="hidden sm:inline">Berikutnya</span>
+          <ChevronRight className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
+    </nav>
+  );
+};
+
 const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'admin', label: 'Dasbor', icon: LayoutDashboard },
@@ -149,7 +258,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [selectedKpkCourse, setSelectedKpkCourse] = useState('all');
   const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_sign'
   const [exportKpkScope, setExportKpkScope] = useState('pending_tte'); // 'pending_tte' | 'all'
-  const [exportKpkBatchMode, setExportKpkBatchMode] = useState('batch'); // 'batch' (per 10) | 'all'
+  const [exportKpkBatchMode, setExportKpkBatchMode] = useState('batch'); // 'batch' (per 20) | 'all'
   const [exportKpkBatchNumber, setExportKpkBatchNumber] = useState(1);
   const [isExportingKpkZip, setIsExportingKpkZip] = useState(false);
   const [loadingKpkCourses, setLoadingKpkCourses] = useState(false);
@@ -177,10 +286,20 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     total_ulasan: 0,
     rata_rata_rating: 0,
     persen_puas: 0,
+    pelatihan_terulas: 0,
     distribusi: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
   });
   const [selectedRatingFilter, setSelectedRatingFilter] = useState('');
   const [loadingUlasan, setLoadingUlasan] = useState(false);
+  const [ulasanError, setUlasanError] = useState('');
+  const [ulasanPagination, setUlasanPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: REVIEW_AND_AUDIT_PER_PAGE,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
 
   // Validasi QR State
   const [validasiList, setValidasiList] = useState([]);
@@ -190,10 +309,14 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     validasi_hari_ini: 0
   });
   const [loadingValidasi, setLoadingValidasi] = useState(false);
+  const [validasiError, setValidasiError] = useState('');
   const [validasiPagination, setValidasiPagination] = useState({
     current_page: 1,
     last_page: 1,
-    total: 0
+    per_page: REVIEW_AND_AUDIT_PER_PAGE,
+    total: 0,
+    from: 0,
+    to: 0,
   });
 
   const fetchKomunitas = async () => {
@@ -259,26 +382,54 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const fetchUlasanReports = async () => {
+  const fetchUlasanReports = async (page = 1) => {
     try {
       setLoadingUlasan(true);
-      const params = {};
+      setUlasanError('');
+      const params = {
+        page,
+        per_page: REVIEW_AND_AUDIT_PER_PAGE,
+      };
       if (selectedKomunitas) params.komunitas_id = selectedKomunitas;
       if (selectedRatingFilter) params.skor_rating = selectedRatingFilter;
-      if (searchTerm) params.search = searchTerm;
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
 
       const res = await api.get('/admin-bkpsdm/laporan/ulasan', { params });
-      if (res.data?.data) {
-        setUlasanList(res.data.data.ulasan || []);
-        setUlasanStats(res.data.data.stats || {
+      const payload = res.data?.data;
+      if (payload) {
+        const rows = payload.ulasan || [];
+        const meta = payload.meta;
+        setUlasanList(rows);
+        setUlasanStats(payload.stats || {
           total_ulasan: 0,
           rata_rata_rating: 0,
           persen_puas: 0,
+          pelatihan_terulas: 0,
           distribusi: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
         });
+        if (meta) {
+          setUlasanPagination({
+            current_page: Number(meta.current_page || 1),
+            last_page: Number(meta.last_page || 1),
+            per_page: Number(meta.per_page || REVIEW_AND_AUDIT_PER_PAGE),
+            total: Number(meta.total || 0),
+            from: Number(meta.from || 0),
+            to: Number(meta.to || 0),
+          });
+        } else {
+          setUlasanPagination({
+            current_page: 1,
+            last_page: 1,
+            per_page: REVIEW_AND_AUDIT_PER_PAGE,
+            total: rows.length,
+            from: rows.length > 0 ? 1 : 0,
+            to: rows.length,
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to fetch ulasan reports:', err);
+      setUlasanError(err?.response?.data?.message || 'Gagal memuat data ulasan mutu pelatihan.');
     } finally {
       setLoadingUlasan(false);
     }
@@ -287,16 +438,28 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const fetchValidasiReports = async (page = 1) => {
     try {
       setLoadingValidasi(true);
-      const params = { page, per_page: 15 };
-      if (searchTerm) params.search = searchTerm;
+      setValidasiError('');
+      const params = { page, per_page: REVIEW_AND_AUDIT_PER_PAGE };
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
 
       const res = await api.get('/admin-bkpsdm/riwayat-validasi-sertifikat', { params });
-      if (res.data?.data) {
-        setValidasiList(res.data.data.data || []);
+      const payload = res.data?.data;
+      if (payload) {
+        const rows = payload.data || [];
+        const curPage = Number(payload.current_page || 1);
+        const perPage = Number(payload.per_page || REVIEW_AND_AUDIT_PER_PAGE);
+        const total = Number(payload.total || 0);
+        const computedFrom = total > 0 && rows.length > 0 ? (curPage - 1) * perPage + 1 : 0;
+        const computedTo = total > 0 && rows.length > 0 ? (curPage - 1) * perPage + rows.length : 0;
+
+        setValidasiList(rows);
         setValidasiPagination({
-          current_page: res.data.data.current_page || 1,
-          last_page: res.data.data.last_page || 1,
-          total: res.data.data.total || 0
+          current_page: curPage,
+          last_page: Number(payload.last_page || 1),
+          per_page: perPage,
+          total,
+          from: payload.from ?? computedFrom,
+          to: payload.to ?? computedTo,
         });
       }
       if (res.data?.stats) {
@@ -304,6 +467,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       }
     } catch (err) {
       console.error('Failed to fetch validasi reports:', err);
+      setValidasiError(err?.response?.data?.message || 'Gagal memuat riwayat validasi & scan QR.');
     } finally {
       setLoadingValidasi(false);
     }
@@ -328,7 +492,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         setCurrentPage(1);
       }
     } else if (activeTabReport === 'ulasan') {
-      fetchUlasanReports();
+      fetchUlasanReports(1);
     } else if (activeTabReport === 'validasi') {
       fetchValidasiReports(1);
     }
@@ -336,7 +500,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
   useEffect(() => {
     if (activeTabReport === 'ulasan') {
-      fetchUlasanReports();
+      fetchUlasanReports(1);
     }
   }, [selectedRatingFilter]);
 
@@ -349,39 +513,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         setCurrentPage(1);
       }
     } else if (activeTabReport === 'ulasan') {
-      fetchUlasanReports();
+      fetchUlasanReports(1);
     } else if (activeTabReport === 'validasi') {
       fetchValidasiReports(1);
     }
-  };
-
-  const getPageNumbers = () => {
-    const totalPages = paginationMeta.last_page || 1;
-    const current = currentPage;
-    const delta = 2;
-    const range = [];
-    const rangeWithDots = [];
-    let l;
-
-    for (let i = 1; i <= totalPages; i++) {
-      if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
-        range.push(i);
-      }
-    }
-
-    for (let i of range) {
-      if (l) {
-        if (i - l === 2) {
-          rangeWithDots.push(l + 1);
-        } else if (i - l !== 1) {
-          rangeWithDots.push('...');
-        }
-      }
-      rangeWithDots.push(i);
-      l = i;
-    }
-
-    return rangeWithDots;
   };
 
   const handleExport = async () => {
@@ -559,6 +694,43 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
+  // Helper kalkulasi status kuota TTE dan pembagian batch ekspor KPK
+  const selectedKpkCourseData = selectedKpkCourse === 'all'
+    ? {
+        total_lulus: kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0),
+        total_pending_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0),
+        total_signed_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_signed_tte || 0), 0),
+      }
+    : kpkCoursesList.find((c) => String(c.pembelajaran_id) === String(selectedKpkCourse)) || {
+        total_lulus: 0,
+        total_pending_tte: 0,
+        total_signed_tte: 0,
+      };
+
+  const isKpkPendingEmpty = (selectedKpkCourseData.total_pending_tte || 0) === 0;
+
+  const targetExportCount = exportKpkScope === 'pending_tte'
+    ? (selectedKpkCourseData.total_pending_tte || 0)
+    : (selectedKpkCourseData.total_lulus || 0);
+
+  const totalBatches = Math.max(1, Math.ceil(targetExportCount / EXPORT_KPK_BATCH_SIZE));
+  const safeBatchNumber = Math.min(Math.max(1, exportKpkBatchNumber), totalBatches);
+  const selectedBatchCount = Math.min(
+    EXPORT_KPK_BATCH_SIZE,
+    Math.max(0, targetExportCount - (safeBatchNumber - 1) * EXPORT_KPK_BATCH_SIZE)
+  );
+
+  useEffect(() => {
+    if (!isExportKpkModalOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isExportingKpkZip) {
+        setIsExportKpkModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExportKpkModalOpen, isExportingKpkZip]);
+
   const handleOpenExportKpkModal = () => {
     setIsExportKpkModalOpen(true);
     setExportKpkScope('pending_tte');
@@ -574,8 +746,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       const params = {
         format: exportKpkFormat,
         scope: exportKpkScope,
-        batch_size: 10,
-        batch_number: isBatchMode ? exportKpkBatchNumber : 'all',
+        batch_size: EXPORT_KPK_BATCH_SIZE,
+        batch_number: isBatchMode ? safeBatchNumber : 'all',
       };
       if (selectedKpkCourse && selectedKpkCourse !== 'all') {
         params.pembelajaran_id = selectedKpkCourse;
@@ -583,20 +755,30 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
       const response = await api.get('/admin-bkpsdm/laporan/sertifikat/export-kpk-zip', {
         params,
-        responseType: 'blob'
+        responseType: 'blob',
+        timeout: 300000
       });
 
       let filename = '';
       const disposition = response.headers['content-disposition'];
-      if (disposition && disposition.includes('filename=')) {
-        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match && match[1]) {
-          filename = match[1].replace(/['"]/g, '');
+      if (disposition) {
+        const utf8Match = disposition.match(/filename\*\s*=\s*UTF-8''([^;\n]+)/i);
+        if (utf8Match && utf8Match[1]) {
+          try {
+            filename = decodeURIComponent(utf8Match[1].trim().replace(/['"]/g, ''));
+          } catch {
+            filename = utf8Match[1].trim().replace(/['"]/g, '');
+          }
+        } else {
+          const match = disposition.match(/filename\s*=\s*((['"]).*?\2|[^;\n]*)/i);
+          if (match && match[1]) {
+            filename = match[1].trim().replace(/['"]/g, '');
+          }
         }
       }
       if (!filename) {
         filename = isBatchMode
-          ? `Sertifikat_KPK_Batch_${exportKpkBatchNumber}_dari_${totalBatches}_${new Date().toISOString().slice(0, 10)}.zip`
+          ? `Sertifikat_KPK_Batch_${safeBatchNumber}_dari_${totalBatches}_${new Date().toISOString().slice(0, 10)}.zip`
           : `Sertifikat_KPK_${new Date().toISOString().slice(0, 10)}.zip`;
       }
 
@@ -610,24 +792,33 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       setTimeout(() => window.URL.revokeObjectURL(fileUrl), 1000);
 
       setIsExportKpkModalOpen(false);
+      fetchReports(currentPage);
 
-      const batchLabel = isBatchMode ? ` (Batch ${exportKpkBatchNumber} dari ${totalBatches})` : '';
+      const exportedCountHeader = response.headers['x-total-exported'];
+      const batchNumberHeader = response.headers['x-batch-number'];
+      const totalBatchesHeader = response.headers['x-total-batches'];
+      const batchLabel = isBatchMode
+        ? ` (Batch ${batchNumberHeader || safeBatchNumber} dari ${totalBatchesHeader || totalBatches})`
+        : '';
+      const countLabel = exportedCountHeader ? ` Sebanyak ${exportedCountHeader} berkas PDF dikemas` : ' Berkas PDF di dalamnya dinamai';
 
       Swal.fire({
         title: 'Ekspor Berhasil',
-        text: `Arsip ZIP sertifikat KPK${batchLabel} (${filename}) berhasil diunduh. Berkas PDF di dalamnya dinamai sesuai NIP peserta.`,
+        text: `Arsip ZIP sertifikat KPK${batchLabel} (${filename}) berhasil diunduh.${countLabel} sesuai NIP peserta.`,
         icon: 'success',
         confirmButtonColor: '#0F766E'
       });
     } catch (err) {
       console.error('Gagal mengunduh ZIP sertifikat KPK:', err);
-      let errorMsg = 'Terjadi kesalahan saat memproses arsip ZIP sertifikat KPK.';
+      let errorMsg = err.code === 'ECONNABORTED'
+        ? 'Waktu pengemasan arsip ZIP melebihi batas tunggu. Silakan coba unduh ulang atau gunakan mode per batch.'
+        : 'Terjadi kesalahan saat memproses arsip ZIP sertifikat KPK.';
       if (err.response?.data instanceof Blob) {
         try {
           const text = await err.response.data.text();
           const json = JSON.parse(text);
           if (json.message) errorMsg = json.message;
-        } catch (_) {}
+        } catch {}
       } else if (err.response?.data?.message) {
         errorMsg = err.response.data.message;
       }
@@ -642,28 +833,6 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       setIsExportingKpkZip(false);
     }
   };
-
-  // Helper kalkulasi status kuota TTE kursus KPK terpilih (Rule Anti-Repetisi)
-  const selectedKpkCourseData = selectedKpkCourse === 'all'
-    ? {
-        total_lulus: kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0),
-        total_pending_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0),
-        total_signed_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_signed_tte || 0), 0),
-      }
-    : kpkCoursesList.find((c) => String(c.pembelajaran_id) === String(selectedKpkCourse)) || {
-        total_lulus: 0,
-        total_pending_tte: 0,
-        total_signed_tte: 0,
-      };
-
-  const isKpkPendingEmpty = (selectedKpkCourseData.total_pending_tte || 0) === 0;
-
-  // Rule Batching: per 10 sertifikat agar ekspor ringan di server & praktis di B-Sign
-  const targetExportCount = exportKpkScope === 'pending_tte'
-    ? (selectedKpkCourseData.total_pending_tte || 0)
-    : (selectedKpkCourseData.total_lulus || 0);
-
-  const totalBatches = Math.max(1, Math.ceil(targetExportCount / 10));
 
   // State Import Sertifikat TTE B-Sign
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1168,7 +1337,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               />
               <StatCard
                 title="PELATIHAN TERULAS"
-                value={new Set(ulasanList.map(u => u.pembelajaran?.pembelajaran_id)).size}
+                value={ulasanStats.pelatihan_terulas ?? new Set(ulasanList.map(u => u.pembelajaran?.pembelajaran_id).filter(Boolean)).size}
                 icon={BookOpen}
                 colorClass="bg-teal-50"
                 iconColorClass="text-teal-600"
@@ -1297,6 +1466,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
             {/* Table: Laporan Peserta */}
             {activeTabReport === 'peserta' && (
+              <>
               <div className="overflow-x-auto relative">
                 {tableLoading && (
                   <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 transition-opacity">
@@ -1435,303 +1605,304 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     )}
                   </tbody>
                 </table>
-
-                {/* Pagination Controls */}
-                {paginationMeta.total > 0 && (
-                  <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50">
-                    <div className="text-sm text-gray-500 text-center md:text-left">
-                      Menampilkan <span className="font-semibold text-gray-700">{paginationMeta.from || 0}</span> - <span className="font-semibold text-gray-700">{paginationMeta.to || 0}</span> dari <span className="font-semibold text-gray-700">{paginationMeta.total?.toLocaleString('id-ID') || 0}</span> data peserta
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage <= 1 || tableLoading}
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">Sebelumnya</span>
-                      </button>
-
-                      {getPageNumbers().map((pageItem, idx) => (
-                        pageItem === '...' ? (
-                          <span key={`dots-${idx}`} className="px-2 py-1 text-gray-400 text-sm select-none">...</span>
-                        ) : (
-                          <button
-                            key={pageItem}
-                            onClick={() => setCurrentPage(pageItem)}
-                            disabled={tableLoading}
-                            className={`min-w-8 h-8 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${currentPage === pageItem
-                                ? 'bg-teal-700 text-white shadow-sm'
-                                : 'text-gray-600 hover:bg-white hover:text-teal-700 border border-gray-200'
-                              }`}
-                          >
-                            {pageItem}
-                          </button>
-                        )
-                      ))}
-
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, paginationMeta.last_page))}
-                        disabled={currentPage >= paginationMeta.last_page || tableLoading}
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:bg-white hover:text-teal-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-                      >
-                        <span className="hidden sm:inline">Berikutnya</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <TablePagination
+                currentPage={currentPage}
+                lastPage={paginationMeta.last_page}
+                total={paginationMeta.total}
+                from={paginationMeta.from}
+                to={paginationMeta.to}
+                itemLabel="data peserta"
+                loading={tableLoading}
+                onPageChange={setCurrentPage}
+              />
+            </>
             )}
 
             {/* Table: Ulasan & Feedback Mutu Pelatihan */}
             {activeTabReport === 'ulasan' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
-                  <thead>
-                    <tr className="bg-white border-b border-gray-100">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PESERTA</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELATIHAN & KOMUNITAS</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENILAIAN RATING</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">ULASAN / FEEDBACK PESERTA</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">TANGGAL</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {loadingUlasan ? (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                          Memuat data ulasan mutu pelatihan...
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[1100px]">
+                    <thead>
+                      <tr className="bg-white border-b border-gray-100">
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PESERTA</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELATIHAN & KOMUNITAS</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENILAIAN RATING</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">ULASAN / FEEDBACK PESERTA</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">TANGGAL</th>
                       </tr>
-                    ) : ulasanList.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                          <div className="max-w-md mx-auto text-center space-y-2">
-                            <Star className="w-8 h-8 text-amber-400 mx-auto fill-amber-50" />
-                            <p className="font-bold text-gray-800 text-sm">Belum Ada Ulasan Peserta</p>
-                            <p className="text-xs text-gray-500">Data ulasan akan tampil di sini saat peserta telah menyelesaikan pelatihan dan mengisi ulasan kepuasan.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      ulasanList.map((rev) => (
-                        <tr key={rev.ulasan_id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0">
-                                {(rev.peserta?.nama_lengkap || 'P').charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <p className="font-bold text-gray-800 mb-0.5">{rev.peserta?.nama_lengkap || 'Peserta'}</p>
-                                <p className="text-xs text-gray-500">{rev.peserta?.nip || '-'} • {rev.peserta?.unit_kerja || 'Pemerintah Kabupaten Buleleng'}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="font-bold text-gray-800 text-sm">{rev.pembelajaran?.judul_pembelajaran || '-'}</p>
-                            <span className="inline-block mt-1 text-xs text-teal-700 bg-teal-50 px-2 py-0.5 rounded font-medium">
-                              {(!rev.pembelajaran?.nama_komunitas || rev.pembelajaran?.nama_komunitas === 'BKPSDM' || rev.pembelajaran?.nama_komunitas === 'Komunitas BKPSDM') ? '-' : rev.pembelajaran.nama_komunitas}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  className={`w-3.5 h-3.5 ${s <= rev.skor_rating
-                                      ? 'fill-amber-400 text-amber-400'
-                                      : 'text-gray-300'
-                                    }`}
-                                />
-                              ))}
-                              <span className="text-xs font-bold text-amber-900 ml-1">
-                                {rev.skor_rating}.0
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 max-w-md">
-                            <div className="p-3 bg-gray-50/80 rounded-lg border border-gray-100 text-xs text-gray-800 italic">
-                              "{rev.teks_ulasan || 'Peserta memberikan penilaian rating tanpa komentar teks.'}"
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
-                            {rev.dikirim_pada
-                              ? new Date(rev.dikirim_pada).toLocaleDateString('id-ID', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })
-                              : '-'}
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {loadingUlasan ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center text-gray-600" role="status">
+                            Memuat data ulasan mutu pelatihan...
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : ulasanError ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center">
+                            <div role="alert" className="max-w-md mx-auto space-y-2">
+                              <AlertCircle className="w-8 h-8 text-red-700 mx-auto" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Gagal Memuat Ulasan</p>
+                              <p className="text-xs text-gray-600">{ulasanError}</p>
+                              <button
+                                type="button"
+                                onClick={() => fetchUlasanReports(ulasanPagination.current_page || 1)}
+                                className="mt-1 min-h-11 lg:min-h-9 px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+                              >
+                                Coba Lagi
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : ulasanList.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center text-gray-600">
+                            <div className="max-w-md mx-auto text-center space-y-2">
+                              <Star className="w-8 h-8 text-amber-500 mx-auto fill-amber-50" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Belum Ada Ulasan Peserta</p>
+                              <p className="text-xs text-gray-600">Data ulasan akan tampil di sini saat peserta telah menyelesaikan pelatihan dan mengisi ulasan kepuasan.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        ulasanList.map((rev) => (
+                          <tr key={rev.ulasan_id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                  {(rev.peserta?.nama_lengkap || 'P').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-800 mb-0.5">{rev.peserta?.nama_lengkap || 'Peserta'}</p>
+                                  <p className="text-xs text-gray-600">{rev.peserta?.nip || '-'} • {rev.peserta?.unit_kerja || 'Pemerintah Kabupaten Buleleng'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-gray-800 text-sm">{rev.pembelajaran?.judul_pembelajaran || '-'}</p>
+                              <span className="inline-block mt-1 text-xs text-teal-700 bg-teal-50 px-2 py-0.5 rounded font-medium">
+                                {(!rev.pembelajaran?.nama_komunitas || rev.pembelajaran?.nama_komunitas === 'BKPSDM' || rev.pembelajaran?.nama_komunitas === 'Komunitas BKPSDM') ? '-' : rev.pembelajaran.nama_komunitas}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={`w-3.5 h-3.5 ${s <= rev.skor_rating
+                                        ? 'fill-amber-400 text-amber-400'
+                                        : 'text-gray-300'
+                                      }`}
+                                  />
+                                ))}
+                                <span className="text-xs font-bold text-amber-900 ml-1">
+                                  {rev.skor_rating}.0
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 max-w-md">
+                              <div className="p-3 bg-gray-50/80 rounded-lg border border-gray-100 text-xs text-gray-800 italic">
+                                "{rev.teks_ulasan || 'Peserta memberikan penilaian rating tanpa komentar teks.'}"
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-gray-600 whitespace-nowrap">
+                              {rev.dikirim_pada
+                                ? new Date(rev.dikirim_pada).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })
+                                : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <TablePagination
+                  currentPage={ulasanPagination.current_page}
+                  lastPage={ulasanPagination.last_page}
+                  total={ulasanPagination.total}
+                  from={ulasanPagination.from}
+                  to={ulasanPagination.to}
+                  itemLabel="ulasan"
+                  loading={loadingUlasan}
+                  onPageChange={(page) => fetchUlasanReports(page)}
+                />
+              </>
             )}
 
             {/* Table: Riwayat Validasi & Scan QR Sertifikat */}
             {activeTabReport === 'validasi' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
-                  <thead>
-                    <tr className="bg-white border-b border-gray-100">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">WAKTU PEMINDAIAN</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">NOMOR SERTIFIKAT</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENERIMA</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELATIHAN</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PERANGKAT & IP</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">STATUS</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">AKSI</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {loadingValidasi ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                          Memuat data riwayat validasi sertifikat...
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[1100px]">
+                    <thead>
+                      <tr className="bg-white border-b border-gray-100">
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">WAKTU PEMINDAIAN</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">NOMOR SERTIFIKAT</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENERIMA</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELATIHAN</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PERANGKAT & IP</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">STATUS</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">AKSI</th>
                       </tr>
-                    ) : validasiList.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                          <div className="max-w-md mx-auto text-center space-y-2">
-                            <QrCode className="w-8 h-8 text-emerald-500 mx-auto" />
-                            <p className="font-bold text-gray-800 text-sm">Belum Ada Riwayat Pemindaian QR</p>
-                            <p className="text-xs text-gray-500">Setiap kali QR Code pada sertifikat di-scan atau diverifikasi via tautan publik, data log pemindaian otomatis tersimpan di sini.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      validasiList.map((log) => {
-                        const recipientName = log.sertifikat?.nama_lengkap_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nama_lengkap || '-';
-                        const recipientNip = log.sertifikat?.nip_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nip || '-';
-                        const courseTitle = log.sertifikat?.pendaftaran?.pembelajaran?.judul_pembelajaran || '-';
-                        const isMobile = log.perangkat === 'Mobile';
-                        const isTablet = log.perangkat === 'Tablet';
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {loadingValidasi ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-12 text-center text-gray-600" role="status">
+                            Memuat data riwayat validasi sertifikat...
+                          </td>
+                        </tr>
+                      ) : validasiError ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-12 text-center">
+                            <div role="alert" className="max-w-md mx-auto space-y-2">
+                              <AlertCircle className="w-8 h-8 text-red-700 mx-auto" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Gagal Memuat Riwayat Validasi</p>
+                              <p className="text-xs text-gray-600">{validasiError}</p>
+                              <button
+                                type="button"
+                                onClick={() => fetchValidasiReports(validasiPagination.current_page || 1)}
+                                className="mt-1 min-h-11 lg:min-h-9 px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+                              >
+                                Coba Lagi
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : validasiList.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="px-6 py-12 text-center text-gray-600">
+                            <div className="max-w-md mx-auto text-center space-y-2">
+                              <QrCode className="w-8 h-8 text-emerald-600 mx-auto" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Belum Ada Riwayat Pemindaian QR</p>
+                              <p className="text-xs text-gray-600">Setiap kali QR Code pada sertifikat di-scan atau diverifikasi via tautan publik, data log pemindaian otomatis tersimpan di sini.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        validasiList.map((log) => {
+                          const recipientName = log.sertifikat?.nama_lengkap_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nama_lengkap || '-';
+                          const recipientNip = log.sertifikat?.nip_snapshot || log.sertifikat?.pendaftaran?.pengguna?.nip || '-';
+                          const courseTitle = log.sertifikat?.pendaftaran?.pembelajaran?.judul_pembelajaran || '-';
+                          const isMobile = log.perangkat === 'Mobile';
+                          const isTablet = log.perangkat === 'Tablet';
 
-                        return (
-                          <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-4 text-xs text-gray-600 whitespace-nowrap">
-                              <p className="font-bold text-gray-800">
-                                {log.scanned_at ? new Date(log.scanned_at).toLocaleDateString('id-ID', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  year: 'numeric'
-                                }) : '-'}
-                              </p>
-                              <p className="text-gray-400">
-                                {log.scanned_at ? new Date(log.scanned_at).toLocaleTimeString('id-ID', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  second: '2-digit'
-                                }) + ' WITA' : '-'}
-                              </p>
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded border border-teal-200 inline-block">
-                                {log.nomor_sertifikat}
-                              </span>
-                              {log.sertifikat?.verification_code && (
-                                <p className="text-[10px] text-gray-400 font-mono mt-1 truncate max-w-[180px]" title={log.sertifikat.verification_code}>
-                                  Kode: {log.sertifikat.verification_code.substring(0, 16)}...
+                          return (
+                            <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-6 py-4 text-xs text-gray-600 whitespace-nowrap">
+                                <p className="font-bold text-gray-800">
+                                  {log.scanned_at ? new Date(log.scanned_at).toLocaleDateString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  }) : '-'}
                                 </p>
-                              )}
-                            </td>
+                                <p className="text-gray-600">
+                                  {log.scanned_at ? new Date(log.scanned_at).toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                  }) + ' WITA' : '-'}
+                                </p>
+                              </td>
 
-                            <td className="px-6 py-4">
-                              <p className="font-bold text-gray-800 text-sm mb-0.5">{recipientName}</p>
-                              <p className="text-xs text-gray-500 font-mono">NIP. {recipientNip}</p>
-                            </td>
-
-                            <td className="px-6 py-4 max-w-xs">
-                              <p className="font-bold text-gray-800 text-sm line-clamp-2">{courseTitle}</p>
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                {isMobile ? (
-                                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                                ) : isTablet ? (
-                                  <Tablet className="w-3.5 h-3.5 text-purple-600" />
-                                ) : (
-                                  <Laptop className="w-3.5 h-3.5 text-gray-600" />
-                                )}
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isMobile ? 'bg-blue-50 text-blue-700' : isTablet ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'
-                                  }`}>
-                                  {log.perangkat || 'Desktop'}
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded border border-teal-200 inline-block">
+                                  {log.nomor_sertifikat}
                                 </span>
-                              </div>
-                              <p className="text-xs font-mono text-gray-400">{log.ip_address || '-'}</p>
-                            </td>
-
-                            <td className="px-6 py-4 text-center">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 border border-green-200 text-green-700">
-                                <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-                                Sah & Valid
-                              </span>
-                            </td>
-
-                            <td className="px-6 py-4 text-center whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-2">
-                                <a
-                                  href={`/validasi-sertifikat/${log.sertifikat?.verification_code || encodeURIComponent(log.nomor_sertifikat)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg border border-teal-200 transition-colors"
-                                  title="Buka Halaman Verifikasi Publik"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  <span>Cek Verifikasi</span>
-                                </a>
-                                {log.sertifikat_id && (
-                                  <button
-                                    onClick={() => handleViewCertificate({ certificateId: log.sertifikat_id })}
-                                    className="inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-teal-800 bg-white hover:bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition-colors"
-                                    title="Unduh Berkas PDF Asli"
-                                  >
-                                    <Award className="w-3.5 h-3.5 text-teal-700" />
-                                    <span>Unduh PDF</span>
-                                  </button>
+                                {log.sertifikat?.verification_code && (
+                                  <p className="text-[11px] text-gray-600 font-mono mt-1 truncate max-w-[180px]" title={log.sertifikat.verification_code}>
+                                    Kode: {log.sertifikat.verification_code.substring(0, 16)}...
+                                  </p>
                                 )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                              </td>
 
-                {/* Pagination Controls */}
-                {validasiPagination.last_page > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-                    <span className="text-xs text-gray-500 font-medium">
-                      Menampilkan halaman <strong className="text-gray-800">{validasiPagination.current_page}</strong> dari <strong className="text-gray-800">{validasiPagination.last_page}</strong> ({validasiPagination.total} total log scan)
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={validasiPagination.current_page <= 1}
-                        onClick={() => fetchValidasiReports(validasiPagination.current_page - 1)}
-                        className="px-3 py-1.5 border border-gray-200 rounded text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white bg-white text-gray-700 transition-colors"
-                      >
-                        Sebelumnya
-                      </button>
-                      <button
-                        disabled={validasiPagination.current_page >= validasiPagination.last_page}
-                        onClick={() => fetchValidasiReports(validasiPagination.current_page + 1)}
-                        className="px-3 py-1.5 border border-gray-200 rounded text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white bg-white text-gray-700 transition-colors"
-                      >
-                        Selanjutnya
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                              <td className="px-6 py-4">
+                                <p className="font-bold text-gray-800 text-sm mb-0.5">{recipientName}</p>
+                                <p className="text-xs text-gray-600 font-mono">NIP. {recipientNip}</p>
+                              </td>
+
+                              <td className="px-6 py-4 max-w-xs">
+                                <p className="font-bold text-gray-800 text-sm line-clamp-2">{courseTitle}</p>
+                              </td>
+
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  {isMobile ? (
+                                    <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                                  ) : isTablet ? (
+                                    <Tablet className="w-3.5 h-3.5 text-purple-600" />
+                                  ) : (
+                                    <Laptop className="w-3.5 h-3.5 text-gray-600" />
+                                  )}
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isMobile ? 'bg-blue-50 text-blue-700' : isTablet ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'
+                                    }`}>
+                                    {log.perangkat || 'Desktop'}
+                                  </span>
+                                </div>
+                                <p className="text-xs font-mono text-gray-600">{log.ip_address || '-'}</p>
+                              </td>
+
+                              <td className="px-6 py-4 text-center">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 border border-green-200 text-green-700">
+                                  <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                  Sah & Valid
+                                </span>
+                              </td>
+
+                              <td className="px-6 py-4 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-2">
+                                  <a
+                                    href={`/validasi-sertifikat/${log.sertifikat?.verification_code || encodeURIComponent(log.nomor_sertifikat)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg border border-teal-200 transition-colors"
+                                    title="Buka Halaman Verifikasi Publik"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span>Cek Verifikasi</span>
+                                  </a>
+                                  {log.sertifikat_id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewCertificate({ certificateId: log.sertifikat_id })}
+                                      className="inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-teal-800 bg-white hover:bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition-colors"
+                                      title="Unduh Berkas PDF Asli"
+                                    >
+                                      <Award className="w-3.5 h-3.5 text-teal-700" />
+                                      <span>Unduh PDF</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <TablePagination
+                  currentPage={validasiPagination.current_page}
+                  lastPage={validasiPagination.last_page}
+                  total={validasiPagination.total}
+                  from={validasiPagination.from}
+                  to={validasiPagination.to}
+                  itemLabel="log scan"
+                  loading={loadingValidasi}
+                  onPageChange={(page) => fetchValidasiReports(page)}
+                />
+              </>
             )}
 
           </div>
@@ -1741,25 +1912,32 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
       {/* Modal Ekspor Sertifikat Khusus Kursus KPK */}
       {isExportKpkModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-kpk-modal-title"
+        >
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92vh]">
             {/* Modal Header */}
             <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-teal-50/50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <FileArchive className="w-5 h-5 text-white" />
+                  <FileArchive className="w-5 h-5 text-white" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Ekspor Sertifikat Kursus KPK</h3>
-                  <p className="text-xs text-gray-500">Unduh seluruh berkas PDF dalam format NIP (.ZIP)</p>
+                  <h3 id="export-kpk-modal-title" className="text-base font-bold text-gray-900">Ekspor Sertifikat Kursus KPK</h3>
+                  <p className="text-xs text-gray-600">Unduh seluruh berkas PDF dalam format NIP (.ZIP)</p>
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="Tutup modal ekspor sertifikat KPK"
                 onClick={() => !isExportingKpkZip && setIsExportKpkModalOpen(false)}
                 disabled={isExportingKpkZip}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -1767,7 +1945,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Pilihan Pelatihan KPK */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                <label htmlFor="export-kpk-course-select" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
                   Pilih Kursus KPK
                 </label>
                 {loadingKpkCourses ? (
@@ -1777,6 +1955,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </div>
                 ) : (
                   <select
+                    id="export-kpk-course-select"
                     value={selectedKpkCourse}
                     onChange={(e) => {
                       setSelectedKpkCourse(e.target.value);
@@ -1803,10 +1982,6 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </label>
                 <div className="space-y-2">
                   <label
-                    onClick={() => {
-                      setExportKpkScope('pending_tte');
-                      setExportKpkBatchNumber(1);
-                    }}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkScope === 'pending_tte'
                         ? 'border-emerald-600 bg-emerald-50/50 text-gray-900'
@@ -1825,23 +2000,19 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
                     />
                     <div className="text-xs flex-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="font-bold text-gray-800">Hanya yang Belum Ber-TTE (Menunggu B-Sign)</p>
-                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
                           Rekomendasi
                         </span>
                       </div>
-                      <p className="text-gray-500 mt-0.5">
+                      <p className="text-gray-600 mt-0.5">
                         Menyaring hanya peserta yang membutuhkan TTE. Berkas yang sudah ber-TTE resmi otomatis dilewati agar tidak terjadi pengajuan repetitif ke B-Sign.
                       </p>
                     </div>
                   </label>
 
                   <label
-                    onClick={() => {
-                      setExportKpkScope('all');
-                      setExportKpkBatchNumber(1);
-                    }}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkScope === 'all'
                         ? 'border-amber-600 bg-amber-50/50 text-gray-900'
@@ -1861,7 +2032,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     />
                     <div className="text-xs flex-1">
                       <p className="font-bold text-gray-800">Semua Peserta Lulus (Termasuk yang Sudah Ber-TTE)</p>
-                      <p className="text-gray-500 mt-0.5">
+                      <p className="text-gray-600 mt-0.5">
                         Mengemas seluruh berkas sertifikat untuk kebutuhan arsip/cadangan. Jangan diajukan ulang ke B-Sign jika sertifikat sudah ber-TTE.
                       </p>
                     </div>
@@ -1876,7 +2047,6 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </label>
                 <div className="space-y-2">
                   <label
-                    onClick={() => setExportKpkFormat('nip')}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkFormat === 'nip'
                         ? 'border-teal-600 bg-teal-50/50 text-gray-900'
@@ -1893,12 +2063,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     />
                     <div className="text-xs">
                       <p className="font-bold text-gray-800">[NIP].pdf (Standar)</p>
-                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001.pdf</code></p>
+                      <p className="text-gray-600 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001.pdf</code></p>
                     </div>
                   </label>
 
                   <label
-                    onClick={() => setExportKpkFormat('nip_sign')}
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       exportKpkFormat === 'nip_sign'
                         ? 'border-teal-600 bg-teal-50/50 text-gray-900'
@@ -1915,18 +2084,18 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     />
                     <div className="text-xs">
                       <p className="font-bold text-gray-800">[NIP]_sign.pdf (Format TTE B-Sign BSrE)</p>
-                      <p className="text-gray-500 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001_sign.pdf</code></p>
+                      <p className="text-gray-600 mt-0.5">Contoh: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">199001012020121001_sign.pdf</code></p>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* Opsi Pembagian Batch Ekspor (Aturan per 10 Sertifikat) */}
-              {targetExportCount > 10 ? (
+              {/* Opsi Pembagian Batch Ekspor (Aturan per 20 Sertifikat) */}
+              {targetExportCount > EXPORT_KPK_BATCH_SIZE ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Aturan Ekspor per 10 Sertifikat (Ringan)
+                      Aturan Ekspor per {EXPORT_KPK_BATCH_SIZE} Sertifikat (Ringan)
                     </label>
                     <span className="text-[11px] font-semibold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">
                       Total: {targetExportCount} Berkas ({totalBatches} Batch)
@@ -1934,76 +2103,73 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </div>
 
                   <div className="space-y-2">
-                    <label
-                      onClick={() => setExportKpkBatchMode('batch')}
-                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    <div
+                      className={`p-3 rounded-xl border transition-colors ${
                         exportKpkBatchMode === 'batch'
                           ? 'border-teal-600 bg-teal-50/50 text-gray-900'
                           : 'border-gray-200 hover:bg-gray-50 text-gray-700'
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="exportKpkBatchMode"
-                        value="batch"
-                        checked={exportKpkBatchMode === 'batch'}
-                        onChange={() => setExportKpkBatchMode('batch')}
-                        className="mt-0.5 text-teal-600 focus:ring-teal-500"
-                      />
-                      <div className="text-xs flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-gray-800">Ekspor per Batch 10 Berkas</p>
-                          <span className="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            Rekomendasi B-Sign
-                          </span>
-                        </div>
-                        <p className="text-gray-500 mt-0.5">
-                          Membatasi per 10 sertifikat agar beban server sangat ringan dan praktis untuk proses batch signing di aplikasi B-Sign.
-                        </p>
-
-                        {exportKpkBatchMode === 'batch' && (
-                          <div className="mt-3 pt-2.5 border-t border-teal-100">
-                            <label className="block text-[11px] font-semibold text-gray-700 mb-1.5">
-                              Pilih Batch Berkas yang Ingin Diunduh:
-                            </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-0.5">
-                              {Array.from({ length: totalBatches }, (_, i) => {
-                                const bNum = i + 1;
-                                const startIdx = (bNum - 1) * 10 + 1;
-                                const endIdx = Math.min(bNum * 10, targetExportCount);
-                                const count = endIdx - startIdx + 1;
-                                const isSelected = exportKpkBatchNumber === bNum;
-
-                                return (
-                                  <button
-                                    key={bNum}
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setExportKpkBatchNumber(bNum);
-                                    }}
-                                    className={`py-1.5 px-2 rounded-lg text-xs font-semibold border text-center transition-all ${
-                                      isSelected
-                                        ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                                        : 'bg-white text-gray-700 border-gray-200 hover:border-teal-400 hover:bg-teal-50/50'
-                                    }`}
-                                  >
-                                    <div>Batch {bNum}</div>
-                                    <div className={`text-[10px] font-normal ${isSelected ? 'text-teal-100' : 'text-gray-500'}`}>
-                                      {startIdx}-{endIdx} ({count} berkas)
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="exportKpkBatchMode"
+                          value="batch"
+                          checked={exportKpkBatchMode === 'batch'}
+                          onChange={() => setExportKpkBatchMode('batch')}
+                          className="mt-0.5 text-teal-600 focus:ring-teal-500"
+                        />
+                        <div className="text-xs flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-bold text-gray-800">Ekspor per Batch {EXPORT_KPK_BATCH_SIZE} Berkas</p>
+                            <span className="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                              Rekomendasi B-Sign
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </label>
+                          <p className="text-gray-600 mt-0.5">
+                            Membatasi per {EXPORT_KPK_BATCH_SIZE} sertifikat agar beban server ringan dan praktis untuk proses batch signing di aplikasi B-Sign.
+                          </p>
+                        </div>
+                      </label>
+
+                      {exportKpkBatchMode === 'batch' && (
+                        <div className="mt-3 pt-2.5 border-t border-teal-100 pl-6">
+                          <p className="block text-[11px] font-semibold text-gray-700 mb-1.5">
+                            Pilih Batch Berkas yang Ingin Diunduh:
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-0.5">
+                            {Array.from({ length: totalBatches }, (_, i) => {
+                              const bNum = i + 1;
+                              const startIdx = (bNum - 1) * EXPORT_KPK_BATCH_SIZE + 1;
+                              const endIdx = Math.min(bNum * EXPORT_KPK_BATCH_SIZE, targetExportCount);
+                              const count = endIdx - startIdx + 1;
+                              const isSelected = safeBatchNumber === bNum;
+
+                              return (
+                                <button
+                                  key={bNum}
+                                  type="button"
+                                  aria-pressed={isSelected}
+                                  onClick={() => setExportKpkBatchNumber(bNum)}
+                                  className={`min-h-[44px] py-2 px-2.5 rounded-lg text-xs font-semibold border text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ${
+                                    isSelected
+                                      ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+                                      : 'bg-white text-gray-700 border-gray-200 hover:border-teal-400 hover:bg-teal-50/50'
+                                  }`}
+                                >
+                                  <div>Batch {bNum}</div>
+                                  <div className={`text-[10px] font-normal ${isSelected ? 'text-teal-100' : 'text-gray-600'}`}>
+                                    {startIdx}-{endIdx} ({count} berkas)
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <label
-                      onClick={() => setExportKpkBatchMode('all')}
                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         exportKpkBatchMode === 'all'
                           ? 'border-amber-600 bg-amber-50/50 text-gray-900'
@@ -2020,7 +2186,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                       />
                       <div className="text-xs flex-1">
                         <p className="font-bold text-gray-800">Ekspor Sekaligus Seluruh Berkas ({targetExportCount} Berkas)</p>
-                        <p className="text-gray-500 mt-0.5">
+                        <p className="text-gray-600 mt-0.5">
                           Mengemas seluruh {targetExportCount} sertifikat dalam 1 arsip ZIP sekaligus tanpa pembagian batch.
                         </p>
                       </div>
@@ -2028,13 +2194,13 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </div>
                 </div>
               ) : targetExportCount > 0 ? (
-                <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-center justify-between">
+                <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-teal-600 shrink-0" />
-                    <span>Total target: <strong>{targetExportCount} berkas</strong> (&le; 10, otomatis 1 batch ringkas).</span>
+                    <CheckCircle className="w-4 h-4 text-teal-600 shrink-0" aria-hidden="true" />
+                    <span>Total target: <strong>{targetExportCount} berkas</strong> (&le; {EXPORT_KPK_BATCH_SIZE}, otomatis 1 batch ringkas).</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-teal-200/80 text-teal-900 px-2 py-0.5 rounded-full">
-                    Aturan 10/Batch
+                  <span className="text-[10px] font-bold bg-teal-200/80 text-teal-900 px-2 py-0.5 rounded-full shrink-0">
+                    Aturan {EXPORT_KPK_BATCH_SIZE}/Batch
                   </span>
                 </div>
               ) : null}
@@ -2042,7 +2208,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               {/* Status Banner Proteksi Anti-Repetisi */}
               {exportKpkScope === 'pending_tte' && isKpkPendingEmpty && !loadingKpkCourses ? (
                 <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 flex items-start gap-2.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
                     <p className="font-bold text-emerald-900">Seluruh Sertifikat Telah Ber-TTE Resmi</p>
                     <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
@@ -2052,7 +2218,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </div>
               ) : exportKpkScope === 'pending_tte' && !isKpkPendingEmpty ? (
                 <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
                     <p className="font-bold text-teal-900">Proteksi Anti-Repetisi Aktif</p>
                     <p className="text-teal-800 text-[11px] mt-0.5 leading-relaxed">
@@ -2062,7 +2228,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 </div>
               ) : (
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
                     <p className="font-bold text-amber-900">Mode Ekspor Seluruh Berkas</p>
                     <p className="text-amber-800 text-[11px] mt-0.5 leading-relaxed">
@@ -2101,15 +2267,15 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </>
                 ) : exportKpkScope === 'pending_tte' && isKpkPendingEmpty ? (
                   <>
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-4 h-4" aria-hidden="true" />
                     <span>Semua Sudah Ber-TTE</span>
                   </>
                 ) : (
                   <>
-                    <Download className="w-4 h-4" />
+                    <Download className="w-4 h-4" aria-hidden="true" />
                     <span>
                       {totalBatches > 1 && exportKpkBatchMode === 'batch'
-                        ? `Unduh Batch ${exportKpkBatchNumber} (${Math.min(10, targetExportCount - (exportKpkBatchNumber - 1) * 10)} Berkas .ZIP)`
+                        ? `Unduh Batch ${safeBatchNumber} (${selectedBatchCount} Berkas .ZIP)`
                         : `Unduh ${targetExportCount} Berkas .ZIP`}
                     </span>
                   </>
