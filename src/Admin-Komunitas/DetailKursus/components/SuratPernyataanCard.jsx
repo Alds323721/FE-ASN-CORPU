@@ -8,7 +8,8 @@ const SuratPernyataanCard = ({
   setSuratFile,
   isUploadingSurat,
   handleUploadSuratPernyataan,
-  handleRemoveSuratPernyataan
+  handleRemoveSuratPernyataan,
+  isReadOnly = false
 }) => {
   return (
     <section className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -60,44 +61,48 @@ const SuratPernyataanCard = ({
               >
                 <Eye className="w-3.5 h-3.5" /> Buka Dokumen
               </a>
-              <button
-                type="button"
-                onClick={handleRemoveSuratPernyataan}
-                className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 rounded-md bg-white border border-red-200 transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Hapus Berkas
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={handleRemoveSuratPernyataan}
+                  className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 rounded-md bg-white border border-red-200 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Hapus Berkas
+                </button>
+              )}
             </div>
           </div>
         ) : null}
 
         {/* File Upload Box */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            {course.surat_pernyataan_url
-              ? 'Ganti Surat Pernyataan (PDF - Opsional)'
-              : 'Unggah Berkas Surat Pernyataan (PDF - Opsional)'}
-          </label>
-          <p className="text-xs text-gray-500 mb-3">
-            Kosongkan bagian ini jika instansi Anda tidak memerlukan surat pengantar khusus keabsahan.
-          </p>
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/60 flex flex-col items-center justify-center text-center">
-            <Upload className="w-8 h-8 text-teal-600 mb-2" />
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => setSuratFile(e.target.files[0] || null)}
-              className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
-            />
-            <p className="text-xs text-gray-400 mt-2">Maksimal ukuran file 5MB (Format .pdf) • Opsional</p>
-            {suratFile && (
-              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 font-medium">
-                <span>Berkas dipilih: <b>{suratFile.name}</b> (Akan diunggah saat klik <b>Simpan Perubahan</b>)</span>
-                <button type="button" onClick={() => setSuratFile(null)} className="text-red-600 hover:text-red-800 font-bold ml-1 cursor-pointer inline-flex items-center" aria-label="Hapus berkas dipilih"><X className="w-3.5 h-3.5" /></button>
-              </div>
-            )}
+        {!isReadOnly && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              {course.surat_pernyataan_url
+                ? 'Ganti Surat Pernyataan (PDF - Opsional)'
+                : 'Unggah Berkas Surat Pernyataan (PDF - Opsional)'}
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Kosongkan bagian ini jika instansi Anda tidak memerlukan surat pengantar khusus keabsahan.
+            </p>
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/60 flex flex-col items-center justify-center text-center">
+              <Upload className="w-8 h-8 text-teal-600 mb-2" />
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setSuratFile(e.target.files[0] || null)}
+                className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+              <p className="text-xs text-gray-400 mt-2">Maksimal ukuran file 5MB (Format .pdf) • Opsional</p>
+              {suratFile && (
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 font-medium">
+                  <span>Berkas dipilih: <b>{suratFile.name}</b> (Akan diunggah saat klik <b>Simpan Perubahan</b>)</span>
+                  <button type="button" onClick={() => setSuratFile(null)} className="text-red-600 hover:text-red-800 font-bold ml-1 cursor-pointer inline-flex items-center" aria-label="Hapus berkas dipilih"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

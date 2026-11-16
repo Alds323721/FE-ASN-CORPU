@@ -118,37 +118,39 @@ const CourseBasicInfoCard = ({
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-3">
-                  <label className="cursor-pointer px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg shadow-2xs transition-colors flex items-center gap-2">
-                    <Upload className="w-3.5 h-3.5 text-gray-500" />
-                    <span>{courseThumbnailFile ? 'Ganti File Dipilih' : 'Pilih File Thumbnail'}</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleCourseThumbnailChange}
-                      className="hidden"
-                    />
-                  </label>
+              {!isReadOnly && (
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <label className="cursor-pointer px-3.5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg shadow-2xs transition-colors flex items-center gap-2">
+                      <Upload className="w-3.5 h-3.5 text-gray-500" />
+                      <span>{courseThumbnailFile ? 'Ganti File Dipilih' : 'Pilih File Thumbnail'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleCourseThumbnailChange}
+                        className="hidden"
+                      />
+                    </label>
+                    {courseThumbnailFile && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCourseThumbnail}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
+                      >
+                        Batal Pilih
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Format yang didukung: JPG, JPEG, PNG, WEBP. Maksimal 2MB. Gambar ini tampil di kartu kursus katalog dan dasbor peserta.
+                  </p>
                   {courseThumbnailFile && (
-                    <button
-                      type="button"
-                      onClick={handleRemoveCourseThumbnail}
-                      className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
-                    >
-                      Batal Pilih
-                    </button>
+                    <p className="text-xs text-teal-700 font-medium">
+                      File baru terpilih: <strong>{courseThumbnailFile.name}</strong> (klik <em>Simpan Perubahan</em> di bawah untuk menerapkan)
+                    </p>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
-                  Format yang didukung: JPG, JPEG, PNG, WEBP. Maksimal 2MB. Gambar ini tampil di kartu kursus katalog dan dasbor peserta.
-                </p>
-                {courseThumbnailFile && (
-                  <p className="text-xs text-teal-700 font-medium">
-                    File baru terpilih: <strong>{courseThumbnailFile.name}</strong> (klik <em>Simpan Perubahan</em> di bawah untuk menerapkan)
-                  </p>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
@@ -156,9 +158,10 @@ const CourseBasicInfoCard = ({
             <label className="block text-sm font-semibold text-gray-700 mb-2">Judul Kursus</label>
             <input
               type="text"
+              disabled={isReadOnly}
               value={course.judul_pembelajaran || ''}
               onChange={(e) => setCourse({ ...course, judul_pembelajaran: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+              className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:bg-gray-100 disabled:text-gray-500"
             />
           </div>
 
@@ -167,6 +170,7 @@ const CourseBasicInfoCard = ({
               <label className="block text-sm font-semibold text-gray-700 mb-2">Kategori</label>
               <div className="relative">
                 <select
+                  disabled={isReadOnly}
                   value={course.kategori_id || course.kategori || 'Pengembangan Kompetensi'}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -179,7 +183,7 @@ const CourseBasicInfoCard = ({
                       kategori: catObj ? catObj.nama_kategori : val
                     });
                   }}
-                  className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 pr-10"
+                  className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 pr-10 disabled:bg-gray-100 disabled:text-gray-500"
                 >
                   {categories.length > 0 ? (
                     categories.map((c) => (
@@ -204,10 +208,11 @@ const CourseBasicInfoCard = ({
               <label className="block text-sm font-semibold text-gray-700 mb-2">Target Capaian Pembelajaran</label>
               <input
                 type="text"
+                disabled={isReadOnly}
                 value={course.capaian_pembelajaran || ''}
                 onChange={(e) => setCourse({ ...course, capaian_pembelajaran: e.target.value })}
                 placeholder="Contoh: Menguasai prinsip integritas birokrasi"
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:bg-gray-100 disabled:text-gray-500"
               />
             </div>
           </div>
@@ -216,7 +221,8 @@ const CourseBasicInfoCard = ({
             <label className="block text-sm font-semibold text-gray-700 mb-2">Deskripsi Kursus</label>
             <textarea
               rows="3"
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
+              disabled={isReadOnly}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none disabled:bg-gray-100 disabled:text-gray-500"
               value={course.deskripsi === '-' ? '' : course.deskripsi || ''}
               onChange={(e) => setCourse({ ...course, deskripsi: e.target.value })}
               placeholder="Tuliskan deskripsi lengkap mengenai tujuan dan target pelatihan ini..."

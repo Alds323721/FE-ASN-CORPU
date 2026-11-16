@@ -81,25 +81,27 @@ const CourseEvaluationSection = ({
                               : 'Kuis evaluasi pemahaman modul dengan sistem salah & benar.'}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenQuizModal(m, 'evaluasi_modul')}
-                          className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                            hasEvalQuiz
-                              ? 'bg-teal-50 text-[#0F766E] border border-teal-200 hover:bg-teal-100'
-                              : 'bg-[#0F766E] text-white hover:bg-teal-800'
-                          }`}
-                        >
-                          {hasEvalQuiz ? (
-                            <>
-                              <Edit2 className="w-3.5 h-3.5" /> Edit Kuis Evaluasi
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="w-3.5 h-3.5" /> Buat Kuis Evaluasi
-                            </>
-                          )}
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQuizModal(m, 'evaluasi_modul')}
+                            className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              hasEvalQuiz
+                                ? 'bg-teal-50 text-[#0F766E] border border-teal-200 hover:bg-teal-100'
+                                : 'bg-[#0F766E] text-white hover:bg-teal-800'
+                            }`}
+                          >
+                            {hasEvalQuiz ? (
+                              <>
+                                <Edit2 className="w-3.5 h-3.5" /> Edit Kuis Evaluasi
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3.5 h-3.5" /> Buat Kuis Evaluasi
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                       {/* 2. Kuis Nilai Berbobot */}
@@ -131,25 +133,27 @@ const CourseEvaluationSection = ({
                               : 'Kuis dengan bobot nilai tiap butir & opsi jawaban (asesmen / skala nilai).'}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenQuizModal(m, 'kuis_berbobot')}
-                          className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                            hasWeightedQuiz
-                              ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
-                              : 'bg-amber-600 text-white hover:bg-amber-700'
-                          }`}
-                        >
-                          {hasWeightedQuiz ? (
-                            <>
-                              <Edit2 className="w-3.5 h-3.5" /> Edit Kuis Berbobot
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="w-3.5 h-3.5" /> Buat Kuis Berbobot
-                            </>
-                          )}
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQuizModal(m, 'kuis_berbobot')}
+                            className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              hasWeightedQuiz
+                                ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                                : 'bg-amber-600 text-white hover:bg-amber-700'
+                            }`}
+                          >
+                            {hasWeightedQuiz ? (
+                              <>
+                                <Edit2 className="w-3.5 h-3.5" /> Edit Kuis Berbobot
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3.5 h-3.5" /> Buat Kuis Berbobot
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -180,9 +184,10 @@ const CourseEvaluationSection = ({
                   type="number"
                   min="0"
                   max="100"
+                  disabled={isReadOnly}
                   value={course.nilai_kelulusan ?? 70}
                   onChange={(e) => setCourse({ ...course, nilai_kelulusan: e.target.value === '' ? '' : Number(e.target.value) })}
-                  className="w-full pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  className="w-full pl-4 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:bg-gray-100 disabled:text-gray-500"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">%</span>
               </div>
@@ -211,6 +216,7 @@ const CourseEvaluationSection = ({
                 <input
                   type="number"
                   min="0"
+                  disabled={isReadOnly}
                   placeholder="Isi 0 untuk Unlimited atau ketik jumlah batas..."
                   value={postTest?.maks_percobaan ?? 3}
                   onChange={(e) => {
@@ -225,45 +231,47 @@ const CourseEvaluationSection = ({
                       setPostTest((prev) => (prev ? { ...prev, maks_percobaan: 0 } : { maks_percobaan: 0 }));
                     }
                   }}
-                  className="w-full px-3.5 py-2 pr-20 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  className="w-full px-3.5 py-2 pr-20 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:bg-gray-100 disabled:text-gray-500"
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold pointer-events-none">
                   {Number(postTest?.maks_percobaan ?? 3) === 0 ? 'Unlimited' : 'Kali'}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-gray-500 mr-1">Pilihan Cepat:</span>
-                {[
-                  { label: '0 (Unlimited)', value: 0 },
-                  { label: '1x', value: 1 },
-                  { label: '2x', value: 2 },
-                  { label: '3x', value: 3 },
-                  { label: '5x', value: 5 },
-                  { label: '10x', value: 10 }
-                ].map((preset) => {
-                  const isActive =
-                    postTest?.maks_percobaan !== '' &&
-                    Number(postTest?.maks_percobaan ?? 3) === preset.value;
-                  return (
-                    <button
-                      key={preset.value}
-                      type="button"
-                      onClick={() =>
-                        setPostTest((prev) =>
-                          prev ? { ...prev, maks_percobaan: preset.value } : { maks_percobaan: preset.value }
-                        )
-                      }
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-[#0F766E] text-white border-[#0F766E]'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {!isReadOnly && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-gray-500 mr-1">Pilihan Cepat:</span>
+                  {[
+                    { label: '0 (Unlimited)', value: 0 },
+                    { label: '1x', value: 1 },
+                    { label: '2x', value: 2 },
+                    { label: '3x', value: 3 },
+                    { label: '5x', value: 5 },
+                    { label: '10x', value: 10 }
+                  ].map((preset) => {
+                    const isActive =
+                      postTest?.maks_percobaan !== '' &&
+                      Number(postTest?.maks_percobaan ?? 3) === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() =>
+                          setPostTest((prev) =>
+                            prev ? { ...prev, maks_percobaan: preset.value } : { maks_percobaan: preset.value }
+                          )
+                        }
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <span className="text-[10px] text-gray-500 mt-1 block">
                 Isi <b>0</b> untuk tanpa batasan percobaan (Unlimited), atau ketik bebas angka batas maksimal percobaan.
               </span>
@@ -281,15 +289,17 @@ const CourseEvaluationSection = ({
               Total <span className="font-bold text-teal-800">{postTest?.soal_post_test?.length || 0} Pertanyaan</span> telah dikonfigurasi pada Bank Soal kursus ini.
             </p>
           </div>
-          <button
-            onClick={() => {
-              localStorage.setItem('adminKomunitasCourseId', course.pembelajaran_id);
-              if (onNavigate) onNavigate('bank-soal');
-            }}
-            className="w-full sm:w-auto px-5 py-2.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm text-center cursor-pointer"
-          >
-            Kelola Bank Soal
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => {
+                localStorage.setItem('adminKomunitasCourseId', course.pembelajaran_id);
+                if (onNavigate) onNavigate('bank-soal');
+              }}
+              className="w-full sm:w-auto px-5 py-2.5 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm text-center cursor-pointer"
+            >
+              Kelola Bank Soal
+            </button>
+          )}
         </div>
       </div>
     </section>

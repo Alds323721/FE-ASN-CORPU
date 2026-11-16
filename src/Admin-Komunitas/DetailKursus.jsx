@@ -186,6 +186,21 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         setCourse(cData);
         setCourseThumbnailPreview(cData?.thumbnail_url || '');
         setCourseThumbnailFile(null);
+      } else {
+        const status = resCourse.reason?.response?.status;
+        if (status === 403 || status === 404) {
+          localStorage.removeItem('adminKomunitasCourseId');
+          Swal.fire({
+            icon: 'warning',
+            title: status === 403 ? 'Akses Ditolak' : 'Pelatihan Tidak Ditemukan',
+            text:
+              resCourse.reason?.response?.data?.message ||
+              'Anda tidak memiliki wewenang untuk mengakses atau mengedit pelatihan dari komunitas lain.',
+            confirmButtonColor: '#0F766E'
+          });
+          if (onNavigate) onNavigate('pelatihan-saya');
+          return;
+        }
       }
       if (resModul.status === 'fulfilled') {
         const modData = resModul.value.data.data || [];
@@ -2007,6 +2022,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
               isUploadingSurat={isUploadingSurat}
               handleUploadSuratPernyataan={handleUploadSuratPernyataan}
               handleRemoveSuratPernyataan={handleRemoveSuratPernyataan}
+              isReadOnly={isReadOnly}
             />
 
             {/* Section 5: Ulasan & Rating Peserta */}

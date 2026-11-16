@@ -53,7 +53,33 @@ const BankSoal = ({ onNavigate, onLogout }) => {
       ]);
 
       if (resCourse.status === 'fulfilled') {
-        setCourse(resCourse.value.data.data);
+        const cData = resCourse.value.data.data;
+        setCourse(cData);
+        if (cData && cData.dapat_dikelola === false) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Akses Edit Ditolak',
+            text: 'Anda tidak memiliki wewenang untuk mengubah Bank Soal pada pelatihan ini.',
+            confirmButtonColor: '#0F766E'
+          });
+          if (onNavigate) onNavigate('detail-kursus');
+          return;
+        }
+      } else {
+        const status = resCourse.reason?.response?.status;
+        if (status === 403 || status === 404) {
+          localStorage.removeItem('adminKomunitasCourseId');
+          Swal.fire({
+            icon: 'warning',
+            title: status === 403 ? 'Akses Ditolak' : 'Pelatihan Tidak Ditemukan',
+            text:
+              resCourse.reason?.response?.data?.message ||
+              'Anda tidak memiliki wewenang untuk mengakses Bank Soal pelatihan komunitas lain.',
+            confirmButtonColor: '#0F766E'
+          });
+          if (onNavigate) onNavigate('pelatihan-saya');
+          return;
+        }
       }
 
       if (resPostTest.status === 'fulfilled' && resPostTest.value.data.data) {

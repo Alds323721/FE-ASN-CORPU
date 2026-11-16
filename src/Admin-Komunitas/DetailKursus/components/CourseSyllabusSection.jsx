@@ -161,12 +161,14 @@ const CourseSyllabusSection = ({
                       {materiList.length === 0 ? (
                         <div className="p-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
                           <p className="text-xs text-gray-500 mb-2">Belum ada berkas materi di modul ini.</p>
-                          <button
-                            onClick={() => handleOpenAddMaterialModal(modul.modul_id)}
-                            className="text-xs font-semibold text-teal-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Tambah materi sekarang
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              onClick={() => handleOpenAddMaterialModal(modul.modul_id)}
+                              className="text-xs font-semibold text-teal-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Tambah materi sekarang
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-2">
