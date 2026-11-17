@@ -98,7 +98,6 @@ const LogDetailModal = ({ isOpen, onClose, logData }) => {
                 Informasi Jaringan & Request
               </p>
               <div className="space-y-1 text-gray-600">
-                <p>IP Address: <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 text-xs text-gray-800 font-mono">{logData.ip_address || '-'}</code></p>
                 <p>Method: <span className="font-bold text-teal-700 font-mono">{logData.method || '-'}</span></p>
                 <p className="truncate" title={logData.url}>URL: <span className="text-gray-700 font-mono text-[11px]">{logData.url || '-'}</span></p>
                 <p className="truncate text-[10px] text-gray-400" title={logData.user_agent}>

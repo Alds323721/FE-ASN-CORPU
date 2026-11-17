@@ -14,6 +14,7 @@ import {
 
 import AdminKomunitasSidebar from '../components/layout/AdminKomunitasSidebar';
 import AdminKomunitasHeader from '../components/layout/AdminKomunitasHeader';
+import SearchableCommunitySelect from '../components/SearchableCommunitySelect';
 import { validateThumbnailFile } from '../utils/imageValidation';
 
 const PelatihanSaya = ({ onNavigate, onLogout }) => {
@@ -108,6 +109,11 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
 
   const handleCreateCourse = async (e) => {
     e.preventDefault();
+
+    if (!formData.komunitas_id) {
+      alert('Pilih komunitas penyelenggara terlebih dahulu.');
+      return;
+    }
 
     if (courseThumbnailFile && !validateThumbnailFile(courseThumbnailFile, null, () => {
       setCourseThumbnailFile(null);
@@ -441,20 +447,16 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
             
             <form onSubmit={handleCreateCourse} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Komunitas Penyelenggara</label>
-                <select 
-                  required
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Komunitas Penyelenggara <span className="text-red-500">*</span>
+                </label>
+                <SearchableCommunitySelect
+                  komunitasList={komunitasList}
                   value={formData.komunitas_id}
-                  onChange={e => setFormData({...formData, komunitas_id: e.target.value})}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
-                >
-                  <option value="" disabled>Pilih Komunitas</option>
-                  {komunitasList.map(k => (
-                    <option key={k.komunitas_id} value={k.komunitas_id}>
-                      {k.nama_komunitas}{k.is_umum ? ' (Umum – semua rumpun)' : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(komunitasId) => setFormData({ ...formData, komunitas_id: komunitasId })}
+                  placeholder="Pilih atau cari komunitas..."
+                  required
+                />
               </div>
               
               <div>

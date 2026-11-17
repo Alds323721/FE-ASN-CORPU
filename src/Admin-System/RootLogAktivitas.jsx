@@ -286,7 +286,7 @@ const RootLogAktivitas = () => {
               <Search className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cari NIP, nama pengguna, aksi, IP..."
+                placeholder="Cari NIP, nama pengguna, aksi, modul..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-white"
@@ -367,14 +367,13 @@ const RootLogAktivitas = () => {
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">MODUL & AKSI</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">DESKRIPSI AKTIVITAS</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">TINGKAT</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">IP ADDRESS</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {logs.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                     <ShieldCheck className="w-8 h-8 mx-auto text-gray-300 mb-2" />
                     <p className="text-sm font-medium text-gray-700">Tidak ada catatan log yang sesuai dengan filter.</p>
                   </td>
@@ -412,10 +411,6 @@ const RootLogAktivitas = () => {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${severityBadges[item.severity] || 'bg-gray-100 text-gray-700'}`}>
                         {item.severity?.toUpperCase()}
                       </span>
-                    </td>
-
-                    <td className="px-6 py-4 font-mono text-xs text-gray-500 whitespace-nowrap">
-                      {item.ip_address || '-'}
                     </td>
 
                     <td className="px-6 py-4 text-right whitespace-nowrap">

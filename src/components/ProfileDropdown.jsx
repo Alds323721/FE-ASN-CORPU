@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Camera, X, Lock, Eye, EyeOff, ArrowLeftRight, Check, Shield } from 'lucide-react';
+import { LogOut, X, Lock, Eye, EyeOff, ArrowLeftRight, Check, Shield } from 'lucide-react';
 import api from '../api/axios';
 import userImg from '../assets/user.png';
 import { logout, getUser, getUserRoles, getActiveRole, setActiveRole, canSwitchRole } from '../utils/auth';
@@ -10,10 +10,7 @@ import NotificationBell from './NotificationBell';
 const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const { t } = useLanguage();
    const [isOpen, setIsOpen] = useState(false);
-   const [profileImage, setProfileImage] = useState(userImg);
-   const [showImageModal, setShowImageModal] = useState(false);
    const [showPasswordModal, setShowPasswordModal] = useState(false);
-   const [isLoading, setIsLoading] = useState(false);
    const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
    const [showNewPassword, setShowNewPassword] = useState(false);
@@ -23,6 +20,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const userRoles = getUserRoles();
    const hasMultipleRoles = canSwitchRole();
    const currentActiveRole = getActiveRole();
+   const avatarUrl = user?.foto_profil_url || user?.avatar || userImg;
 
    const roleLabels = {
      root: { label: 'Admin System (Root)', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
@@ -88,7 +86,6 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const [passwordSuccess, setPasswordSuccess] = useState('');
 
    const dropdownRef = useRef(null);
-   const fileInputRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -102,20 +99,6 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-   const handleImageChange = (e) => {
-     const file = e.target.files[0];
-     if (file) {
-       setIsLoading(true);
-       const reader = new FileReader();
-       reader.onloadend = () => {
-         setProfileImage(reader.result);
-         setIsLoading(false);
-         setShowImageModal(false);
-       };
-       reader.readAsDataURL(file);
-     }
-   };
-
   return (
     <>
       <NotificationBell onNavigate={onNavigate} />
@@ -124,7 +107,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
           onClick={() => setIsOpen(!isOpen)}
           className="w-8 h-8 rounded-full bg-gray-200 border-2 border-gray-300 overflow-hidden flex-shrink-0 hover:border-[#006A63] transition-colors focus:outline-none focus:ring-2 focus:ring-[#006A63] focus:ring-offset-2"
         >
-          <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+          <img src={avatarUrl} alt="Foto Profil" className="w-full h-full object-cover" />
         </button>
 
         {isOpen && (
@@ -176,17 +159,6 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
             
             <button
               onClick={() => {
-                setShowImageModal(true);
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-2.5 text-left text-sm font-semibold text-[#1D315F] hover:bg-gray-50 transition-colors flex items-center gap-3 cursor-pointer"
-            >
-              <Camera className="w-4 h-4 text-[#006A63]" />
-              {t('profile.changePhoto')}
-            </button>
-            
-            <button
-              onClick={() => {
                 setShowPasswordModal(true);
                 setPasswordStep(1);
                 setEmail(JSON.parse(localStorage.getItem('user') || '{}').email || '');
@@ -214,78 +186,6 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
         )}
       </div>
 
-      {/* Modal for changing profile image */}
-      {showImageModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[#1D315F]">Ganti Foto Profil</h3>
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-gray-300 overflow-hidden relative">
-                {profileImage ? (
-                  <img src={profileImage} alt="Current profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-gray-400" />
-                  </div>
-                )}
-                {isLoading && (
-                  <div className="absolute inset-0 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-[#006A63] border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
-              </div>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-                className="px-6 py-2.5 bg-[#006A63] text-white rounded-md text-sm font-bold hover:bg-[#00534D] transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-4 h-4" />
-                    Pilih Foto Baru
-                  </>
-                )}
-              </button>
-              
-              <p className="text-xs text-gray-500 text-center">
-                Format: JPG, PNG, atau GIF. Maksimal 5MB
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-[#1D315F] rounded-md text-sm font-bold hover:bg-gray-50 transition-colors"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">

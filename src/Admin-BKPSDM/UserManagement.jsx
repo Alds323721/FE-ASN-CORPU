@@ -15,6 +15,7 @@ const Toast = Swal.mixin({
 });
 import AdminLoadingSkeleton from '../components/AdminLoadingSkeleton';
 import AdminBkpsdmProfile from '../components/AdminBkpsdmProfile';
+import SearchableCommunitySelect from '../components/SearchableCommunitySelect';
 import { getUser, getActiveRole, setActiveRole, logout } from '../utils/auth';
 import {
   Users, BookOpen, MessageSquare, Award, CheckCircle,
@@ -955,15 +956,16 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   </div>
                   {formData.roles.includes('admin_komunitas') && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
-                      <select required value={formData.komunitas_id} onChange={e => setFormData({ ...formData, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                        <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.map(k => (
-                          <option key={k.komunitas_id} value={k.komunitas_id}>
-                            {k.nama_komunitas} {k.rumpun_jabatan ? `(${k.rumpun_jabatan === 'UMUM' ? 'Umum / Semua Rumpun' : `Rumpun ${k.rumpun_jabatan}`})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Pilih Komunitas <span className="text-red-500">*</span>
+                      </label>
+                      <SearchableCommunitySelect
+                        komunitasList={komunitasList}
+                        value={formData.komunitas_id}
+                        onChange={(komunitasId) => setFormData({ ...formData, komunitas_id: komunitasId })}
+                        placeholder="Pilih atau cari komunitas..."
+                        required
+                      />
                       <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
@@ -1097,15 +1099,16 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   </div>
                   {(selectedUser.roles || [selectedUser.peran]).includes('admin_komunitas') && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Pilih Komunitas</label>
-                      <select required value={selectedUser.komunitas_id || ''} onChange={e => setSelectedUser({ ...selectedUser, komunitas_id: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                        <option value="" disabled>Pilih Komunitas...</option>
-                        {komunitasList.map(k => (
-                          <option key={k.komunitas_id} value={k.komunitas_id}>
-                            {k.nama_komunitas} {k.rumpun_jabatan ? `(${k.rumpun_jabatan === 'UMUM' ? 'Umum / Semua Rumpun' : `Rumpun ${k.rumpun_jabatan}`})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Pilih Komunitas <span className="text-red-500">*</span>
+                      </label>
+                      <SearchableCommunitySelect
+                        komunitasList={komunitasList}
+                        value={selectedUser.komunitas_id || ''}
+                        onChange={(komunitasId) => setSelectedUser({ ...selectedUser, komunitas_id: komunitasId })}
+                        placeholder="Pilih atau cari komunitas..."
+                        required
+                      />
                       <p className="text-[11px] text-gray-500 mt-1">Pilih komunitas yang dikelola oleh Admin Komunitas ini (dapat berupa Komunitas Rumpun maupun Komunitas Umum).</p>
                     </div>
                   )}
