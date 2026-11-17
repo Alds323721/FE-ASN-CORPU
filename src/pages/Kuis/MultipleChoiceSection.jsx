@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Flag, Check, ChevronLeft, Send } from 'lucide-react';
-import QuestionNavigation from './QuestionNavigation';
+import QuestionNavigation, { MobileQuestionBar } from './QuestionNavigation';
 
 export const QuestionCard = ({
   questionNumber,
@@ -27,10 +27,11 @@ export const QuestionCard = ({
   const options = questionData.pilihan_jawaban ? Object.entries(questionData.pilihan_jawaban) : [];
 
   return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8">
+    <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8 shadow-xs min-w-0 max-w-full">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl md:text-2xl font-semibold text-[#1D315F]">Pertanyaan {questionNumber}</h2>
         <button
+          type="button"
           onClick={onFlag}
           className="flex items-center gap-2 text-gray-500 hover:text-[#F59E0B] transition-colors text-sm font-semibold cursor-pointer"
         >
@@ -39,8 +40,8 @@ export const QuestionCard = ({
         </button>
       </div>
 
-      <div className="mb-8">
-        <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold">
+      <div className="mb-8 min-w-0 max-w-full">
+        <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold break-words [overflow-wrap:anywhere] [word-break:break-word]">
           {questionData.teks_soal}
         </p>
       </div>
@@ -55,16 +56,16 @@ export const QuestionCard = ({
             <div
               key={key}
               onClick={() => handleSelectAnswer(key)}
-              className={`flex items-start sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group ${
+              className={`flex items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group min-w-0 max-w-full ${
                 isSelected
                   ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
                   : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
               }`}
             >
-              <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                 {/* Badge Huruf Opsi (A, B, C, D) */}
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
@@ -75,7 +76,7 @@ export const QuestionCard = ({
 
                 <div className="flex-1 min-w-0">
                   <span
-                    className={`font-semibold text-sm md:text-base leading-relaxed ${
+                    className={`block font-semibold text-sm md:text-base leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] ${
                       isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
                     }`}
                   >
@@ -85,7 +86,7 @@ export const QuestionCard = ({
               </div>
 
               {/* Tanda Centang Hijau saat dipilih */}
-              <div className="shrink-0 self-start sm:self-center">
+              <div className="shrink-0 self-start mt-0.5">
                 {isSelected ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
                     <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
@@ -171,11 +172,33 @@ export default function MultipleChoiceSection({
       ? isAllAnsweredProp
       : pgQuestions.length > 0 && answeredQuestionsSet.size >= pgQuestions.length;
 
+  const questionCardRef = useRef(null);
+
+  useEffect(() => {
+    // When switching question, if viewport is scrolled past question top, gently scroll to card
+    if (questionCardRef.current) {
+      const rect = questionCardRef.current.getBoundingClientRect?.() || { top: 0 };
+      if (rect.top < 70) {
+        questionCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [currentQuestion]);
+
   return (
-    <>
-      {/* Desktop Layout: QuestionCard + Navigation + Submit */}
-      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
-        <div className="lg:col-span-8">
+    <div>
+      {/* Mobile Sticky Quick Navigation Bar (< md) */}
+      <MobileQuestionBar
+        currentQuestion={currentQuestion}
+        totalQuestions={pgQuestions.length}
+        onNavigate={handleQuestionSelect}
+        flaggedQuestions={flaggedQuestions}
+        answeredQuestions={answeredQuestionsSet}
+      />
+
+      {/* Main Layout: Desktop & Tablet 2 columns, Mobile 1 column */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
+        {/* Left Column: Question Card */}
+        <div ref={questionCardRef} className="md:col-span-8 min-w-0 max-w-full scroll-mt-24">
           <QuestionCard
             questionNumber={currentQuestion}
             questionData={currentQuestionData}
@@ -195,7 +218,8 @@ export default function MultipleChoiceSection({
           />
         </div>
 
-        <div className="lg:col-span-4 space-y-6">
+        {/* Right Column: QuestionNavigation + Submit Button (Sticky on md & lg) */}
+        <div className="md:col-span-4 md:sticky md:top-20 md:self-start space-y-6 z-20">
           <QuestionNavigation
             currentQuestion={currentQuestion}
             totalQuestions={pgQuestions.length}
@@ -204,9 +228,10 @@ export default function MultipleChoiceSection({
             answeredQuestions={answeredQuestionsSet}
           />
 
-          {/* Submit Button - Desktop (di samping navigasi) */}
-          <div>
+          {/* Submit Button - Desktop & Tablet (Sticky di sidebar samping navigasi) */}
+          <div className="hidden md:block">
             <button
+              type="button"
               onClick={() => handleSubmit(false)}
               disabled={submitting}
               className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
@@ -218,52 +243,18 @@ export default function MultipleChoiceSection({
         </div>
       </div>
 
-      {/* Tablet & Mobile Layout: QuestionCard + Navigation */}
-      <div className="lg:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
-          <div className="md:col-span-8">
-            <QuestionCard
-              questionNumber={currentQuestion}
-              questionData={currentQuestionData}
-              savedAnswer={answers[currentQuestionData?.soal_kuis_id]}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              onFlag={handleFlag}
-              onAnswer={handleAnswer}
-              isAllAnswered={isAllAnswered}
-              onSubmit={handleSubmit}
-              submitting={submitting}
-              submitLabel={submitLabel}
-              isDisabled={{
-                previous: currentQuestion === 1,
-                next: currentQuestion === pgQuestions.length,
-              }}
-            />
-          </div>
-
-          <div className="md:col-span-4">
-            <QuestionNavigation
-              currentQuestion={currentQuestion}
-              totalQuestions={pgQuestions.length}
-              onNavigate={handleQuestionSelect}
-              flaggedQuestions={flaggedQuestions}
-              answeredQuestions={answeredQuestionsSet}
-            />
-          </div>
-        </div>
-
-        {/* Submit Button - Bottom hanya untuk Tablet & Mobile */}
-        <div className="mt-6">
-          <button
-            onClick={() => handleSubmit(false)}
-            disabled={submitting}
-            className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            <Send className="w-4 h-4" aria-hidden="true" />
-            <span>{submitting ? 'Mengumpulkan...' : 'Submit Kuis'}</span>
-          </button>
-        </div>
+      {/* Submit Button - Mobile only (terletak di bawah card navigasi pada alur dokumen mobile) */}
+      <div className="md:hidden mt-6">
+        <button
+          type="button"
+          onClick={() => handleSubmit(false)}
+          disabled={submitting}
+          className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        >
+          <Send className="w-4 h-4" aria-hidden="true" />
+          <span>{submitting ? 'Mengumpulkan...' : 'Submit Kuis'}</span>
+        </button>
       </div>
-    </>
+    </div>
   );
 }

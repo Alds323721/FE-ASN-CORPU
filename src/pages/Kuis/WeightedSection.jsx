@@ -35,13 +35,13 @@ export default function WeightedSection({
             const options = q.pilihan_jawaban ? Object.entries(q.pilihan_jawaban) : [];
             const savedAns = answers[q.soal_kuis_id];
             return (
-              <div key={q.soal_kuis_id} className="p-4 sm:p-6 rounded-2xl border border-gray-200 bg-white shadow-xs space-y-4">
+              <div key={q.soal_kuis_id} className="p-4 sm:p-6 rounded-2xl border border-gray-200 bg-white shadow-xs space-y-4 min-w-0 max-w-full">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
                     <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                       {idx + 1}
                     </span>
-                    <p className="font-semibold text-sm md:text-base text-[#1D315F] leading-relaxed">
+                    <p className="font-semibold text-sm md:text-base text-[#1D315F] leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word]">
                       {q.teks_soal}
                     </p>
                   </div>
@@ -58,28 +58,28 @@ export default function WeightedSection({
                       <div
                         key={optKey}
                         onClick={() => handleAnswer(q.soal_kuis_id, optKey)}
-                        className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border cursor-pointer transition-all duration-150 select-none ${
+                        className={`flex items-start justify-between gap-3 p-3 sm:p-3.5 rounded-xl border cursor-pointer transition-all duration-150 select-none min-w-0 max-w-full ${
                           isSelected
                             ? 'border-amber-500 bg-amber-50/70 shadow-2xs ring-2 ring-amber-400/20'
                             : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50/80'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors mt-0.5 ${
                             isSelected
                               ? 'bg-amber-600 text-white shadow-xs'
                               : 'bg-gray-100 text-gray-700'
                           }`}>
                             {optKey}
                           </span>
-                          <span className={`text-xs sm:text-sm font-semibold leading-relaxed ${
+                          <span className={`block text-xs sm:text-sm font-semibold leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] ${
                             isSelected ? 'text-amber-950 font-bold' : 'text-gray-700'
                           }`}>
                             {text}
                           </span>
                         </div>
 
-                        <div className="shrink-0 pl-2">
+                        <div className="shrink-0 pl-2 self-start mt-0.5">
                           {isSelected ? (
                             <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs">
                               <Check className="w-3 h-3 stroke-[3]" />

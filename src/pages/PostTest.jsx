@@ -8,6 +8,7 @@ import ProfileDropdown from '../components/ProfileDropdown';
 import LanguageDropdown from '../components/LanguageDropdown';
 import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
+import QuestionNavigation, { MobileQuestionBar } from './Kuis/QuestionNavigation';
 import {
   ChevronDown,
   Menu,
@@ -203,45 +204,6 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, s
   );
 };
 
-const QuestionNavigation = ({ currentQuestion, totalQuestions, onNavigate, flaggedQuestions, answeredQuestions }) => {
-  const questions = Array.from({ length: totalQuestions }, (_, i) => i + 1);
-
-  const getButtonClass = (num) => {
-    if (num === currentQuestion) {
-      // Current question - always highlighted as the active one
-      return 'bg-[#006A63] text-white ring-2 ring-[#006A63] ring-offset-2 hover:bg-[#00534D]';
-    }
-    if (flaggedQuestions.includes(num)) {
-      // Flagged questions - yellow
-      return 'bg-[#F59E0B] text-white hover:bg-[#D97706]';
-    }
-    if (answeredQuestions.has(num)) {
-      // Answered questions - teal/soft green
-      return 'bg-[#3FCDC1] text-white hover:bg-[#2eb3a3]';
-    }
-    // Not visited questions - neutral/white with border
-    return 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50';
-  };
-
-  return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-4 md:p-6">
-      <h3 className="font-semibold text-[#1D315F] text-base md:text-lg mb-4">Navigasi Soal</h3>
-
-      <div className="grid grid-cols-5 gap-2">
-        {questions.map((num) => (
-          <button
-            key={num}
-            onClick={() => onNavigate(num)}
-            className={`w-full aspect-square rounded-md font-semibold text-sm transition-all ${getButtonClass(num)}`}
-          >
-            {num}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const QuestionCard = ({
   questionNumber,
   questionData,
@@ -266,20 +228,21 @@ const QuestionCard = ({
   const options = questionData.pilihan_jawaban ? Object.entries(questionData.pilihan_jawaban) : [];
 
   return (
-    <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8">
+    <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8 shadow-xs min-w-0 max-w-full">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl md:text-2xl font-semibold text-[#1D315F]">Pertanyaan {questionNumber}</h2>
         <button
+          type="button"
           onClick={onFlag}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#F59E0B] transition-colors text-sm font-semibold"
+          className="flex items-center gap-2 text-gray-500 hover:text-[#F59E0B] transition-colors text-sm font-semibold cursor-pointer"
         >
           <Flag className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Tandai Ragu</span>
         </button>
       </div>
 
-      <div className="mb-8">
-        <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold">
+      <div className="mb-8 min-w-0 max-w-full">
+        <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold break-words [overflow-wrap:anywhere] [word-break:break-word]">
           {questionData.teks_soal}
         </p>
       </div>
@@ -291,16 +254,16 @@ const QuestionCard = ({
             <div
               key={key}
               onClick={() => handleSelectAnswer(key)}
-              className={`flex items-start sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group ${
+              className={`flex items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group min-w-0 max-w-full ${
                 isSelected
                   ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
                   : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
               }`}
             >
-              <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                 {/* Badge Huruf Opsi (A, B, C, D) */}
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
@@ -311,7 +274,7 @@ const QuestionCard = ({
 
                 <div className="flex-1 min-w-0">
                   <span
-                    className={`font-semibold text-sm md:text-base leading-relaxed ${
+                    className={`block font-semibold text-sm md:text-base leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] ${
                       isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
                     }`}
                   >
@@ -321,7 +284,7 @@ const QuestionCard = ({
               </div>
 
               {/* Tanda Centang Hijau saat dipilih */}
-              <div className="shrink-0 self-start sm:self-center">
+              <div className="shrink-0 self-start mt-0.5">
                 {isSelected ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
                     <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
@@ -338,9 +301,10 @@ const QuestionCard = ({
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
         <button
+          type="button"
           onClick={onPrevious}
           disabled={isDisabled.previous}
-          className={`px-6 py-2.5 border-2 border-[#1D315F] text-[#1D315F] font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${isDisabled.previous ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+          className={`px-6 py-2.5 border-2 border-[#1D315F] text-[#1D315F] font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer ${isDisabled.previous ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
             }`}
         >
           <ChevronLeft className="w-4 h-4" aria-hidden="true" />
@@ -348,8 +312,9 @@ const QuestionCard = ({
         </button>
 
         <button
+          type="button"
           onClick={onFlag}
-          className="px-6 py-2.5 bg-[#F59E0B] text-white font-semibold rounded-md hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2"
+          className="px-6 py-2.5 bg-[#F59E0B] text-white font-semibold rounded-md hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
           <Flag className="w-4 h-4" aria-hidden="true" />
           Ragu-ragu
@@ -371,7 +336,7 @@ const QuestionCard = ({
             onClick={onNext}
             disabled={isDisabled.next}
             title={isDisabled.next ? 'Lengkapi seluruh soal untuk mengumpulkan' : undefined}
-            className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
+            className={`px-6 py-2.5 bg-[#006A63] text-white font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer ${isDisabled.next ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00534D]'
               }`}
           >
             <span>Selanjutnya</span>
@@ -451,6 +416,17 @@ export default function PostTest({ onNavigate, onBack }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const hasFetchedRef = useRef(false);
+  const questionCardRef = useRef(null);
+
+  useEffect(() => {
+    // When switching question, if viewport is scrolled past question top, gently scroll to card
+    if (questionCardRef.current) {
+      const rect = questionCardRef.current.getBoundingClientRect?.() || { top: 0 };
+      if (rect.top < 70) {
+        questionCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [currentQuestion]);
 
   useEffect(() => {
     if (hasFetchedRef.current) return;
@@ -682,9 +658,19 @@ export default function PostTest({ onNavigate, onBack }) {
             />
           </div>
 
-          {/* Desktop Layout: QuestionCard + Navigation + Submit */}
-          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
-            <div className="lg:col-span-8">
+          {/* Mobile Sticky Quick Navigation Bar (< md) */}
+          <MobileQuestionBar
+            currentQuestion={currentQuestion}
+            totalQuestions={testData.soal.length}
+            onNavigate={handleQuestionSelect}
+            flaggedQuestions={flaggedQuestions}
+            answeredQuestions={answeredQuestionsSet}
+          />
+
+          {/* Main Layout: Desktop & Tablet 2 columns, Mobile 1 column */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
+            {/* Left Column: Question Card */}
+            <div ref={questionCardRef} className="md:col-span-8 min-w-0 max-w-full scroll-mt-24">
               <QuestionCard
                 questionNumber={currentQuestion}
                 questionData={currentQuestionData}
@@ -703,7 +689,8 @@ export default function PostTest({ onNavigate, onBack }) {
               />
             </div>
 
-            <div className="lg:col-span-4 space-y-6">
+            {/* Right Column: QuestionNavigation + Submit Button (Sticky on md & lg) */}
+            <div className="md:col-span-4 md:sticky md:top-20 md:self-start space-y-6 z-20">
               <QuestionNavigation
                 currentQuestion={currentQuestion}
                 totalQuestions={testData.soal.length}
@@ -712,12 +699,13 @@ export default function PostTest({ onNavigate, onBack }) {
                 answeredQuestions={answeredQuestionsSet}
               />
 
-              {/* Submit Button - Desktop (di samping navigasi) */}
-              <div>
+              {/* Submit Button - Desktop & Tablet (Sticky di samping navigasi) */}
+              <div className="hidden md:block">
                 <button
+                  type="button"
                   onClick={() => handleSubmit(false)}
                   disabled={submitting}
-                  className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-4 h-4" aria-hidden="true" />
                   <span>{submitting ? 'Mengumpulkan...' : 'Submit Post Test'}</span>
@@ -726,51 +714,17 @@ export default function PostTest({ onNavigate, onBack }) {
             </div>
           </div>
 
-          {/* Tablet & Mobile Layout: QuestionCard + Navigation */}
-          <div className="lg:hidden">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
-              {/* QuestionCard */}
-              <div className="md:col-span-8">
-                <QuestionCard
-                  questionNumber={currentQuestion}
-                  questionData={currentQuestionData}
-                  savedAnswer={answers[currentQuestionData?.soal_post_test_id]}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  onFlag={handleFlag}
-                  onAnswer={handleAnswer}
-                  isAllAnswered={isAllAnswered}
-                  onSubmit={handleSubmit}
-                  submitting={submitting}
-                  isDisabled={{
-                    previous: currentQuestion === 1,
-                    next: currentQuestion === testData.soal.length,
-                  }}
-                />
-              </div>
-
-              <div className="md:col-span-4">
-                <QuestionNavigation
-                  currentQuestion={currentQuestion}
-                  totalQuestions={testData.soal.length}
-                  onNavigate={handleQuestionSelect}
-                  flaggedQuestions={flaggedQuestions}
-                  answeredQuestions={answeredQuestionsSet}
-                />
-              </div>
-            </div>
-
-            {/* Submit Button - Bottom hanya untuk Tablet & Mobile */}
-            <div className="mt-6">
-              <button
-                onClick={() => handleSubmit(false)}
-                disabled={submitting}
-                className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" aria-hidden="true" />
-                <span>{submitting ? 'Mengumpulkan...' : 'Submit Post Test'}</span>
-              </button>
-            </div>
+          {/* Submit Button - Mobile only (terletak di bawah card navigasi pada alur dokumen mobile) */}
+          <div className="md:hidden mt-6">
+            <button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              disabled={submitting}
+              className="w-full px-8 py-3 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Send className="w-4 h-4" aria-hidden="true" />
+              <span>{submitting ? 'Mengumpulkan...' : 'Submit Post Test'}</span>
+            </button>
           </div>
         </div>
       </main>
