@@ -25,6 +25,8 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
   const [loading, setLoading] = useState(true);
   const [certData, setCertData] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(null);
 
   const fetchVerification = async (targetCode) => {
     if (!targetCode) {
@@ -33,6 +35,8 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
     }
     setLoading(true);
     setErrorMsg(null);
+    setIsLocked(false);
+    setRetryAfter(null);
     try {
       const cleanTarget = targetCode.trim();
       const res = await api.get(`/sertifikat/validasi/${encodeURIComponent(cleanTarget)}`);
@@ -44,6 +48,11 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
       }
     } catch (err) {
       console.error('Verification error:', err);
+      const isLockout = err.response?.status === 429 || Boolean(err.response?.data?.locked);
+      setIsLocked(isLockout);
+      if (err.response?.data?.retry_after) {
+        setRetryAfter(err.response.data.retry_after);
+      }
       const msg = err.response?.data?.message || 'Sertifikat tidak terdaftar atau tidak sah dalam pangkalan data BKPSDM Kabupaten Buleleng.';
       setErrorMsg(msg);
       setCertData(null);
@@ -134,7 +143,8 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
             </div>
             <button
               type="submit"
-              className="px-6 py-3 bg-[#006A63] hover:bg-[#00534D] text-white font-semibold text-sm rounded-lg shadow-md transition-colors flex items-center gap-1.5"
+              disabled={loading || isLocked}
+              className="px-6 py-3 bg-[#006A63] hover:bg-[#00534D] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-lg shadow-md transition-colors flex items-center gap-1.5"
             >
               Cek Keaslian
             </button>
@@ -151,36 +161,67 @@ export default function PublicCertificateVerification({ initialCode, onNavigate 
             <p className="text-sm text-gray-500 mt-1">Menghubungkan ke Pangkalan Data Sertifikasi BKPSDM Buleleng</p>
           </div>
         ) : errorMsg ? (
-          /* Tampilan Sertifikat Tidak Sah / Gagal */
-          <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-red-200">
-            <div className="bg-red-50 p-6 sm:p-8 border-b border-red-100 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                <XCircle className="w-8 h-8" />
-              </div>
-              <div>
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-200 text-red-800 mb-1">
-                  Sertifikat Tidak Sah
-                </span>
-                <h2 className="text-xl sm:text-2xl font-bold text-red-950">
-                  Data Sertifikat Tidak Terdaftar
-                </h2>
-                <p className="text-sm text-red-700 mt-1">{errorMsg}</p>
-              </div>
-            </div>
-
-            <div className="p-6 sm:p-8 space-y-4">
-              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs sm:text-sm text-amber-800 leading-relaxed">
-                  <strong>Peringatan Keamanan:</strong> QR Code atau Nomor Sertifikat yang dipindai tidak cocok dengan arsip resmi. Pastikan Anda memindai kode QR dari berkas asli yang diunduh langsung dari sistem e-Learning BKPSDM Kabupaten Buleleng.
+          isLocked ? (
+            /* Tampilan Sesi Terkunci / Cooldown */
+            <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-amber-300">
+              <div className="bg-amber-50 p-6 sm:p-8 border-b border-amber-200 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-200 text-amber-900 mb-1">
+                    Sesi Dibatasi Sementara
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-amber-950">
+                    Batas Percobaan Pencarian Tercapai
+                  </h2>
+                  <p className="text-sm text-amber-800 mt-1">{errorMsg}</p>
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 text-center pt-4">
-                Kode yang dipindai: <span className="font-mono font-semibold text-gray-700">{code || '-'}</span>
+              <div className="p-6 sm:p-8 space-y-4">
+                <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed">
+                  Perangkat Anda mendeteksi beberapa kali percobaan nomor sertifikat yang tidak terdaftar. Untuk menjaga stabilitas layanan pangkalan data verifikasi, pencarian baru dari peramban atau perangkat ini dibatasi sementara.
+                </div>
+                {retryAfter && (
+                  <div className="text-xs text-center font-medium text-amber-800">
+                    Silakan tunggu sekitar <span className="font-bold">{Math.ceil(retryAfter / 60)} menit</span> sebelum mencoba kembali.
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            /* Tampilan Sertifikat Tidak Sah / Gagal */
+            <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-red-200">
+              <div className="bg-red-50 p-6 sm:p-8 border-b border-red-100 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <XCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-200 text-red-800 mb-1">
+                    Sertifikat Tidak Sah
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-red-950">
+                    Data Sertifikat Tidak Terdaftar
+                  </h2>
+                  <p className="text-sm text-red-700 mt-1">{errorMsg}</p>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-8 space-y-4">
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-xs sm:text-sm text-amber-800 leading-relaxed">
+                    <strong>Peringatan Keamanan:</strong> QR Code atau Nomor Sertifikat yang dipindai tidak cocok dengan arsip resmi. Pastikan Anda memindai kode QR dari berkas asli yang diunduh langsung dari sistem e-Learning BKPSDM Kabupaten Buleleng.
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-500 text-center pt-4">
+                  Kode yang dipindai: <span className="font-mono font-semibold text-gray-700">{code || '-'}</span>
+                </div>
+              </div>
+            </div>
+          )
         ) : certData ? (
           /* POP-UP / KARTU RESMI VALIDASI BERHASIL */
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-emerald-100 transition-all">

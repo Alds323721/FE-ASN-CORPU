@@ -729,33 +729,41 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                         {getStatusBadge(user)}
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end gap-2">
-                        <button
-                          onClick={() => handleResetPassword(user)}
-                          title="Reset Kata Sandi"
-                          className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (komunitasList.length === 0) fetchKomunitas();
-                            const userRoles = Array.isArray(user.roles) && user.roles.length > 0
-                              ? user.roles
-                              : (user.peran ? [user.peran] : ['peserta']);
-                            setSelectedUser({ 
-                              ...user, 
-                              roles: userRoles, 
-                              email: user.email || '', 
-                              jabatan: user.jabatan || '',
-                              rumpun_jabatan: user.rumpun_jabatan || 'JP' 
-                            });
-                            setShowEditModal(true);
-                          }}
-                          title="Edit Pengguna"
-                          className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                        {user.nip === 'root' || user.peran === 'root' ? (
+                          <span className="text-xs text-gray-400 italic px-2 py-1 bg-gray-100 rounded">
+                            Dilindungi
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleResetPassword(user)}
+                              title="Reset Kata Sandi"
+                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                            >
+                              <Key className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (komunitasList.length === 0) fetchKomunitas();
+                                const userRoles = Array.isArray(user.roles) && user.roles.length > 0
+                                  ? user.roles
+                                  : (user.peran ? [user.peran] : ['peserta']);
+                                setSelectedUser({ 
+                                  ...user, 
+                                  roles: userRoles, 
+                                  email: user.email || '', 
+                                  jabatan: user.jabatan || '',
+                                  rumpun_jabatan: user.rumpun_jabatan || 'JP' 
+                                });
+                                setShowEditModal(true);
+                              }}
+                              title="Edit Pengguna"
+                              className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -934,24 +942,6 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                           <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
                         </div>
                       </label>
-
-                      <label className="flex items-center gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.roles.includes('root')}
-                          onChange={(e) => {
-                            const newRoles = e.target.checked
-                              ? [...formData.roles, 'root']
-                              : formData.roles.filter(r => r !== 'root');
-                            setFormData({ ...formData, roles: newRoles });
-                          }}
-                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-                        />
-                        <div>
-                          <span className="text-sm font-semibold text-gray-800">Admin Sistem (Root)</span>
-                          <span className="text-xs text-gray-500 block">Pengelolaan infrastruktur server, basis data & audit log sistem</span>
-                        </div>
-                      </label>
                     </div>
                   </div>
                   {formData.roles.includes('admin_komunitas') && (
@@ -1074,25 +1064,6 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                         <div>
                           <span className="text-sm font-semibold text-gray-800">Admin BKPSDM</span>
                           <span className="text-xs text-gray-500 block">Super admin pengelolaan platform</span>
-                        </div>
-                      </label>
-
-                      <label className="flex items-center gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(selectedUser.roles || [selectedUser.peran]).includes('root')}
-                          onChange={(e) => {
-                            const current = selectedUser.roles || [selectedUser.peran];
-                            const newRoles = e.target.checked
-                              ? [...current, 'root']
-                              : current.filter(r => r !== 'root');
-                            setSelectedUser({ ...selectedUser, roles: newRoles });
-                          }}
-                          className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-                        />
-                        <div>
-                          <span className="text-sm font-semibold text-gray-800">Admin Sistem (Root)</span>
-                          <span className="text-xs text-gray-500 block">Pengelolaan infrastruktur server, basis data & audit log sistem</span>
                         </div>
                       </label>
                     </div>
