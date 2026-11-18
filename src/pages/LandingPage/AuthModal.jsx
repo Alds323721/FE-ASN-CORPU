@@ -74,21 +74,27 @@ export default function AuthModal({
     sessionStorage.removeItem('bkpsdm_otp_lockout_until');
   }, []);
 
-  // Sinkronisasi status lockout / cooldown lupa kata sandi berbasis sesi / cookie browser
+  // Sinkronisasi status lockout OTP khusus per NIP yang sedang aktif diinput
   useEffect(() => {
-    const savedCooldownUntil = sessionStorage.getItem('bkpsdm_session_forgot_cooldown_until');
-    if (savedCooldownUntil) {
-      const remaining = Math.ceil((parseInt(savedCooldownUntil, 10) - Date.now()) / 1000);
+    const cleanNip = resetNip.trim();
+    if (!cleanNip) {
+      setOtpLockoutCountdown(0);
+      return;
+    }
+    const key = `bkpsdm_otp_lockout_until_${cleanNip}`;
+    const savedOtpLockoutUntil = sessionStorage.getItem(key);
+    if (savedOtpLockoutUntil) {
+      const remaining = Math.ceil((parseInt(savedOtpLockoutUntil, 10) - Date.now()) / 1000);
       if (remaining > 0) {
         setOtpLockoutCountdown(remaining);
       } else {
-        sessionStorage.removeItem('bkpsdm_session_forgot_cooldown_until');
+        sessionStorage.removeItem(key);
         setOtpLockoutCountdown(0);
       }
     } else {
       setOtpLockoutCountdown(0);
     }
-  }, []);
+  }, [resetNip]);
 
   useEffect(() => {
     let timer;
@@ -114,7 +120,10 @@ export default function AuthModal({
       timer = setTimeout(() => {
         setOtpLockoutCountdown((prev) => {
           if (prev <= 1) {
-            sessionStorage.removeItem('bkpsdm_session_forgot_cooldown_until');
+            const cleanNip = resetNip.trim();
+            if (cleanNip) {
+              sessionStorage.removeItem(`bkpsdm_otp_lockout_until_${cleanNip}`);
+            }
             return 0;
           }
           return prev - 1;
@@ -122,7 +131,7 @@ export default function AuthModal({
       }, 1000);
     }
     return () => clearTimeout(timer);
-  }, [otpLockoutCountdown]);
+  }, [otpLockoutCountdown, resetNip]);
 
   const formatCountdown = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -244,10 +253,6 @@ export default function AuthModal({
         setRemainingAttempts(0);
         setError(resData?.message || 'Terlalu banyak percobaan gagal (3 kali). Silakan tunggu sebelum mencoba kembali.');
         setLoginErrorType('');
-      } else if (resData?.error_type === 'session_blocked') {
-        setRemainingAttempts(null);
-        setLoginErrorType('session_blocked');
-        setError(resData?.message || 'Akses login pada perangkat/sesi ini telah diblokir karena telah mencapai batas 4 kali percobaan verifikasi lupa kata sandi. Silakan hubungi Administrator BKPSDM (untuk pergantian email).');
       } else if (status === 403 || resData?.error_type === 'account_inactive') {
         setRemainingAttempts(null);
         setLoginErrorType('account_inactive');
@@ -427,7 +432,7 @@ export default function AuthModal({
 
                 {(() => {
                   const isEmailMismatch = resetErrorType === 'email_mismatch';
-                  const isEmailError = isEmailMismatch || resetErrorType === 'email_taken' || resetErrorType === 'account_inactive' || resetErrorType === 'session_blocked' || (Boolean(resetError) && resetError.toLowerCase().includes('email'));
+                  const isEmailError = isEmailMismatch || resetErrorType === 'email_taken' || (Boolean(resetError) && resetError.toLowerCase().includes('email'));
                   const isNipError = resetErrorType === 'nip_not_found' || (!isEmailError && Boolean(resetError) && (resetError.toLowerCase().includes('nip') || resetError.toLowerCase().includes('pangkalan data') || resetError.toLowerCase().includes('ditemukan')));
 
                   return (
@@ -444,14 +449,8 @@ export default function AuthModal({
                       {resetStep === 'email' && (
                         <form onSubmit={async (e) => {
                           e.preventDefault();
-                          if (resetErrorType === 'account_inactive' || resetErrorType === 'session_blocked') {
-                            setResetError(resetError || 'Akun Anda dinonaktifkan. Silakan hubungi Administrator BKPSDM (untuk pergantian email dan pengaktifan kembali).');
-                            resetRecaptchaRef.current?.reset();
-                            setResetCaptchaToken('');
-                            return;
-                          }
                           if (otpLockoutCountdown > 0) {
-                            setResetError(`Akses lupa kata sandi sedang dibatasi selama 15 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
+                            setResetError(`Akses OTP sedang dibatasi selama 30 menit. Silakan tunggu ${formatCountdown(otpLockoutCountdown)}.`);
                             resetRecaptchaRef.current?.reset();
                             setResetCaptchaToken('');
                             return;
@@ -495,14 +494,13 @@ export default function AuthModal({
                             const errType = resData?.error_type || '';
                             setResetErrorType(errType);
                             if (err.response?.status === 429) {
-                              const retryAfter = Number(resData?.retry_after) || 900;
+                              const retryAfter = Number(resData?.retry_after) || 1800;
                               setOtpLockoutCountdown(retryAfter);
-                              sessionStorage.setItem('bkpsdm_session_forgot_cooldown_until', String(Date.now() + retryAfter * 1000));
-                              setResetError(resData?.message || 'Batas percobaan verifikasi telah tercapai (3 kali). Akses pada sesi ini dibatasi selama 15 menit.');
-                            } else if (errType === 'account_inactive' || errType === 'session_blocked' || err.response?.status === 403) {
-                              setOtpLockoutCountdown(0);
-                              sessionStorage.removeItem('bkpsdm_session_forgot_cooldown_until');
-                              setResetError(resData?.message || 'Akun Anda telah dinonaktifkan secara otomatis karena mencapai batas maksimal 4 kali salah verifikasi. Silakan hubungi Administrator BKPSDM (untuk pergantian email dan pengaktifan kembali).');
+                              const cleanNip = resetNip.trim();
+                              if (cleanNip) {
+                                sessionStorage.setItem(`bkpsdm_otp_lockout_until_${cleanNip}`, String(Date.now() + retryAfter * 1000));
+                              }
+                              setResetError(resData?.message || 'Batas percobaan verifikasi telah tercapai. Akses dibatasi selama 30 menit.');
                             } else {
                               setResetError(resData?.message || 'Terjadi kesalahan saat memproses permintaan.');
                             }
@@ -514,7 +512,7 @@ export default function AuthModal({
                             <div className="bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-xs mb-4 text-center font-medium flex flex-col items-center gap-1 shadow-sm">
                               <div className="flex items-center gap-1.5 font-bold text-red-800 text-xs sm:text-sm">
                                 <Clock className="w-4 h-4 text-red-600 animate-pulse" />
-                                <span>Akses Verifikasi Dibatasi (15 Menit)</span>
+                                <span>Akses Verifikasi Dibatasi (30 Menit)</span>
                               </div>
                               <p className="text-[11px] text-red-600">
                                 Telah mencapai batas 3 kali salah verifikasi email terdaftar. Silakan tunggu:
@@ -671,7 +669,7 @@ export default function AuthModal({
                                   }
                                 }}
                                 required
-                                disabled={resetLoading || otpLockoutCountdown > 0 || resetErrorType === 'account_inactive' || resetErrorType === 'session_blocked' || (nipInfo && !nipInfo.has_email)}
+                                disabled={resetLoading || otpLockoutCountdown > 0 || (nipInfo && !nipInfo.has_email)}
                                 className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 transition-colors ${
                                   isEmailError
                                     ? 'border-rose-400 focus:ring-rose-300 focus:border-rose-500 bg-rose-50/30'
@@ -699,7 +697,7 @@ export default function AuthModal({
 
                           <button
                             type="submit"
-                            disabled={resetLoading || otpLockoutCountdown > 0 || resetErrorType === 'account_inactive' || resetErrorType === 'session_blocked' || (nipInfo && !nipInfo.has_email)}
+                            disabled={resetLoading || otpLockoutCountdown > 0 || (nipInfo && !nipInfo.has_email)}
                             className="w-full bg-[#1D315F] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#152747] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mb-3 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                           >
                             {resetLoading ? 'Memverifikasi...' : 'Verifikasi & Lanjut Buat Sandi'} <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -974,23 +972,6 @@ export default function AuthModal({
                       Sisa: {remainingAttempts}x kesempatan
                     </span>
                   </div>
-                ) : loginErrorType === 'session_blocked' ? (
-                  <div className="bg-rose-50 border border-rose-300 text-rose-900 p-3.5 rounded-xl text-xs mb-4 shadow-sm text-left animate-in fade-in duration-200">
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-1.5 bg-rose-600 text-white rounded-lg shrink-0 mt-0.5">
-                        <AlertCircle className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <h5 className="font-bold text-rose-900 text-xs sm:text-sm">Akses Login Diblokir</h5>
-                        <p className="text-rose-700 text-[11px] mt-1 leading-relaxed">
-                          {error}
-                        </p>
-                        <div className="mt-2 p-1.5 bg-white rounded border border-rose-200 text-rose-800 text-[11px] font-medium">
-                          Silakan hubungi <b>Administrator BKPSDM</b> (untuk pergantian email terdaftar).
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 ) : error ? (
                   <div className="bg-red-50 border border-red-200 text-red-600 p-2.5 rounded-lg text-xs mb-4 text-center leading-relaxed font-medium">
                     {error}
@@ -1008,7 +989,7 @@ export default function AuthModal({
 
                 <button
                   type="submit"
-                  disabled={loading || lockoutCountdown > 0 || loginErrorType === 'session_blocked'}
+                  disabled={loading || lockoutCountdown > 0}
                   className="w-full bg-[#36B1A0] text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-[#2A8F81] transition-colors text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {lockoutCountdown > 0 ? (
