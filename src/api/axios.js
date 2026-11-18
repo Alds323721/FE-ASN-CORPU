@@ -20,8 +20,6 @@ const getApiBaseUrl = () => {
     return 'http://localhost:8000/api';
 };
 
-let memoryDeviceId = null;
-
 const getOrCreateDeviceSessionId = () => {
     const storageKey = 'device_session_id';
     try {
@@ -39,10 +37,7 @@ const getOrCreateDeviceSessionId = () => {
         }
         return deviceId;
     } catch (e) {
-        if (!memoryDeviceId) {
-            memoryDeviceId = 'dev_mem_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 15);
-        }
-        return memoryDeviceId;
+        return 'fallback_device_session';
     }
 };
 
