@@ -79,6 +79,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
    const [passwordStep, setPasswordStep] = useState(1);
    const [email, setEmail] = useState('');
    const [otp, setOtp] = useState('');
+   const [uniqueId, setUniqueId] = useState('');
    const [currentPassword, setCurrentPassword] = useState('');
    const [newPassword, setNewPassword] = useState('');
    const [confirmPassword, setConfirmPassword] = useState('');
@@ -207,8 +208,11 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
                  if (passwordStep === 1) {
                    setIsPasswordSubmitting(true);
                    try {
-                     await api.post('/change-password/request-otp', { email });
-                     setPasswordSuccess('OTP telah dikirim ke email Anda!');
+                     const res = await api.post('/change-password/request-otp', { email });
+                     if (res.data?.unique_id) {
+                       setUniqueId(res.data.unique_id);
+                     }
+                     setPasswordSuccess(res.data?.message || 'OTP telah dikirim ke email terdaftar Anda!');
                      setTimeout(() => {
                        setPasswordSuccess('');
                        setPasswordStep(2);
@@ -230,6 +234,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
                  try {
                    await api.post('/change-password/verify', {
                      otp,
+                     unique_id: uniqueId,
                      password_sebelumnya: currentPassword,
                      password_baru: newPassword,
                      password_baru_confirmation: confirmPassword
@@ -246,6 +251,7 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
                      setNewPassword('');
                      setConfirmPassword('');
                      setOtp('');
+                     setUniqueId('');
                      setPasswordSuccess('');
                    }, 1500);
                  } catch (err) {
@@ -287,14 +293,29 @@ const ProfileDropdown = ({ onLogout, onNavigate }) => {
                ) : (
                  <>
                    <div>
-                     <label className="block text-sm font-semibold text-[#1D315F] mb-2">
-                       Kode OTP (6 digit)
-                     </label>
+                     <div className="flex items-center justify-between mb-2">
+                       <label className="block text-sm font-semibold text-[#1D315F]">
+                         Kode OTP (6 digit)
+                       </label>
+                       <button
+                         type="button"
+                         onClick={() => {
+                           setPasswordStep(1);
+                           setOtp('');
+                           setPasswordError('');
+                           setPasswordSuccess('');
+                         }}
+                         className="text-xs text-[#006A63] font-semibold hover:underline cursor-pointer"
+                       >
+                         Cek Email / Minta Ulang
+                       </button>
+                     </div>
                      <input
                        type="text"
                        value={otp}
                        onChange={(e) => setOtp(e.target.value)}
                        required
+                       maxLength={6}
                        placeholder="Masukkan kode OTP dari email"
                        className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006A63] outline-none text-sm font-semibold tracking-widest"
                      />
