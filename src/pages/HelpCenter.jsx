@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import api from '../api/axios';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
@@ -20,7 +20,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  Star
+  Star,
+  AlertCircle
 } from 'lucide-react';
 
 const HelpCenterNavbar = ({ onNavigate }) => {
@@ -138,13 +139,44 @@ const ContactForm = () => {
     description: '',
     rating: 0
   });
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const typeRef = useRef(null);
+  const descriptionRef = useRef(null);
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const trimmedDesc = formData.description.trim();
+
+    if (!formData.type) {
+      nextErrors.type = 'Silakan pilih jenis keluhan terlebih dahulu.';
+    }
+
+    if (!trimmedDesc) {
+      nextErrors.description = 'Silakan isi deskripsi keluhan secara detail.';
+    } else if (trimmedDesc.length < 10) {
+      nextErrors.description = 'Deskripsi keluhan minimal 10 karakter agar tim kami dapat memahami kendala Anda.';
+    }
+
+    setErrors(nextErrors);
+
+    if (nextErrors.type) {
+      typeRef.current?.focus();
+    } else if (nextErrors.description) {
+      descriptionRef.current?.focus();
+    }
+
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.type || !formData.description) {
-      alert('Harap lengkapi jenis dan deskripsi keluhan.');
+    setSubmitError('');
+    setSuccess(false);
+
+    if (!validateForm()) {
       return;
     }
 
@@ -153,13 +185,23 @@ const ContactForm = () => {
       const subjekText = `${formData.type.toUpperCase()}: Tiket Keluhan Baru`;
       await api.post('/user/bantuan/tiket', {
         subjek: subjekText,
-        deskripsi: formData.description
+        deskripsi: formData.description.trim()
       });
       setSuccess(true);
+      setErrors({});
       setFormData({ type: '', description: '', rating: 0 });
       setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
-      alert(error.response?.data?.message || 'Gagal mengirim keluhan.');
+      const serverErrors = error.response?.data?.errors;
+      if (serverErrors) {
+        const mapped = {};
+        if (serverErrors.subjek) mapped.type = Array.isArray(serverErrors.subjek) ? serverErrors.subjek[0] : serverErrors.subjek;
+        if (serverErrors.deskripsi) mapped.description = Array.isArray(serverErrors.deskripsi) ? serverErrors.deskripsi[0] : serverErrors.deskripsi;
+        if (Object.keys(mapped).length > 0) {
+          setErrors(mapped);
+        }
+      }
+      setSubmitError(error.response?.data?.message || 'Gagal mengirim keluhan. Silakan periksa kembali data Anda dan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -168,7 +210,7 @@ const ContactForm = () => {
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8">
       <div className="flex items-start gap-3 mb-6">
-        <MessageSquare className="w-6 h-6 text-[#F59E0B] flex-shrink-0 mt-1" />
+        <MessageSquare className="w-6 h-6 text-[#F59E0B] flex-shrink-0 mt-1" aria-hidden="true" />
         <div>
           <h3 className="font-semibold text-[#1D315F] text-lg mb-2">{t('helpCenter.formTitle')}</h3>
           <p className="text-sm text-gray-600 font-semibold">
@@ -178,21 +220,43 @@ const ContactForm = () => {
       </div>
 
       {success && (
-        <div className="mb-6 p-4 bg-[#10B981]/10 border border-[#10B981]/20 rounded-lg flex items-center gap-3">
-          <Award className="w-5 h-5 text-[#10B981] flex-shrink-0" />
-          <p className="text-sm text-[#10B981] font-semibold">{t('helpCenter.formSuccess')}</p>
+        <div role="status" className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-3">
+          <Award className="w-5 h-5 text-emerald-700 flex-shrink-0" aria-hidden="true" />
+          <p className="text-sm text-emerald-800 font-semibold">{t('helpCenter.formSuccess')}</p>
         </div>
       )}
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      {submitError && (
+        <div role="alert" className="mb-6 p-3.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2.5 text-red-700">
+          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-xs sm:text-sm font-medium leading-relaxed">{submitError}</p>
+        </div>
+      )}
+
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <div>
-          <label className="block text-sm font-semibold text-[#1D315F] mb-2">
+          <label htmlFor="help-complaint-type" className="block text-sm font-semibold text-[#1D315F] mb-2">
             {t('helpCenter.complaintType')} <span className="text-red-500">*</span>
           </label>
           <select
+            id="help-complaint-type"
+            ref={typeRef}
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006A63] focus:border-transparent text-sm font-semibold"
+            aria-invalid={Boolean(errors.type)}
+            aria-describedby={errors.type ? 'help-complaint-type-error' : undefined}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData({ ...formData, type: val });
+              if (errors.type && val) {
+                setErrors((prev) => ({ ...prev, type: undefined }));
+              }
+              if (submitError) setSubmitError('');
+            }}
+            className={`w-full px-4 py-2.5 border rounded-md focus:ring-2 focus:border-transparent text-sm font-semibold cursor-pointer transition-colors ${
+              errors.type
+                ? 'border-red-400 bg-red-50/30 focus:ring-red-300'
+                : 'border-gray-300 focus:ring-[#006A63]'
+            }`}
           >
             <option value="">{t('helpCenter.complaintTypePlaceholder')}</option>
             <option value="akun">{t('helpCenter.cat1Title')}</option>
@@ -200,34 +264,64 @@ const ContactForm = () => {
             <option value="sertifikat">{t('helpCenter.cat3Title')}</option>
             <option value="teknis">{t('helpCenter.cat4Title')}</option>
           </select>
+          {errors.type && (
+            <p id="help-complaint-type-error" role="alert" className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+              <span>{errors.type}</span>
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-[#1D315F] mb-2">
+          <label htmlFor="help-complaint-desc" className="block text-sm font-semibold text-[#1D315F] mb-2">
             {t('helpCenter.complaintDesc')} <span className="text-red-500">*</span>
           </label>
           <textarea
+            id="help-complaint-desc"
+            ref={descriptionRef}
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            aria-invalid={Boolean(errors.description)}
+            aria-describedby={errors.description ? 'help-complaint-desc-error' : undefined}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData({ ...formData, description: val });
+              if (errors.description && val.trim().length >= 10) {
+                setErrors((prev) => ({ ...prev, description: undefined }));
+              }
+              if (submitError) setSubmitError('');
+            }}
             placeholder={t('helpCenter.complaintDescPlaceholder')}
             rows={5}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#006A63] focus:border-transparent text-sm font-semibold resize-none"
+            className={`w-full px-4 py-3 border rounded-md focus:ring-2 focus:border-transparent text-sm font-semibold resize-none transition-colors ${
+              errors.description
+                ? 'border-red-400 bg-red-50/30 focus:ring-red-300'
+                : 'border-gray-300 focus:ring-[#006A63]'
+            }`}
           />
+          {errors.description && (
+            <p id="help-complaint-desc-error" role="alert" className="mt-1.5 text-xs text-red-600 font-medium flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+              <span>{errors.description}</span>
+            </p>
+          )}
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-[#1D315F] mb-3">
             {t('helpCenter.satisfaction')}
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label={t('helpCenter.satisfaction')}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 type="button"
+                aria-label={`Beri rating ${star} dari 5 bintang`}
+                aria-pressed={formData.rating === star}
                 onClick={() => setFormData({ ...formData, rating: star })}
-                className="focus:outline-none transition-transform hover:scale-110"
+                className="p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006A63] transition-transform hover:scale-110 cursor-pointer"
               >
                 <Star
+                  aria-hidden="true"
                   className={`w-8 h-8 ${
                     star <= formData.rating ? 'fill-[#F59E0B] text-[#F59E0B]' : 'text-gray-300'
                   }`}
@@ -240,7 +334,7 @@ const ContactForm = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors disabled:opacity-50"
+          className="w-full px-6 py-3 bg-[#006A63] text-white font-semibold rounded-md hover:bg-[#00534D] transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         >
           {loading ? t('helpCenter.sending') : t('helpCenter.sendComplaint')}
         </button>
