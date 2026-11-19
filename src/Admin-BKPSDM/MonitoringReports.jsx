@@ -11,7 +11,7 @@ import {
   Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
   QrCode, ExternalLink, Smartphone, Laptop, Tablet, FileArchive, Check,
   Upload, AlertCircle, FileCheck, RefreshCw, FileText, Send, UserCheck, UserX,
-  Eye, EyeOff
+  Eye, EyeOff, Headphones, Clock
 } from 'lucide-react';
 
 const EXPORT_KPK_BATCH_SIZE = 20;
@@ -175,9 +175,6 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
         </div>
 
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <button onClick={() => onNavigate && onNavigate('help-center')} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
-            Bantuan Teknis
-          </button>
           <button
             onClick={() => {
               if (typeof onLogout === 'function') {
@@ -318,6 +315,31 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     from: 0,
     to: 0,
   });
+
+  // Laporan Teknis State
+  const [teknisList, setTeknisList] = useState([]);
+  const [teknisStats, setTeknisStats] = useState({
+    total_aduan: 0,
+    terbuka: 0,
+    diproses: 0,
+    selesai: 0,
+    dari_peserta: 0,
+    dari_admin_komunitas: 0,
+  });
+  const [loadingTeknis, setLoadingTeknis] = useState(false);
+  const [teknisError, setTeknisError] = useState('');
+  const [teknisPagination, setTeknisPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('');
+  const [selectedTiketDetail, setSelectedTiketDetail] = useState(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   const fetchKomunitas = async () => {
     try {
@@ -473,10 +495,113 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
+  const fetchTeknisReports = async (page = 1) => {
+    try {
+      setLoadingTeknis(true);
+      setTeknisError('');
+      const params = {
+        page,
+        per_page: 10,
+      };
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
+      if (selectedStatusFilter) params.status = selectedStatusFilter;
+      if (selectedRoleFilter) params.role = selectedRoleFilter;
+
+      const res = await api.get('/admin-bkpsdm/laporan/teknis', { params });
+      const payload = res.data?.data;
+      if (payload) {
+        const rows = payload.data || [];
+        const curPage = Number(payload.current_page || 1);
+        const perPage = Number(payload.per_page || 10);
+        const total = Number(payload.total || 0);
+        const computedFrom = total > 0 && rows.length > 0 ? (curPage - 1) * perPage + 1 : 0;
+        const computedTo = total > 0 && rows.length > 0 ? (curPage - 1) * perPage + rows.length : 0;
+
+        setTeknisList(rows);
+        setTeknisPagination({
+          current_page: curPage,
+          last_page: Number(payload.last_page || 1),
+          per_page: perPage,
+          total,
+          from: payload.from ?? computedFrom,
+          to: payload.to ?? computedTo,
+        });
+      }
+      if (res.data?.stats) {
+        setTeknisStats(res.data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to fetch teknis reports:', err);
+      setTeknisError(err?.response?.data?.message || 'Gagal memuat laporan aduan teknis.');
+    } finally {
+      setLoadingTeknis(false);
+    }
+  };
+
+  const handleUpdateStatusTiket = async (tiketId, newStatus) => {
+    try {
+      setUpdatingStatusId(tiketId);
+      await api.put(`/admin-bkpsdm/laporan/teknis/${tiketId}/status`, {
+        status: newStatus,
+      });
+
+      // Update state lokal seketika
+      setTeknisList((prev) =>
+        prev.map((t) =>
+          t.help_tiket_id === tiketId
+            ? {
+                ...t,
+                status: newStatus,
+                diselesaikan_pada: newStatus === 'selesai' ? new Date().toISOString() : null,
+              }
+            : t
+        )
+      );
+
+      if (selectedTiketDetail && selectedTiketDetail.help_tiket_id === tiketId) {
+        setSelectedTiketDetail((prev) => ({
+          ...prev,
+          status: newStatus,
+          diselesaikan_pada: newStatus === 'selesai' ? new Date().toISOString() : null,
+        }));
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Status Berhasil Diperbarui',
+        text: `Status tiket aduan berhasil diubah menjadi ${newStatus}.`,
+        timer: 1800,
+        showConfirmButton: false,
+      });
+
+      fetchTeknisReports(teknisPagination.current_page);
+    } catch (err) {
+      console.error('Failed to update ticket status:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memperbarui Status',
+        text: err?.response?.data?.message || 'Terjadi kesalahan sistem saat memperbarui status tiket.',
+      });
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
   useEffect(() => {
     fetchKomunitas();
     fetchValidasiReports(1);
+    fetchTeknisReports(1);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && selectedTiketDetail) {
+        setSelectedTiketDetail(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTiketDetail]);
 
   useEffect(() => {
     if (activeTabReport === 'peserta') {
@@ -495,6 +620,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       fetchUlasanReports(1);
     } else if (activeTabReport === 'validasi') {
       fetchValidasiReports(1);
+    } else if (activeTabReport === 'teknis') {
+      fetchTeknisReports(1);
     }
   }, [activeTabReport, selectedKomunitas]);
 
@@ -503,6 +630,12 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       fetchUlasanReports(1);
     }
   }, [selectedRatingFilter]);
+
+  useEffect(() => {
+    if (activeTabReport === 'teknis') {
+      fetchTeknisReports(1);
+    }
+  }, [selectedStatusFilter, selectedRoleFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -516,6 +649,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       fetchUlasanReports(1);
     } else if (activeTabReport === 'validasi') {
       fetchValidasiReports(1);
+    } else if (activeTabReport === 'teknis') {
+      fetchTeknisReports(1);
     }
   };
 
@@ -1275,6 +1410,19 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 {validasiStats.total_validasi || 0}
               </span>
             </button>
+            <button
+              onClick={() => setActiveTabReport('teknis')}
+              className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTabReport === 'teknis'
+                  ? 'text-teal-700 border-b-2 border-teal-700'
+                  : 'text-gray-500 hover:text-gray-800'
+                }`}
+            >
+              <Headphones className="w-4 h-4 text-teal-600" />
+              <span>Laporan Teknis</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-teal-100 text-teal-800 font-bold">
+                {teknisStats.total_aduan || 0}
+              </span>
+            </button>
           </div>
 
           {/* Stat Cards - Peserta Tab */}
@@ -1379,11 +1527,45 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
             </div>
           )}
 
+          {/* Stat Cards - Teknis Tab */}
+          {activeTabReport === 'teknis' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <StatCard
+                title="TOTAL ADUAN TEKNIS"
+                value={teknisStats.total_aduan || 0}
+                icon={Headphones}
+                colorClass="bg-teal-50"
+                iconColorClass="text-teal-600"
+              />
+              <StatCard
+                title="ADUAN TERBUKA"
+                value={teknisStats.terbuka || 0}
+                icon={AlertCircle}
+                colorClass="bg-amber-50"
+                iconColorClass="text-amber-600"
+              />
+              <StatCard
+                title="SEDANG DIPROSES"
+                value={teknisStats.diproses || 0}
+                icon={RefreshCw}
+                colorClass="bg-blue-50"
+                iconColorClass="text-blue-600"
+              />
+              <StatCard
+                title="SELESAI DITANGANI"
+                value={teknisStats.selesai || 0}
+                icon={CheckCircle}
+                colorClass="bg-emerald-50"
+                iconColorClass="text-emerald-600"
+              />
+            </div>
+          )}
+
           {/* Main Card Container */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
             <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                {activeTabReport !== 'validasi' && (
+                {activeTabReport !== 'validasi' && activeTabReport !== 'teknis' && (
                   <select
                     value={selectedKomunitas}
                     onChange={(e) => setSelectedKomunitas(e.target.value)}
@@ -1411,6 +1593,31 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   </select>
                 )}
 
+                {activeTabReport === 'teknis' && (
+                  <>
+                    <select
+                      value={selectedRoleFilter}
+                      onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
+                    >
+                      <option value="">Semua Pelapor</option>
+                      <option value="peserta">Peserta</option>
+                      <option value="admin_komunitas">Admin Komunitas</option>
+                    </select>
+
+                    <select
+                      value={selectedStatusFilter}
+                      onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white w-full sm:w-auto"
+                    >
+                      <option value="">Semua Status</option>
+                      <option value="terbuka">Terbuka (Menunggu)</option>
+                      <option value="diproses">Sedang Diproses</option>
+                      <option value="selesai">Selesai</option>
+                    </select>
+                  </>
+                )}
+
                 <div className="relative w-full sm:w-72">
                   <input
                     type="text"
@@ -1421,7 +1628,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                         ? "Cari Nama / NIP..."
                         : activeTabReport === 'ulasan'
                           ? "Cari Peserta / Pelatihan / Kata Kunci..."
-                          : "Cari No. Sertifikat / Nama / NIP / IP..."
+                          : activeTabReport === 'validasi'
+                            ? "Cari No. Sertifikat / Nama / NIP / IP..."
+                            : "Cari Subjek / Aduan / Nama / NIP..."
                     }
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
@@ -1433,6 +1642,25 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   Cari
                 </button>
               </form>
+
+              {activeTabReport === 'teknis' && (
+                <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedStatusFilter('');
+                      setSelectedRoleFilter('');
+                      fetchTeknisReports(1);
+                    }}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                    title="Reset Filter & Muat Ulang"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Reset Filter</span>
+                  </button>
+                </div>
+              )}
 
               {activeTabReport === 'peserta' && (
                 <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
@@ -1901,6 +2129,198 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   itemLabel="log scan"
                   loading={loadingValidasi}
                   onPageChange={(page) => fetchValidasiReports(page)}
+                />
+              </>
+            )}
+
+            {/* Table: Laporan Aduan Teknis (Peserta & Admin Komunitas) */}
+            {activeTabReport === 'teknis' && (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[1100px]">
+                    <thead>
+                      <tr className="bg-white border-b border-gray-100">
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider w-16 text-center">NO</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PELAPOR</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">TIPE PELAPOR</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">SUBJEK & KENDALA</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">WAKTU ADUAN</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">STATUS</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">PENANGAN</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">AKSI</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {loadingTeknis ? (
+                        <tr>
+                          <td colSpan="8" className="px-6 py-12 text-center text-gray-600" role="status">
+                            <div className="flex items-center justify-center gap-2">
+                              <RefreshCw className="w-5 h-5 text-teal-600 animate-spin" />
+                              <span>Memuat data laporan aduan teknis...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : teknisError ? (
+                        <tr>
+                          <td colSpan="8" className="px-6 py-12 text-center">
+                            <div role="alert" className="max-w-md mx-auto space-y-2">
+                              <AlertCircle className="w-8 h-8 text-red-600 mx-auto" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Gagal Memuat Aduan Teknis</p>
+                              <p className="text-xs text-gray-600">{teknisError}</p>
+                              <button
+                                type="button"
+                                onClick={() => fetchTeknisReports(teknisPagination.current_page || 1)}
+                                className="mt-1 min-h-11 lg:min-h-9 px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+                              >
+                                Coba Lagi
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : teknisList.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="px-6 py-12 text-center text-gray-600">
+                            <div className="max-w-md mx-auto text-center space-y-2">
+                              <Headphones className="w-8 h-8 text-teal-600 mx-auto" aria-hidden="true" />
+                              <p className="font-bold text-gray-800 text-sm">Tidak Ada Aduan Teknis</p>
+                              <p className="text-xs text-gray-600">
+                                {searchTerm || selectedStatusFilter || selectedRoleFilter
+                                  ? 'Tidak ditemukan aduan teknis yang sesuai dengan kriteria filter pencarian Anda.'
+                                  : 'Belum ada aduan atau tiket kendala teknis yang dikirimkan oleh Peserta maupun Admin Komunitas.'}
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        teknisList.map((tiket, idx) => {
+                          const rowNumber = (teknisPagination.current_page - 1) * teknisPagination.per_page + idx + 1;
+                          const pelapor = tiket.pelapor || {};
+                          const isAdmin = pelapor.tipe_pelapor === 'admin_komunitas';
+
+                          return (
+                            <tr key={tiket.help_tiket_id} className="hover:bg-gray-50/50 transition-colors">
+                              {/* NO */}
+                              <td className="px-6 py-4 text-xs font-semibold text-gray-500 text-center">
+                                {rowNumber}
+                              </td>
+
+                              {/* PELAPOR */}
+                              <td className="px-6 py-4">
+                                <p className="font-bold text-gray-900 text-sm mb-0.5">{pelapor.nama_lengkap}</p>
+                                <p className="text-xs text-gray-500 font-mono">NIP. {pelapor.nip}</p>
+                                <p className="text-xs text-gray-400 truncate max-w-[200px]" title={pelapor.unit_kerja}>
+                                  {pelapor.unit_kerja}
+                                </p>
+                              </td>
+
+                              {/* TIPE PELAPOR */}
+                              <td className="px-6 py-4">
+                                {isAdmin ? (
+                                  <div className="flex flex-col items-start gap-1">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                      Admin Komunitas
+                                    </span>
+                                    {pelapor.nama_komunitas && pelapor.nama_komunitas !== '-' && (
+                                      <span className="text-[11px] text-gray-500 font-medium truncate max-w-[150px]" title={pelapor.nama_komunitas}>
+                                        {pelapor.nama_komunitas}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                    Peserta
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* SUBJEK & KENDALA */}
+                              <td className="px-6 py-4 max-w-xs sm:max-w-sm">
+                                <p className="font-bold text-gray-900 text-sm mb-1 line-clamp-1" title={tiket.subjek}>
+                                  {tiket.subjek}
+                                </p>
+                                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed" title={tiket.deskripsi}>
+                                  {tiket.deskripsi}
+                                </p>
+                              </td>
+
+                              {/* WAKTU ADUAN */}
+                              <td className="px-6 py-4 text-xs text-gray-600 whitespace-nowrap">
+                                <p className="font-bold text-gray-800">
+                                  {tiket.dibuat_pada ? new Date(tiket.dibuat_pada).toLocaleDateString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  }) : '-'}
+                                </p>
+                                <p className="text-gray-500">
+                                  {tiket.dibuat_pada ? new Date(tiket.dibuat_pada).toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }) + ' WITA' : '-'}
+                                </p>
+                              </td>
+
+                              {/* STATUS */}
+                              <td className="px-6 py-4 text-center whitespace-nowrap">
+                                {tiket.status === 'selesai' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                    Selesai
+                                  </span>
+                                ) : tiket.status === 'diproses' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                    Diproses
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-700">
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                    Terbuka
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* PENANGAN */}
+                              <td className="px-6 py-4 text-xs text-gray-600">
+                                {tiket.penangan ? (
+                                  <div>
+                                    <p className="font-semibold text-gray-800">{tiket.penangan.nama_lengkap}</p>
+                                    <p className="text-[11px] text-gray-400 font-mono">NIP. {tiket.penangan.nip}</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic">Belum ditangani</span>
+                                )}
+                              </td>
+
+                              {/* AKSI */}
+                              <td className="px-6 py-4 text-center whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTiketDetail(tiket)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200 transition-colors"
+                                  title="Lihat Detail & Tindak Lanjut"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Detail</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <TablePagination
+                  currentPage={teknisPagination.current_page}
+                  lastPage={teknisPagination.last_page}
+                  total={teknisPagination.total}
+                  from={teknisPagination.from}
+                  to={teknisPagination.to}
+                  itemLabel="aduan teknis"
+                  loading={loadingTeknis}
+                  onPageChange={(page) => fetchTeknisReports(page)}
                 />
               </>
             )}
@@ -2876,6 +3296,197 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0"
               >
                 Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail Aduan Teknis */}
+      {selectedTiketDetail && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-tiket-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedTiketDetail(null);
+          }}
+        >
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-teal-50/50 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-100/80 flex items-center justify-center text-teal-700 shrink-0">
+                  <Headphones className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 id="modal-tiket-title" className="font-bold text-gray-900 text-base leading-snug">
+                    Detail Aduan & Tiket Kendala
+                  </h3>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    ID: {selectedTiketDetail.help_tiket_id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTiketDetail(null)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Tutup detail aduan"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-sm">
+              {/* Status & Asal Pelapor Banner */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-200/60">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500">Status Saat Ini:</span>
+                  {selectedTiketDetail.status === 'selesai' ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      Selesai Ditangani
+                    </span>
+                  ) : selectedTiketDetail.status === 'diproses' ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                      <Clock className="w-3.5 h-3.5 text-blue-600" />
+                      Sedang Diproses
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                      Terbuka (Menunggu Tindak Lanjut)
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-gray-500">Tipe Pelapor:</span>
+                  {selectedTiketDetail.pelapor?.tipe_pelapor === 'admin_komunitas' ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                      Admin Komunitas
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                      Peserta
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Identitas Pelapor Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-gray-100 bg-white">
+                <div>
+                  <p className="text-xs text-gray-400 font-medium">Nama Pelapor</p>
+                  <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    {selectedTiketDetail.pelapor?.nama_lengkap || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 font-medium">NIP</p>
+                  <p className="text-sm font-mono font-semibold text-gray-700 mt-0.5">
+                    {selectedTiketDetail.pelapor?.nip || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 font-medium">Unit Kerja / Instansi</p>
+                  <p className="text-sm font-semibold text-gray-700 mt-0.5">
+                    {selectedTiketDetail.pelapor?.unit_kerja || '-'}
+                  </p>
+                </div>
+                {selectedTiketDetail.pelapor?.tipe_pelapor === 'admin_komunitas' && (
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium">Komunitas</p>
+                    <p className="text-sm font-semibold text-purple-700 mt-0.5">
+                      {selectedTiketDetail.pelapor?.nama_komunitas || '-'}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-400 font-medium">Waktu Pengiriman</p>
+                  <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                    {selectedTiketDetail.dibuat_pada
+                      ? new Date(selectedTiketDetail.dibuat_pada).toLocaleString('id-ID', {
+                          dateStyle: 'long',
+                          timeStyle: 'short',
+                        }) + ' WITA'
+                      : '-'}
+                  </p>
+                </div>
+                {selectedTiketDetail.penangan && (
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium">Ditangani Oleh</p>
+                    <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                      {selectedTiketDetail.penangan.nama_lengkap} (NIP. {selectedTiketDetail.penangan.nip})
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Subjek & Isi Deskripsi */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Subjek Kendala
+                </label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200/70 text-sm font-bold text-gray-900">
+                  {selectedTiketDetail.subjek}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Deskripsi Lengkap Masalah
+                </label>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200/70 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                  {selectedTiketDetail.deskripsi}
+                </div>
+              </div>
+
+              {/* Quick Status Action Buttons */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-600 mb-2.5">
+                  Tindak Lanjut & Pembaruan Status:
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={updatingStatusId === selectedTiketDetail.help_tiket_id || selectedTiketDetail.status === 'terbuka'}
+                    onClick={() => handleUpdateStatusTiket(selectedTiketDetail.help_tiket_id, 'terbuka')}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Buka Kembali (Terbuka)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updatingStatusId === selectedTiketDetail.help_tiket_id || selectedTiketDetail.status === 'diproses'}
+                    onClick={() => handleUpdateStatusTiket(selectedTiketDetail.help_tiket_id, 'diproses')}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Tandai Sedang Diproses
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updatingStatusId === selectedTiketDetail.help_tiket_id || selectedTiketDetail.status === 'selesai'}
+                    onClick={() => handleUpdateStatusTiket(selectedTiketDetail.help_tiket_id, 'selesai')}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Tandai Selesai
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedTiketDetail(null)}
+                className="px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold transition-colors"
+              >
+                Tutup
               </button>
             </div>
           </div>

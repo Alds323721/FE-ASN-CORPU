@@ -78,9 +78,6 @@ const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, onLogou
         </div>
 
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <button onClick={() => onNavigate && onNavigate('help-center')} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-600 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
-            Bantuan Teknis
-          </button>
           <button 
             onClick={() => {
               if (typeof onLogout === 'function') {
