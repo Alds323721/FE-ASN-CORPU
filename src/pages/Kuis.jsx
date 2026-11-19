@@ -1,16 +1,25 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
-import { BookOpen, Star, Grid, Sparkles } from 'lucide-react';
 
 import KuisNavbar from './Kuis/KuisNavbar';
 import KuisHeader from './Kuis/KuisHeader';
 import TimerCard from './Kuis/TimerCard';
 import KuisFooter from './Kuis/KuisFooter';
 import MultipleChoiceSection from './Kuis/MultipleChoiceSection';
-import CrosswordSection from './Kuis/CrosswordSection';
-import DragDropSection from './Kuis/DragDropSection';
-import WeightedSection from './Kuis/WeightedSection';
+
+export const isQuizItemAnswered = (s, ans) => {
+  if (!s) return false;
+  if (s.tipe_soal === 'tts') {
+    const minLen = s.panjang_kata || 2;
+    return typeof ans === 'string' && ans.trim().length >= minLen && !ans.includes(' ');
+  }
+  if (s.tipe_soal === 'drag_drop') {
+    const required = s.jumlah_blank || 1;
+    return Array.isArray(ans) && ans.filter(Boolean).length === required;
+  }
+  return typeof ans === 'string' && ans.trim().length > 0;
+};
 
 export default function Kuis({ onNavigate, onBack }) {
   const courseId = localStorage.getItem('userCourseId');
@@ -54,13 +63,6 @@ export default function Kuis({ onNavigate, onBack }) {
   const [testData, setTestData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeSection, setActiveSection] = useState(() => {
-    try {
-      const saved = localStorage.getItem(sectionStorageKey);
-      if (saved) return saved;
-    } catch (e) { }
-    return 'pg';
-  });
 
   useEffect(() => {
     try {
@@ -80,12 +82,6 @@ export default function Kuis({ onNavigate, onBack }) {
     } catch (e) { }
   }, [currentQuestion, questionStorageKey]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(sectionStorageKey, activeSection);
-    } catch (e) { }
-  }, [activeSection, sectionStorageKey]);
-
   const hasFetchedKuisRef = useRef(false);
 
   useEffect(() => {
@@ -96,23 +92,7 @@ export default function Kuis({ onNavigate, onBack }) {
       try {
         const res = await api.get(`/user/courses/${courseId}/modul/${modulId}/kuis/${kuisId}`);
         if (res.data?.data) {
-          const data = res.data.data;
-          setTestData(data);
-          const hasPG = (data.soal || []).some(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop' && s.tipe_soal !== 'pilihan_berbobot'));
-          const hasWeighted = (data.soal || []).some(s => s.tipe_soal === 'pilihan_berbobot');
-          const hasTTS = (data.soal || []).some(s => s.tipe_soal === 'tts');
-          const hasDD = (data.soal || []).some(s => s.tipe_soal === 'drag_drop');
-          if (data.tipe_kuis === 'kuis_berbobot' || (hasWeighted && !hasPG)) {
-            setActiveSection('weighted');
-          } else if (hasPG) {
-            setActiveSection('pg');
-          } else if (hasWeighted) {
-            setActiveSection('weighted');
-          } else if (hasTTS) {
-            setActiveSection('tts');
-          } else if (hasDD) {
-            setActiveSection('drag_drop');
-          }
+          setTestData(res.data.data);
         }
       } catch (error) {
         await Swal.fire({
@@ -141,48 +121,45 @@ export default function Kuis({ onNavigate, onBack }) {
     }
   }, [courseId]);
 
-  // Pisahkan soal PG, TTS, Drag & Drop, dan Pilihan Berbobot
+  const allQuestions = useMemo(() => testData?.soal || [], [testData]);
+
+  // Klasifikasi soal berdasarkan tipe untuk ringkasan dan papan TTS
   const pgQuestions = useMemo(() => {
-    return (testData?.soal || []).filter(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop' && s.tipe_soal !== 'pilihan_berbobot'));
-  }, [testData]);
+    return allQuestions.filter(s => s.tipe_soal === 'pilihan_ganda' || (!s.tipe_soal && s.tipe_soal !== 'tts' && s.tipe_soal !== 'drag_drop' && s.tipe_soal !== 'pilihan_berbobot'));
+  }, [allQuestions]);
 
   const weightedQuestions = useMemo(() => {
-    return (testData?.soal || []).filter(s => s.tipe_soal === 'pilihan_berbobot');
-  }, [testData]);
+    return allQuestions.filter(s => s.tipe_soal === 'pilihan_berbobot');
+  }, [allQuestions]);
 
   const ttsQuestions = useMemo(() => {
-    return (testData?.soal || []).filter(s => s.tipe_soal === 'tts');
-  }, [testData]);
+    return allQuestions.filter(s => s.tipe_soal === 'tts');
+  }, [allQuestions]);
 
   const dragDropQuestions = useMemo(() => {
-    return (testData?.soal || []).filter(s => s.tipe_soal === 'drag_drop');
-  }, [testData]);
+    return allQuestions.filter(s => s.tipe_soal === 'drag_drop');
+  }, [allQuestions]);
 
-  const totalSoal = testData?.soal?.length || 0;
+  const totalSoal = allQuestions.length;
 
-  // Hitung jumlah butir yang sudah terjawab
-  const answeredCount = useMemo(() => {
-    let count = 0;
-    (testData?.soal || []).forEach(s => {
-      const ans = answers[s.soal_kuis_id];
-      if (s.tipe_soal === 'tts') {
-        const minLen = s.panjang_kata || 2;
-        if (typeof ans === 'string' && ans.trim().length >= minLen && !ans.includes(' ')) {
-          count++;
-        }
-      } else if (s.tipe_soal === 'drag_drop') {
-        const required = s.jumlah_blank || 1;
-        if (Array.isArray(ans) && ans.filter(Boolean).length === required) {
-          count++;
-        }
-      } else {
-        if (typeof ans === 'string' && ans.trim().length > 0) {
-          count++;
-        }
+  useEffect(() => {
+    if (totalSoal > 0 && currentQuestion > totalSoal) {
+      setCurrentQuestion(1);
+    }
+  }, [totalSoal, currentQuestion]);
+
+  // Hitung himpunan nomor urut soal yang sudah terjawab di seluruh tipe soal
+  const answeredQuestionsSet = useMemo(() => {
+    const set = new Set();
+    allQuestions.forEach((s, idx) => {
+      if (isQuizItemAnswered(s, answers[s.soal_kuis_id])) {
+        set.add(idx + 1);
       }
     });
-    return count;
-  }, [testData, answers]);
+    return set;
+  }, [allQuestions, answers]);
+
+  const answeredCount = answeredQuestionsSet.size;
 
   const handleFlag = () => {
     setFlaggedQuestions((prev) => {
@@ -201,7 +178,7 @@ export default function Kuis({ onNavigate, onBack }) {
   };
 
   const handleNext = () => {
-    if (currentQuestion < pgQuestions.length) {
+    if (currentQuestion < totalSoal) {
       setCurrentQuestion((prev) => prev + 1);
     }
   };
@@ -237,24 +214,9 @@ export default function Kuis({ onNavigate, onBack }) {
     const isPreTestQuiz = testData?.tipe_kuis === 'pre_test';
 
     if (isPreTestQuiz && unansweredCount > 0) {
-      const firstUnansPgIdx = pgQuestions.findIndex(s => !answers[s.soal_kuis_id]);
-      if (firstUnansPgIdx !== -1) {
-        setActiveSection('pg');
-        setCurrentQuestion(firstUnansPgIdx + 1);
-      } else if (weightedQuestions.some(s => !answers[s.soal_kuis_id])) {
-        setActiveSection('weighted');
-      } else if (ttsQuestions.some(s => {
-        const a = answers[s.soal_kuis_id];
-        const minLen = s.panjang_kata || 2;
-        return !(typeof a === 'string' && a.trim().length >= minLen && !a.includes(' '));
-      })) {
-        setActiveSection('tts');
-      } else if (dragDropQuestions.some(s => {
-        const a = answers[s.soal_kuis_id];
-        const required = s.jumlah_blank || 1;
-        return !(Array.isArray(a) && a.filter(Boolean).length === required);
-      })) {
-        setActiveSection('drag_drop');
+      const firstUnansIdx = allQuestions.findIndex(s => !isQuizItemAnswered(s, answers[s.soal_kuis_id]));
+      if (firstUnansIdx !== -1) {
+        setCurrentQuestion(firstUnansIdx + 1);
       }
 
       await Swal.fire({
@@ -268,18 +230,10 @@ export default function Kuis({ onNavigate, onBack }) {
     }
 
     if (!isTimeUp) {
-      const unansPG = pgQuestions.filter(s => !answers[s.soal_kuis_id]).length;
-      const unansWeighted = weightedQuestions.filter(s => !answers[s.soal_kuis_id]).length;
-      const unansTTS = ttsQuestions.filter(s => {
-        const a = answers[s.soal_kuis_id];
-        const minLen = s.panjang_kata || 2;
-        return !(typeof a === 'string' && a.trim().length >= minLen && !a.includes(' '));
-      }).length;
-      const unansDD = dragDropQuestions.filter(s => {
-        const a = answers[s.soal_kuis_id];
-        const required = s.jumlah_blank || 1;
-        return !(Array.isArray(a) && a.filter(Boolean).length === required);
-      }).length;
+      const unansPG = pgQuestions.filter(s => !isQuizItemAnswered(s, answers[s.soal_kuis_id])).length;
+      const unansWeighted = weightedQuestions.filter(s => !isQuizItemAnswered(s, answers[s.soal_kuis_id])).length;
+      const unansTTS = ttsQuestions.filter(s => !isQuizItemAnswered(s, answers[s.soal_kuis_id])).length;
+      const unansDD = dragDropQuestions.filter(s => !isQuizItemAnswered(s, answers[s.soal_kuis_id])).length;
 
       const breakdownDetails = [];
       if (unansPG > 0) breakdownDetails.push(`<li><b>${unansPG}</b> Soal Pilihan Ganda</li>`);
@@ -318,7 +272,7 @@ export default function Kuis({ onNavigate, onBack }) {
     try {
       setSubmitting(true);
 
-      const formattedAnswers = (testData?.soal || []).map(s => {
+      const formattedAnswers = allQuestions.map(s => {
         const val = answers[s.soal_kuis_id];
         if (s.tipe_soal === 'drag_drop') {
           return {
@@ -393,7 +347,7 @@ export default function Kuis({ onNavigate, onBack }) {
           html: `
             <div class="text-center space-y-4 pt-2">
               <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-700 mx-auto">
-                <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
               </div>
               <div>
                 <div class="text-4xl font-extrabold text-amber-600">
@@ -483,17 +437,11 @@ export default function Kuis({ onNavigate, onBack }) {
     return <div className="min-h-screen flex items-center justify-center text-[#1D315F] font-bold">Memuat Soal...</div>;
   }
 
-  if (!testData || testData.soal.length === 0) {
+  if (!testData || totalSoal === 0) {
     return <div className="min-h-screen flex items-center justify-center text-[#1D315F] font-bold">Tidak ada soal tersedia.</div>;
   }
 
-  const answeredQuestionsSet = new Set(
-    pgQuestions
-      .map((s, idx) => (answers[s.soal_kuis_id] ? idx + 1 : null))
-      .filter(Boolean)
-  );
-
-  const currentQuestionData = pgQuestions[currentQuestion - 1];
+  const currentQuestionData = allQuestions[currentQuestion - 1];
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
@@ -516,146 +464,27 @@ export default function Kuis({ onNavigate, onBack }) {
             />
           </div>
 
-          {/* Tab Selector jika Kuis memiliki lebih dari 1 jenis soal (Hybrid) */}
-          {[
-            pgQuestions.length > 0 ? 'pg' : null,
-            weightedQuestions.length > 0 ? 'weighted' : null,
-            ttsQuestions.length > 0 ? 'tts' : null,
-            dragDropQuestions.length > 0 ? 'drag_drop' : null
-          ].filter(Boolean).length > 1 && (
-            <div className="flex bg-white p-1.5 rounded-xl border border-gray-200 mb-6 shadow-xs max-w-3xl overflow-x-auto">
-              {pgQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('pg')}
-                  className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'pg'
-                      ? 'bg-[#006A63] text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Pilihan Ganda</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'pg' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {pgQuestions.filter(s => answers[s.soal_kuis_id]).length}/{pgQuestions.length}
-                  </span>
-                </button>
-              )}
-              {weightedQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('weighted')}
-                  className={`flex-1 min-w-[150px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'weighted'
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Star className="w-4 h-4 fill-amber-300" />
-                  <span>Pilihan Berbobot</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'weighted' ? 'bg-amber-800 text-amber-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {weightedQuestions.filter(s => answers[s.soal_kuis_id]).length}/{weightedQuestions.length}
-                  </span>
-                </button>
-              )}
-              {ttsQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('tts')}
-                  className={`flex-1 min-w-[130px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'tts'
-                      ? 'bg-[#006A63] text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Grid className="w-4 h-4" />
-                  <span>TTS</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'tts' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {ttsQuestions.filter(s => answers[s.soal_kuis_id] && answers[s.soal_kuis_id].trim().length === (s.panjang_kata || 0)).length}/{ttsQuestions.length}
-                  </span>
-                </button>
-              )}
-              {dragDropQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('drag_drop')}
-                  className={`flex-1 min-w-[150px] py-2.5 px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
-                    activeSection === 'drag_drop'
-                      ? 'bg-[#006A63] text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Drag & Drop</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeSection === 'drag_drop' ? 'bg-teal-800 text-teal-100' : 'bg-gray-100 text-gray-600'}`}>
-                    {dragDropQuestions.filter(s => Array.isArray(answers[s.soal_kuis_id]) && answers[s.soal_kuis_id].filter(Boolean).length === (s.jumlah_blank || 1)).length}/{dragDropQuestions.length}
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* TAMPILAN 1: PILIHAN GANDA */}
-          {activeSection === 'pg' && pgQuestions.length > 0 && (
-            <MultipleChoiceSection
-              pgQuestions={pgQuestions}
-              currentQuestion={currentQuestion}
-              currentQuestionData={currentQuestionData}
-              answers={answers}
-              handlePrevious={handlePrevious}
-              handleNext={handleNext}
-              handleFlag={handleFlag}
-              handleAnswer={handleAnswer}
-              handleQuestionSelect={handleQuestionSelect}
-              flaggedQuestions={flaggedQuestions}
-              answeredQuestionsSet={answeredQuestionsSet}
-              handleSubmit={handleSubmit}
-              submitting={submitting}
-              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
-              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
-            />
-          )}
-
-          {/* TAMPILAN 2: TEKA-TEKI SILANG (TTS) */}
-          {activeSection === 'tts' && ttsQuestions.length > 0 && (
-            <CrosswordSection
-              ttsQuestions={ttsQuestions}
-              parsedGridConfig={parsedGridConfig}
-              answers={answers}
-              handleAnswer={handleAnswer}
-              handleSubmit={handleSubmit}
-              submitting={submitting}
-              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
-              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
-            />
-          )}
-
-          {/* TAMPILAN 3: DRAG & DROP / DROPDOWN */}
-          {activeSection === 'drag_drop' && dragDropQuestions.length > 0 && (
-            <DragDropSection
-              dragDropQuestions={dragDropQuestions}
-              answers={answers}
-              handleAnswer={handleAnswer}
-              handleSubmit={handleSubmit}
-              submitting={submitting}
-              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
-              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
-            />
-          )}
-
-          {/* TAMPILAN 4: PILIHAN BERBOBOT */}
-          {activeSection === 'weighted' && weightedQuestions.length > 0 && (
-            <WeightedSection
-              weightedQuestions={weightedQuestions}
-              testData={testData}
-              answers={answers}
-              handleAnswer={handleAnswer}
-              handleSubmit={handleSubmit}
-              submitting={submitting}
-              isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
-              submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
-            />
-          )}
+          {/* Tampilan Kuis Terpadu dalam 1 Halaman & 1 Alur Navigasi */}
+          <MultipleChoiceSection
+            allQuestions={allQuestions}
+            pgQuestions={allQuestions}
+            ttsQuestions={ttsQuestions}
+            parsedGridConfig={parsedGridConfig}
+            currentQuestion={currentQuestion}
+            currentQuestionData={currentQuestionData}
+            answers={answers}
+            handlePrevious={handlePrevious}
+            handleNext={handleNext}
+            handleFlag={handleFlag}
+            handleAnswer={handleAnswer}
+            handleQuestionSelect={handleQuestionSelect}
+            flaggedQuestions={flaggedQuestions}
+            answeredQuestionsSet={answeredQuestionsSet}
+            handleSubmit={handleSubmit}
+            submitting={submitting}
+            isAllAnswered={totalSoal > 0 && answeredCount >= totalSoal}
+            submitLabel={testData?.tipe_kuis === 'pre_test' ? 'Submit Pre-Test' : 'Kumpulkan Jawaban'}
+          />
         </div>
       </main>
 

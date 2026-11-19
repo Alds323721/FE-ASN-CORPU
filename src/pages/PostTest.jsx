@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import logoImg from '../assets/logo-removebg-preview 1.png';
@@ -9,6 +9,8 @@ import LanguageDropdown from '../components/LanguageDropdown';
 import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
 import QuestionNavigation, { MobileQuestionBar } from './Kuis/QuestionNavigation';
+import CrosswordBoard from '../components/CrosswordBoard';
+import DragDropQuiz from '../components/DragDropQuiz';
 import {
   ChevronDown,
   Menu,
@@ -19,7 +21,10 @@ import {
   Phone,
   MapPin,
   Check,
-  Send
+  Send,
+  Grid,
+  ListChecks,
+  Scale
 } from 'lucide-react';
 
 /* ── Navbar ─────────────────────────────────────────── */
@@ -204,6 +209,19 @@ const TimerCard = ({ answeredCount, totalQuestions, durationMinutes, onTimeUp, s
   );
 };
 
+const isPostTestItemAnswered = (s, ans) => {
+  if (!s) return false;
+  if (s.tipe_soal === 'tts') {
+    const minLen = s.panjang_kata || 2;
+    return typeof ans === 'string' && ans.trim().length >= minLen && !ans.includes(' ');
+  }
+  if (s.tipe_soal === 'drag_drop') {
+    const required = s.jumlah_blank || 1;
+    return Array.isArray(ans) && ans.filter(Boolean).length === required;
+  }
+  return typeof ans === 'string' && ans.trim().length > 0;
+};
+
 const QuestionCard = ({
   questionNumber,
   questionData,
@@ -213,24 +231,53 @@ const QuestionCard = ({
   onAnswer,
   isDisabled,
   savedAnswer,
+  answers = {},
+  ttsQuestions = [],
+  parsedGridConfig = null,
   isAllAnswered = false,
   onSubmit = null,
   submitting = false
 }) => {
   if (!questionData) return null;
 
+  const tipeSoal = questionData.tipe_soal || 'pilihan_ganda';
+  const questionId = questionData.soal_post_test_id ?? questionData.soal_kuis_id;
+
   const handleSelectAnswer = (value) => {
     if (onAnswer) {
-      onAnswer(questionData.soal_post_test_id, value);
+      onAnswer(questionId, value);
     }
   };
 
-  const options = questionData.pilihan_jawaban ? Object.entries(questionData.pilihan_jawaban) : [];
+  const options =
+    questionData.pilihan_jawaban && !Array.isArray(questionData.pilihan_jawaban)
+      ? Object.entries(questionData.pilihan_jawaban)
+      : [];
 
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 md:p-8 shadow-xs min-w-0 max-w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl md:text-2xl font-semibold text-[#1D315F]">Pertanyaan {questionNumber}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#1D315F]">Pertanyaan {questionNumber}</h2>
+          {tipeSoal === 'pilihan_berbobot' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <Scale className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />
+              <span>Pilihan Berbobot</span>
+            </span>
+          )}
+          {tipeSoal === 'tts' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-[#006A63] border border-teal-200">
+              <Grid className="w-3.5 h-3.5 text-[#006A63]" aria-hidden="true" />
+              <span>Teka-Teki Silang (TTS)</span>
+            </span>
+          )}
+          {tipeSoal === 'drag_drop' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-[#006A63] border border-teal-200">
+              <ListChecks className="w-3.5 h-3.5 text-[#006A63]" aria-hidden="true" />
+              <span>Lengkapi Kalimat</span>
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={onFlag}
@@ -241,63 +288,106 @@ const QuestionCard = ({
         </button>
       </div>
 
-      <div className="mb-8 min-w-0 max-w-full">
-        <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold break-words [overflow-wrap:anywhere] [word-break:break-word]">
-          {questionData.teks_soal}
-        </p>
-      </div>
+      {tipeSoal === 'tts' ? (
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 text-xs sm:text-sm text-teal-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className="font-bold text-[#006A63]">
+                Petunjuk #{questionData.nomor_urut || questionNumber} ({questionData.arah === 'menurun' ? 'Menurun' : 'Mendatar'}):
+              </span>{' '}
+              <span className="font-semibold">{questionData.teks_soal}</span>
+            </div>
+            <span className="text-xs font-bold bg-white text-[#006A63] px-2.5 py-1 rounded-md border border-teal-200 shrink-0 self-start sm:self-center">
+              {questionData.panjang_kata || 0} Huruf
+            </span>
+          </div>
 
-      <div className="space-y-3 sm:space-y-4">
-        {options.map(([key, text]) => {
-          const isSelected = savedAnswer !== undefined && savedAnswer !== null && String(savedAnswer).trim().toLowerCase() === String(key).trim().toLowerCase();
-          return (
-            <div
-              key={key}
-              onClick={() => handleSelectAnswer(key)}
-              className={`flex items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group min-w-0 max-w-full ${
-                isSelected
-                  ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
-                  : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
-              }`}
-            >
-              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-                {/* Badge Huruf Opsi (A, B, C, D) */}
+          <CrosswordBoard
+            gridConfig={parsedGridConfig}
+            words={(ttsQuestions.length > 0 ? ttsQuestions : [questionData]).map(w => ({
+              ...w,
+              soal_kuis_id: w.soal_post_test_id ?? w.soal_kuis_id
+            }))}
+            answers={answers}
+            onAnswerChange={onAnswer}
+            focusedWordId={questionId}
+            isReadOnly={submitting}
+          />
+        </div>
+      ) : tipeSoal === 'drag_drop' ? (
+        <div className="space-y-4">
+          <DragDropQuiz
+            question={questionData}
+            value={Array.isArray(savedAnswer) ? savedAnswer : []}
+            onChange={(newAns) => handleSelectAnswer(newAns)}
+            isReadOnly={submitting}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="mb-8 min-w-0 max-w-full">
+            <p className="text-[#1D315F] text-base md:text-lg leading-relaxed font-semibold break-words [overflow-wrap:anywhere] [word-break:break-word]">
+              {questionData.teks_soal}
+            </p>
+          </div>
+
+          <div className="space-y-3 sm:space-y-4">
+            {options.map(([key, rawVal]) => {
+              const text = typeof rawVal === 'object' && rawVal !== null ? (rawVal.teks ?? '') : String(rawVal ?? '');
+              const isSelected =
+                savedAnswer !== undefined &&
+                savedAnswer !== null &&
+                String(savedAnswer).trim().toLowerCase() === String(key).trim().toLowerCase();
+              return (
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 ${
+                  key={key}
+                  onClick={() => handleSelectAnswer(key)}
+                  className={`flex items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 md:p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 select-none group min-w-0 max-w-full ${
                     isSelected
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
+                      ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-500/20'
+                      : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50/80'
                   }`}
                 >
-                  {key}
-                </div>
+                  <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                    {/* Badge Huruf Opsi (A, B, C, D) */}
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 transition-colors mt-0.5 ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-700 group-hover:bg-gray-200'
+                      }`}
+                    >
+                      {key}
+                    </div>
 
-                <div className="flex-1 min-w-0">
-                  <span
-                    className={`block font-semibold text-sm md:text-base leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] ${
-                      isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
-                    }`}
-                  >
-                    {text}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tanda Centang Hijau saat dipilih */}
-              <div className="shrink-0 self-start mt-0.5">
-                {isSelected ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
-                    <span className="hidden sm:inline">Terpilih</span>
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={`block font-semibold text-sm md:text-base leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] ${
+                          isSelected ? 'text-emerald-950 font-bold' : 'text-[#1D315F]'
+                        }`}
+                      >
+                        {text}
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="w-6 h-6 rounded-full border-2 border-gray-300 group-hover:border-emerald-300 transition-colors" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+
+                  {/* Tanda Centang Hijau saat dipilih */}
+                  <div className="shrink-0 self-start mt-0.5">
+                    {isSelected ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm animate-in zoom-in-95 duration-150">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />
+                        <span className="hidden sm:inline">Terpilih</span>
+                      </div>
+                    ) : (
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-300 group-hover:border-emerald-300 transition-colors" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
         <button
@@ -512,11 +602,37 @@ export default function PostTest({ onNavigate, onBack }) {
     }));
   };
 
+  const allQuestions = useMemo(() => testData?.soal || [], [testData]);
+  const ttsQuestions = useMemo(() => allQuestions.filter(s => s.tipe_soal === 'tts'), [allQuestions]);
+
+  const parsedGridConfig = useMemo(() => {
+    if (!testData?.grid_config) return null;
+    if (typeof testData.grid_config === 'string') {
+      try {
+        return JSON.parse(testData.grid_config);
+      } catch (e) {
+        return null;
+      }
+    }
+    return testData.grid_config;
+  }, [testData?.grid_config]);
+
+  const answeredQuestionsSet = useMemo(() => {
+    const set = new Set();
+    allQuestions.forEach((s, idx) => {
+      const qId = s.soal_post_test_id ?? s.soal_kuis_id;
+      if (isPostTestItemAnswered(s, answers[qId])) {
+        set.add(idx + 1);
+      }
+    });
+    return set;
+  }, [allQuestions, answers]);
+
   const handleSubmit = async (isTimeUp = false) => {
     if (!testData || submitting) return;
 
-    const totalSoal = testData.soal?.length || 0;
-    const answeredCount = Object.keys(answers).length;
+    const totalSoal = allQuestions.length;
+    const answeredCount = answeredQuestionsSet.size;
     const unansweredCount = totalSoal - answeredCount;
 
     if (!isTimeUp) {
@@ -550,10 +666,20 @@ export default function PostTest({ onNavigate, onBack }) {
     try {
       setSubmitting(true);
       
-      const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
-        soal_post_test_id: parseInt(id),
-        jawaban: val
-      }));
+      const formattedAnswers = allQuestions.map((s) => {
+        const qId = s.soal_post_test_id ?? s.soal_kuis_id;
+        const val = answers[qId];
+        if (s.tipe_soal === 'drag_drop') {
+          return {
+            soal_post_test_id: Number.isNaN(parseInt(qId, 10)) ? qId : parseInt(qId, 10),
+            jawaban: Array.isArray(val) ? val : []
+          };
+        }
+        return {
+          soal_post_test_id: Number.isNaN(parseInt(qId, 10)) ? qId : parseInt(qId, 10),
+          jawaban: typeof val === 'string' ? val.trim().toUpperCase() : (val || '')
+        };
+      });
 
       const res = await api.post(`/user/courses/${courseId}/post-test/submit`, {
         jawaban: formattedAnswers
@@ -626,18 +752,13 @@ export default function PostTest({ onNavigate, onBack }) {
     return <div className="min-h-screen flex items-center justify-center text-[#1D315F] font-bold">Memuat Soal...</div>;
   }
 
-  if (!testData || testData.soal.length === 0) {
+  if (!testData || allQuestions.length === 0) {
     return <div className="min-h-screen flex items-center justify-center text-[#1D315F] font-bold">Tidak ada soal tersedia.</div>;
   }
 
-  const answeredQuestionsSet = new Set(
-    testData.soal
-      .map((s, idx) => (answers[s.soal_post_test_id] ? idx + 1 : null))
-      .filter(Boolean)
-  );
-
-  const currentQuestionData = testData.soal[currentQuestion - 1];
-  const isAllAnswered = testData.soal.length > 0 && answeredQuestionsSet.size >= testData.soal.length;
+  const currentQuestionData = allQuestions[currentQuestion - 1];
+  const currentQId = currentQuestionData?.soal_post_test_id ?? currentQuestionData?.soal_kuis_id;
+  const isAllAnswered = allQuestions.length > 0 && answeredQuestionsSet.size >= allQuestions.length;
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
@@ -649,8 +770,8 @@ export default function PostTest({ onNavigate, onBack }) {
           {/* Timer Card - Top untuk semua tampilan */}
           <div className="mb-6">
             <TimerCard 
-              answeredCount={Object.keys(answers).length} 
-              totalQuestions={testData.soal.length} 
+              answeredCount={answeredQuestionsSet.size} 
+              totalQuestions={allQuestions.length} 
               durationMinutes={testData.durasi_menit}
               storageKey={timerStorageKey}
               testData={testData}
@@ -661,7 +782,7 @@ export default function PostTest({ onNavigate, onBack }) {
           {/* Mobile Sticky Quick Navigation Bar (< md) */}
           <MobileQuestionBar
             currentQuestion={currentQuestion}
-            totalQuestions={testData.soal.length}
+            totalQuestions={allQuestions.length}
             onNavigate={handleQuestionSelect}
             flaggedQuestions={flaggedQuestions}
             answeredQuestions={answeredQuestionsSet}
@@ -674,7 +795,10 @@ export default function PostTest({ onNavigate, onBack }) {
               <QuestionCard
                 questionNumber={currentQuestion}
                 questionData={currentQuestionData}
-                savedAnswer={answers[currentQuestionData?.soal_post_test_id]}
+                savedAnswer={answers[currentQId]}
+                answers={answers}
+                ttsQuestions={ttsQuestions}
+                parsedGridConfig={parsedGridConfig}
                 onPrevious={handlePrevious}
                 onNext={handleNext}
                 onFlag={handleFlag}
@@ -684,7 +808,7 @@ export default function PostTest({ onNavigate, onBack }) {
                 submitting={submitting}
                 isDisabled={{
                   previous: currentQuestion === 1,
-                  next: currentQuestion === testData.soal.length,
+                  next: currentQuestion === allQuestions.length,
                 }}
               />
             </div>
@@ -693,7 +817,7 @@ export default function PostTest({ onNavigate, onBack }) {
             <div className="md:col-span-4 md:sticky md:top-20 md:self-start space-y-6 z-20">
               <QuestionNavigation
                 currentQuestion={currentQuestion}
-                totalQuestions={testData.soal.length}
+                totalQuestions={allQuestions.length}
                 onNavigate={handleQuestionSelect}
                 flaggedQuestions={flaggedQuestions}
                 answeredQuestions={answeredQuestionsSet}

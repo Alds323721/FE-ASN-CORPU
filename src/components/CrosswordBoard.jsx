@@ -8,7 +8,8 @@ export default function CrosswordBoard({
   answers = {},
   onAnswerChange,
   isReadOnly = false,
-  showAnswers = false
+  showAnswers = false,
+  focusedWordId = null
 }) {
   const [selectedCell, setSelectedCell] = useState(null); // { r, c }
   const [direction, setDirection] = useState('mendatar'); // 'mendatar' | 'menurun'
@@ -30,6 +31,15 @@ export default function CrosswordBoard({
       bobot_nilai: w.bobot_nilai ?? 1
     }));
   }, [words, gridData]);
+
+  useEffect(() => {
+    if (focusedWordId === null || focusedWordId === undefined || isReadOnly) return;
+    const targetWord = normalizedWords.find(w => String(w.soal_kuis_id) === String(focusedWordId));
+    if (targetWord) {
+      setSelectedCell({ r: targetWord.baris_mulai || 0, c: targetWord.kolom_mulai || 0 });
+      setDirection(targetWord.arah || 'mendatar');
+    }
+  }, [focusedWordId, normalizedWords, isReadOnly]);
 
   // 1. Hitung dimensi grid
   const computedRows = useMemo(() => {
@@ -365,7 +375,7 @@ export default function CrosswordBoard({
 
         {/* Petunjuk Aksi Bawah Board */}
         <div className="flex flex-wrap items-center justify-between w-full mt-4 pt-3 border-t border-gray-100 text-[11px] text-gray-500 gap-2">
-          <span>💡 Klik kotak atau klik nomor petunjuk untuk mulai mengetik.</span>
+          <span>Klik kotak atau klik nomor petunjuk untuk mulai mengetik.</span>
           <span className="hidden sm:inline">Gunakan tombol <b>Backspace</b> untuk menghapus dan <b>Panah</b> untuk navigasi.</span>
         </div>
       </div>

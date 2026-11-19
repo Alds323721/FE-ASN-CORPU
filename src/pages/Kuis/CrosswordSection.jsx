@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Sparkles } from 'lucide-react';
+import { Grid, Check } from 'lucide-react';
 import CrosswordBoard from '../../components/CrosswordBoard';
 
 export default function CrosswordSection({
@@ -27,7 +27,7 @@ export default function CrosswordSection({
           </p>
         </div>
         <div className="text-xs bg-teal-50 text-[#006A63] font-bold px-3 py-1.5 rounded-lg border border-teal-200 self-start sm:self-auto flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-[#006A63]" />
+          <Check className="w-4 h-4 text-[#006A63]" />
           {completedWordsCount} dari {ttsQuestions.length} Kata Terisi Lengkap
         </div>
       </div>

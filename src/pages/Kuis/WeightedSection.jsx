@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Check } from 'lucide-react';
+import { Scale, Check } from 'lucide-react';
 
 export default function WeightedSection({
   weightedQuestions,
@@ -17,7 +17,7 @@ export default function WeightedSection({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-[#1D315F] flex items-center gap-2">
-              <Star className="w-6 h-6 text-amber-500 fill-amber-400" />
+              <Scale className="w-6 h-6 text-amber-600" />
               {testData?.tipe_kuis === 'kuis_berbobot' ? 'Kuis Nilai Berbobot (Asesmen Mandiri)' : 'Soal Pilihan Berbobot'}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -25,7 +25,7 @@ export default function WeightedSection({
             </p>
           </div>
           <div className="text-xs bg-amber-50 text-amber-900 font-bold px-3 py-1.5 rounded-lg border border-amber-200 self-start sm:self-auto flex items-center gap-1.5">
-            <Star className="w-4 h-4 text-amber-600 fill-amber-500" />
+            <Scale className="w-4 h-4 text-amber-600" />
             {answeredCount} dari {weightedQuestions.length} Soal Terjawab
           </div>
         </div>

@@ -301,5 +301,88 @@ describe('Sticky Question Navigation & Status Tests', () => {
       expect(optionTextEl.className).toContain('break-words');
       expect(optionTextEl.className).toContain('[overflow-wrap:anywhere]');
     });
+    it('renders mixed question types (PG, Pilihan Berbobot, TTS, Drag & Drop) in a single unified flow without separating into tabs/modals and allows submitting', () => {
+      const mixedQuestions = [
+        {
+          soal_kuis_id: 'q_pg',
+          tipe_soal: 'pilihan_ganda',
+          teks_soal: 'Pertanyaan pilihan ganda nomor 1?',
+          pilihan_jawaban: { A: 'Opsi A1', B: 'Opsi B1' },
+        },
+        {
+          soal_kuis_id: 'q_weighted',
+          tipe_soal: 'pilihan_berbobot',
+          teks_soal: 'Pertanyaan pilihan berbobot nomor 2?',
+          pilihan_jawaban: { A: 'Sangat Setuju', B: 'Setuju' },
+        },
+        {
+          soal_kuis_id: 'q_dd',
+          tipe_soal: 'drag_drop',
+          teks_soal: 'ASN wajib menjaga [integritas] dalam bekerja.',
+          pilihan_jawaban: ['integritas', 'egoisme'],
+          jumlah_blank: 1,
+        },
+      ];
+
+      const handleSubmit = vi.fn();
+      const handleQuestionSelect = vi.fn();
+
+      const { rerender } = render(
+        <MultipleChoiceSection
+          allQuestions={mixedQuestions}
+          pgQuestions={mixedQuestions}
+          currentQuestion={2}
+          currentQuestionData={mixedQuestions[1]}
+          answers={{ q_pg: 'A', q_weighted: 'A', q_dd: ['integritas'] }}
+          handlePrevious={vi.fn()}
+          handleNext={vi.fn()}
+          handleFlag={vi.fn()}
+          handleAnswer={vi.fn()}
+          handleQuestionSelect={handleQuestionSelect}
+          flaggedQuestions={[]}
+          answeredQuestionsSet={new Set([1, 2, 3])}
+          handleSubmit={handleSubmit}
+          submitting={false}
+          isAllAnswered={true}
+        />
+      );
+
+      // Verify question navigation renders all 3 mixed questions in one unified navigator
+      expect(screen.getAllByRole('button', { name: /Nomor Soal 1\b/ }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: /Nomor Soal 2\b/ }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: /Nomor Soal 3\b/ }).length).toBeGreaterThan(0);
+
+      // Verify Weighted Question badge & options render on question 2
+      expect(screen.getByText('Pilihan Berbobot')).toBeDefined();
+      expect(screen.getByText('Sangat Setuju')).toBeDefined();
+
+      // Switch to Question 3 (Drag & Drop) in the same page flow
+      rerender(
+        <MultipleChoiceSection
+          allQuestions={mixedQuestions}
+          pgQuestions={mixedQuestions}
+          currentQuestion={3}
+          currentQuestionData={mixedQuestions[2]}
+          answers={{ q_pg: 'A', q_weighted: 'A', q_dd: ['integritas'] }}
+          handlePrevious={vi.fn()}
+          handleNext={vi.fn()}
+          handleFlag={vi.fn()}
+          handleAnswer={vi.fn()}
+          handleQuestionSelect={handleQuestionSelect}
+          flaggedQuestions={[]}
+          answeredQuestionsSet={new Set([1, 2, 3])}
+          handleSubmit={handleSubmit}
+          submitting={false}
+          isAllAnswered={true}
+        />
+      );
+
+      expect(screen.getByText('Lengkapi Kalimat')).toBeDefined();
+
+      // Verify "Kumpulkan Jawaban" submit button works across mixed questions
+      const submitBtn = screen.getByRole('button', { name: /Kumpulkan Jawaban/ });
+      fireEvent.click(submitBtn);
+      expect(handleSubmit).toHaveBeenCalledWith(false);
+    });
   });
 });

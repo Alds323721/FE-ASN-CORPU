@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GripVertical, X, Check, RotateCcw, ChevronDown, Sparkles } from 'lucide-react';
+import { GripVertical, X, Check, RotateCcw, ChevronDown, ListChecks } from 'lucide-react';
 
 export default function DragDropQuiz({
   question,
@@ -176,7 +176,7 @@ export default function DragDropQuiz({
       <div className="p-4 sm:p-6 bg-gradient-to-br from-teal-50/40 via-white to-gray-50/50 rounded-2xl border border-teal-100/80 shadow-xs">
         <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-teal-100/60">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#0F766E] animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-[#0F766E]"></span>
             <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
               Lengkapi Kalimat di Bawah Ini
             </span>
@@ -248,7 +248,7 @@ export default function DragDropQuiz({
                       isDragOver
                         ? 'bg-amber-100 border-amber-500 text-amber-900 scale-105 shadow-md'
                         : selectedWord
-                        ? 'bg-teal-50 border-teal-400 text-teal-700 animate-pulse'
+                        ? 'bg-teal-50 border-teal-500 text-teal-800 ring-2 ring-teal-300'
                         : 'bg-white border-gray-300 text-gray-400 hover:border-[#0F766E] hover:text-[#0F766E] hover:bg-teal-50/50'
                     }`}
                   >
@@ -297,14 +297,14 @@ export default function DragDropQuiz({
         <div className="p-4 sm:p-5 bg-white rounded-2xl border border-gray-200 shadow-xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#0F766E]" />
+              <ListChecks className="w-3.5 h-3.5 text-[#0F766E]" />
               <span>Bank Kata Pilihan</span>
               <span className="text-[11px] text-gray-400 font-normal">
                 (Tarik kata atau klik kata lalu klik titik kosong)
               </span>
             </h4>
             {selectedWord && (
-              <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-semibold animate-pulse">
+              <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-semibold">
                 Klik salah satu titik kosong untuk meletakkan <b>"{selectedWord}"</b>
               </span>
             )}
@@ -344,7 +344,6 @@ export default function DragDropQuiz({
 
       {/* Petunjuk Interaksi Ramah Pengguna */}
       <div className="flex items-center gap-2 text-[11px] text-gray-500 px-1">
-        <span>💡</span>
         <span>
           <b>Tips:</b> Di layar laptop/komputer Anda dapat <b>menyeret (drag)</b> kata ke titik kosong. Di layar HP/ponsel Anda cukup <b>mengklik titik kosong</b> untuk memilih kata yang cocok.
         </span>
