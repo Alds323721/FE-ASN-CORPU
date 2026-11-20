@@ -197,7 +197,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
   // Form states
   const [formData, setFormData] = useState({
     nip: '', nama_lengkap: '', email: '', roles: ['peserta'],
-    jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: ''
+    jabatan: '', rumpun_jabatan: '', unit_kerja: '', komunitas_id: ''
   });
 
   // Debounce search agar tidak membebani server saat mengetik
@@ -325,7 +325,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
 
       await api.post('/admin-bkpsdm/pengguna', payload);
       setShowAddModal(false);
-      setFormData({ nip: '', nama_lengkap: '', email: '', roles: ['peserta'], jabatan: '', rumpun_jabatan: 'JP', unit_kerja: '', komunitas_id: '' });
+      setFormData({ nip: '', nama_lengkap: '', email: '', roles: ['peserta'], jabatan: '', rumpun_jabatan: '', unit_kerja: '', komunitas_id: '' });
       fetchUsers();
       Toast.fire({
         icon: 'success',
@@ -362,7 +362,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
         status: selectedUser.status,
         email: selectedUser.email ? selectedUser.email.trim() : null,
         jabatan: selectedUser.jabatan ? selectedUser.jabatan.trim() : null,
-        rumpun_jabatan: selectedUser.rumpun_jabatan || 'JP',
+        rumpun_jabatan: selectedUser.rumpun_jabatan || null,
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
       
@@ -751,7 +751,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                                   roles: userRoles, 
                                   email: user.email || '', 
                                   jabatan: user.jabatan || '',
-                                  rumpun_jabatan: user.rumpun_jabatan || 'JP' 
+                                  rumpun_jabatan: user.rumpun_jabatan || '' 
                                 });
                                 setShowEditModal(true);
                               }}
@@ -964,10 +964,11 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
                     <select value={formData.rumpun_jabatan} onChange={e => setFormData({ ...formData, rumpun_jabatan: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                      <option value="JPT">JPT</option>
-                      <option value="JA">JA</option>
-                      <option value="JF">JF</option>
-                      <option value="JP">JP (Pelaksana)</option>
+                      <option value="">-- Pilih Rumpun Jabatan --</option>
+                      <option value="JPT">JPT (Jabatan Pimpinan Tinggi)</option>
+                      <option value="JA">JA (Jabatan Administrasi)</option>
+                      <option value="JF">JF (Jabatan Fungsional)</option>
+                      <option value="JP">JP (Jabatan Pelaksana)</option>
                     </select>
                   </div>
                   <div>
@@ -1095,10 +1096,11 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Rumpun Jabatan</label>
                     <select
-                      value={selectedUser.rumpun_jabatan || 'JP'}
+                      value={selectedUser.rumpun_jabatan || ''}
                       onChange={e => setSelectedUser({ ...selectedUser, rumpun_jabatan: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     >
+                      <option value="">-- Pilih Rumpun Jabatan --</option>
                       <option value="JPT">JPT (Jabatan Pimpinan Tinggi)</option>
                       <option value="JA">JA (Jabatan Administrasi)</option>
                       <option value="JF">JF (Jabatan Fungsional)</option>

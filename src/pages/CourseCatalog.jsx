@@ -488,16 +488,19 @@ const CatalogContent = ({ onNavigate }) => {
       fetchKatalog(); // refresh to update isEnrolled status
     } catch (error) {
       if (error.response?.status === 403) {
+        const errorMsg = error.response?.data?.message || '';
+        const isNeedCommunity = errorMsg.toLowerCase().includes('bergabung dengan') || errorMsg.toLowerCase().includes('perlu bergabung');
+
         Swal.fire({
           icon: 'warning',
-          title: 'Perlu Bergabung Komunitas',
-          text: error.response?.data?.message || 'Anda harus bergabung ke komunitas penyelenggara terlebih dahulu sebelum mendaftar pelatihan ini.',
-          showCancelButton: true,
-          confirmButtonText: 'Buka Menu Komunitas',
+          title: isNeedCommunity ? 'Perlu Bergabung Komunitas' : 'Akses Pendaftaran Dibatasi',
+          text: errorMsg || 'Anda tidak memiliki akses untuk mendaftar pelatihan ini.',
+          showCancelButton: isNeedCommunity,
+          confirmButtonText: isNeedCommunity ? 'Buka Menu Komunitas' : 'Mengerti',
           cancelButtonText: 'Tutup',
           confirmButtonColor: '#006A63'
         }).then((result) => {
-          if (result.isConfirmed) {
+          if (result.isConfirmed && isNeedCommunity) {
             onNavigate('community');
           }
         });
@@ -562,16 +565,19 @@ const CatalogContent = ({ onNavigate }) => {
       fetchKatalog();
     } catch (error) {
       if (error.response?.status === 403) {
+        const errorMsg = error.response?.data?.message || '';
+        const isNeedCommunity = errorMsg.toLowerCase().includes('bergabung dengan') || errorMsg.toLowerCase().includes('perlu bergabung');
+
         Swal.fire({
           icon: 'warning',
-          title: 'Perlu Bergabung Komunitas',
-          text: error.response?.data?.message || 'Anda harus bergabung ke komunitas penyelenggara terlebih dahulu sebelum meminta akses pelatihan ini.',
-          showCancelButton: true,
-          confirmButtonText: 'Buka Menu Komunitas',
+          title: isNeedCommunity ? 'Perlu Bergabung Komunitas' : 'Akses Pendaftaran Dibatasi',
+          text: errorMsg || 'Anda tidak memiliki akses untuk meminta akses pelatihan ini.',
+          showCancelButton: isNeedCommunity,
+          confirmButtonText: isNeedCommunity ? 'Buka Menu Komunitas' : 'Mengerti',
           cancelButtonText: 'Tutup',
           confirmButtonColor: '#006A63'
         }).then((result) => {
-          if (result.isConfirmed) {
+          if (result.isConfirmed && isNeedCommunity) {
             onNavigate('community');
           }
         });
