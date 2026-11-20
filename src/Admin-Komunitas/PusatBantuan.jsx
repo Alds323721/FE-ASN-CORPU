@@ -20,31 +20,29 @@ const PusatBantuan = ({ onNavigate, onLogout }) => {
   const [openFaqId, setOpenFaqId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingFaq, setLoadingFaq] = useState(true);
+  const [faqError, setFaqError] = useState('');
 
   // Form keluhan
   const [subjek, setSubjek] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchFaqs = async () => {
+    try {
+      setLoadingFaq(true);
+      setFaqError('');
+      const res = await api.get('/admin-komunitas/faq');
+      setFaqs(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (e) {
+      console.error('Error fetching FAQ:', e);
+      setFaqError('Gagal memuat daftar FAQ dari server.');
+      setFaqs([]);
+    } finally {
+      setLoadingFaq(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchFaqs = async () => {
-      try {
-        setLoadingFaq(true);
-        const res = await api.get('/admin-komunitas/faq');
-        setFaqs(res.data?.data || []);
-      } catch (e) {
-        console.error('Error fetching FAQ:', e);
-        // Fallback default
-        setFaqs([
-          { faq_id: 1, pertanyaan: 'Bagaimana cara mengajukan draf kursus untuk approval?', jawaban: 'Lengkapi minimal 1 modul beserta materi dan kuis evaluasi. Kemudian klik tombol "Ajukan Approval Publikasi" pada halaman Detail Kursus.' },
-          { faq_id: 2, pertanyaan: 'Berapa format dan ukuran maksimal file materi PDF?', jawaban: 'Format yang didukung adalah PDF dengan ukuran maksimal hingga 10MB per berkas materi.' },
-          { faq_id: 3, pertanyaan: 'Apakah Surat Pernyataan Keabsahan bersifat wajib?', jawaban: 'Surat Pernyataan bersifat Opsional namun sangat dianjurkan untuk kelengkapan administrasi OPD sebelum materi dipublikasikan ke katalog umum.' },
-          { faq_id: 4, pertanyaan: 'Bagaimana cara mengekspor data laporan progres peserta?', jawaban: 'Masuk ke menu Laporan Progress, lalu klik tombol "Export Laporan (CSV)" pada sudut kanan atas.' }
-        ]);
-      } finally {
-        setLoadingFaq(false);
-      }
-    };
     fetchFaqs();
   }, []);
 
@@ -72,10 +70,15 @@ const PusatBantuan = ({ onNavigate, onLogout }) => {
     }
   };
 
-  const filteredFaqs = faqs.filter(f => 
-    f.pertanyaan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.jawaban?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFaqs = faqs.filter(f => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      f.pertanyaan?.toLowerCase().includes(q) ||
+      f.jawaban?.toLowerCase().includes(q) ||
+      f.kategori?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -176,22 +179,45 @@ const PusatBantuan = ({ onNavigate, onLogout }) => {
                   <div className="space-y-3">
                     {loadingFaq ? (
                       <p className="text-xs text-gray-400 py-3">Memuat daftar FAQ...</p>
+                    ) : faqError ? (
+                      <div role="alert" className="p-4 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center justify-between gap-3">
+                        <span>{faqError}</span>
+                        <button
+                          type="button"
+                          onClick={fetchFaqs}
+                          className="px-3 py-1.5 bg-red-600 text-white rounded-md font-semibold hover:bg-red-700 transition-colors cursor-pointer"
+                        >
+                          Coba Lagi
+                        </button>
+                      </div>
                     ) : filteredFaqs.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-3">Tidak ada FAQ yang cocok dengan kata kunci pencarian.</p>
+                      <p className="text-xs text-gray-400 py-3">
+                        {searchQuery.trim()
+                          ? 'Tidak ada FAQ yang cocok dengan kata kunci pencarian.'
+                          : 'Belum ada FAQ yang tersedia saat ini.'}
+                      </p>
                     ) : (
                       filteredFaqs.map((item, idx) => {
                         const isOpen = openFaqId === (item.faq_id || idx);
                         return (
                           <div key={item.faq_id || idx} className="border border-gray-200 rounded-lg overflow-hidden">
                             <button 
+                              type="button"
                               onClick={() => setOpenFaqId(isOpen ? null : (item.faq_id || idx))}
-                              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors font-semibold text-xs sm:text-sm text-gray-900"
+                              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors font-semibold text-xs sm:text-sm text-gray-900 cursor-pointer"
                             >
-                              <span>{item.pertanyaan}</span>
+                              <div className="pr-3">
+                                {item.kategori && (
+                                  <span className="inline-block mb-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                    {item.kategori}
+                                  </span>
+                                )}
+                                <span className="block">{item.pertanyaan}</span>
+                              </div>
                               <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180 text-teal-600' : ''}`} />
                             </button>
                             {isOpen && (
-                              <div className="p-4 pt-1 bg-gray-50/50 text-xs text-gray-600 leading-relaxed border-t border-gray-100">
+                              <div className="p-4 pt-2 bg-gray-50/50 text-xs text-gray-600 leading-relaxed border-t border-gray-100 whitespace-pre-line">
                                 {item.jawaban}
                               </div>
                             )}

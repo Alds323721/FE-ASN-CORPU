@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import api from '../api/axios';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
@@ -72,7 +72,7 @@ const HelpCenterNavbar = ({ onNavigate }) => {
   );
 };
 
-const HeroSection = () => {
+const HeroSection = ({ searchQuery, onSearchChange }) => {
   const { t } = useLanguage();
   return (
     <div className="relative bg-[#1D315F] py-16 md:py-20 px-6 overflow-hidden" style={{ backgroundImage: `url(${hiasanImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -85,11 +85,13 @@ const HeroSection = () => {
         </p>
         
         <div className="max-w-2xl mx-auto relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" aria-hidden="true" />
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
             placeholder={t('helpCenter.searchPlaceholder')}
-            className="w-full py-3 md:py-4 pl-12 pr-4 rounded-lg border-none focus:ring-2 focus:ring-[#3FCDC1] outline-none text-sm md:text-base font-semibold bg-[#FFFFFF] text-[#6B7280] placeholder-[#6B7280]"
+            className="w-full py-3 md:py-4 pl-12 pr-4 rounded-lg border-none focus:ring-2 focus:ring-[#3FCDC1] outline-none text-sm md:text-base font-semibold bg-[#FFFFFF] text-[#1D315F] placeholder-[#6B7280]"
           />
         </div>
       </div>
@@ -107,17 +109,27 @@ const CategoryCard = ({ icon: Icon, title, description }) => (
   </div>
 );
 
-const FAQItem = ({ question, answer }) => {
+const FAQItem = ({ question, answer, category }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="bg-white border border-[#BBC9C7] rounded-lg overflow-hidden">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+        aria-expanded={isOpen}
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors cursor-pointer"
       >
-        <span className="font-semibold text-[#1D315F] text-sm md:text-base pr-4">{question}</span>
+        <div className="pr-4">
+          {category && (
+            <span className="inline-block mb-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#3FCDC1]/15 text-[#006A63]">
+              {category}
+            </span>
+          )}
+          <span className="block font-semibold text-[#1D315F] text-sm md:text-base">{question}</span>
+        </div>
         <ChevronDown
+          aria-hidden="true"
           className={`w-5 h-5 text-[#006A63] flex-shrink-0 transition-transform ${
             isOpen ? 'rotate-180' : ''
           }`}
@@ -125,7 +137,7 @@ const FAQItem = ({ question, answer }) => {
       </button>
       {isOpen && (
         <div className="px-6 pb-4 pt-2 border-t border-gray-100">
-          <p className="text-sm text-gray-600 font-semibold leading-relaxed">{answer}</p>
+          <p className="text-sm text-gray-600 font-semibold leading-relaxed whitespace-pre-line">{answer}</p>
         </div>
       )}
     </div>
@@ -349,6 +361,32 @@ const ContactForm = () => {
 
 export default function HelpCenter({ onNavigate }) {
   const { t } = useLanguage();
+  const [faqs, setFaqs] = useState([]);
+  const [loadingFaq, setLoadingFaq] = useState(true);
+  const [faqError, setFaqError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchFaqs = async () => {
+    if (typeof api.get !== 'function') {
+      setLoadingFaq(false);
+      return;
+    }
+    try {
+      setLoadingFaq(true);
+      setFaqError('');
+      const res = await api.get('/user/bantuan/faq');
+      setFaqs(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (error) {
+      console.error('Failed to fetch FAQs:', error);
+      setFaqError('Gagal memuat daftar FAQ dari server.');
+    } finally {
+      setLoadingFaq(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFaqs();
+  }, []);
 
   const categories = [
     {
@@ -373,25 +411,20 @@ export default function HelpCenter({ onNavigate }) {
     }
   ];
 
-  const faqs = [
-    {
-      question: t('helpCenter.faq1Q'),
-      answer: t('helpCenter.faq1A')
-    },
-    {
-      question: t('helpCenter.faq2Q'),
-      answer: t('helpCenter.faq2A')
-    },
-    {
-      question: t('helpCenter.faq3Q'),
-      answer: t('helpCenter.faq3A')
-    }
-  ];
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredFaqs = faqs.filter((item) => {
+    if (!normalizedQuery) return true;
+    return (
+      (item.pertanyaan && item.pertanyaan.toLowerCase().includes(normalizedQuery)) ||
+      (item.jawaban && item.jawaban.toLowerCase().includes(normalizedQuery)) ||
+      (item.kategori && item.kategori.toLowerCase().includes(normalizedQuery))
+    );
+  });
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F9FBFC]">
       <HelpCenterNavbar onNavigate={onNavigate} />
-      <HeroSection />
+      <HeroSection searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       
       <main className="flex-grow py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
@@ -414,9 +447,37 @@ export default function HelpCenter({ onNavigate }) {
                 {t('helpCenter.faqTitle')}
               </h2>
               <div className="space-y-4">
-                {faqs.map((faq, idx) => (
-                  <FAQItem key={idx} {...faq} />
-                ))}
+                {loadingFaq ? (
+                  <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 text-sm text-gray-500">
+                    Memuat daftar FAQ...
+                  </div>
+                ) : faqError ? (
+                  <div role="alert" className="bg-white border border-red-200 rounded-lg p-6 text-center space-y-2">
+                    <p className="text-sm font-semibold text-red-700">{faqError}</p>
+                    <button
+                      type="button"
+                      onClick={fetchFaqs}
+                      className="px-4 py-2 bg-[#006A63] text-white text-xs font-semibold rounded-md hover:bg-[#00534D] transition-colors cursor-pointer"
+                    >
+                      Coba Lagi
+                    </button>
+                  </div>
+                ) : filteredFaqs.length === 0 ? (
+                  <div className="bg-white border border-[#BBC9C7] rounded-lg p-6 text-sm text-gray-600">
+                    {normalizedQuery
+                      ? 'Tidak ada FAQ yang cocok dengan kata kunci pencarian Anda.'
+                      : 'Belum ada FAQ yang tersedia saat ini.'}
+                  </div>
+                ) : (
+                  filteredFaqs.map((faq) => (
+                    <FAQItem
+                      key={faq.faq_id}
+                      question={faq.pertanyaan}
+                      answer={faq.jawaban}
+                      category={faq.kategori}
+                    />
+                  ))
+                )}
               </div>
             </div>
             

@@ -23,6 +23,7 @@ import CourseValidation from './Admin-BKPSDM/CourseValidation'
 import CourseReview from './Admin-BKPSDM/CourseReview'
 import MonitoringReports from './Admin-BKPSDM/MonitoringReports'
 import CategoryManagement from './Admin-BKPSDM/CategoryManagement'
+import FaqManagement from './Admin-BKPSDM/FaqManagement'
 import AdminKomunitasDashboard from './Admin-Komunitas/AdminKomunitasDashboard'
 import AdminKomunitasSkeleton from './Admin-Komunitas/AdminKomunitasSkeleton'
 import PelatihanSaya from './Admin-Komunitas/PelatihanSaya'
@@ -48,6 +49,7 @@ const routePaths = {
   'course-validation': '/admin/course-validation',
   'course-review': '/admin/course-validation/review',
   'monitoring-reports': '/admin/monitoring-reports',
+  'faq-management': '/admin/faq-management',
   'admin-komunitas': '/admin-komunitas',
   'pelatihan-saya': '/admin-komunitas/pelatihan-saya',
   'laporan-progress': '/admin-komunitas/laporan-progress',
@@ -178,6 +180,7 @@ function App() {
       if (path === '/admin/course-validation/review') return 'course-review';
       if (path === '/admin/course-validation') return 'course-validation';
       if (path === '/admin/monitoring-reports') return 'monitoring-reports';
+      if (path === '/admin/faq-management') return 'faq-management';
       return 'admin';
     }
 
@@ -201,7 +204,7 @@ function App() {
     // Rute yang tersimpan di localStorage
     const adminSystemRoutes = ['admin-system', 'root-log-aktivitas', 'root-backup-db', 'root-e-file'];
     const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
-    const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
+    const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports', 'faq-management'];
 
     const savedRoute = localStorage.getItem('current_route');
 
@@ -224,7 +227,7 @@ function App() {
 
   const adminSystemRoutes = ['admin-system', 'root-log-aktivitas', 'root-backup-db', 'root-e-file'];
   const adminKomunitasRoutes = ['admin-komunitas', 'pelatihan-saya', 'laporan-progress', 'katalog-kursus', 'detail-kursus', 'bank-soal', 'pusat-bantuan'];
-  const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports'];
+  const adminBkpsdmRoutes = ['admin', 'user-management', 'community-management', 'category-management', 'course-validation', 'course-review', 'monitoring-reports', 'faq-management'];
 
   useEffect(() => {
     // Tampilkan notifikasi jika tab baru dibuka setelah batas sesi kedaluwarsa
@@ -603,6 +606,10 @@ function App() {
 
     if (currentRoute === 'monitoring-reports') {
       return <MonitoringReports onNavigate={handleNavigate} onLogout={handleLogout} />
+    }
+
+    if (currentRoute === 'faq-management') {
+      return <FaqManagement onNavigate={handleNavigate} onLogout={handleLogout} />
     }
 
     if (currentRoute === 'dashboard') {

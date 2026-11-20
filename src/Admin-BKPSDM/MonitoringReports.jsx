@@ -11,7 +11,7 @@ import {
   Calendar, ChevronLeft, Layers, Star, MessageSquare, ThumbsUp, BookOpen, Filter,
   QrCode, ExternalLink, Smartphone, Laptop, Tablet, FileArchive, Check,
   Upload, AlertCircle, FileCheck, RefreshCw, FileText, Send, UserCheck, UserX,
-  Eye, EyeOff, Headphones, Clock
+  Eye, EyeOff, Headphones, Clock, HelpCircle
 } from 'lucide-react';
 
 const EXPORT_KPK_BATCH_SIZE = 20;
@@ -131,6 +131,7 @@ const AdminSidebar = ({ activeMenu = 'monitoring-reports', onNavigate, onLogout,
     { id: 'category-management', label: 'Kategori Kursus', icon: Layers },
     { id: 'course-validation', label: 'Validasi Kursus', icon: ShieldCheck },
     { id: 'monitoring-reports', label: 'Monitoring & Laporan', icon: BarChart3 },
+    { id: 'faq-management', label: 'Kelola FAQ', icon: HelpCircle },
   ];
 
   return (
@@ -288,6 +289,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   });
   const [selectedRatingFilter, setSelectedRatingFilter] = useState('');
   const [loadingUlasan, setLoadingUlasan] = useState(false);
+  const [exportingUlasan, setExportingUlasan] = useState(false);
   const [ulasanError, setUlasanError] = useState('');
   const [ulasanPagination, setUlasanPagination] = useState({
     current_page: 1,
@@ -673,6 +675,50 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     } catch (e) {
       console.error(e);
       alert('Gagal mengekspor laporan');
+    }
+  };
+
+  const handleExportUlasan = async () => {
+    if (exportingUlasan) return;
+    try {
+      setExportingUlasan(true);
+      const params = {};
+      if (selectedKomunitas) params.komunitas_id = selectedKomunitas;
+      if (selectedRatingFilter) params.skor_rating = selectedRatingFilter;
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
+
+      const response = await api.get('/admin-bkpsdm/laporan/ulasan/export', {
+        params,
+        responseType: 'blob'
+      });
+
+      let filename = `laporan_ulasan_${new Date().toISOString().slice(0, 10)}.csv`;
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('Failed to export ulasan:', e);
+      Swal.fire({
+        title: 'Gagal Mengekspor Ulasan',
+        text: 'Terjadi kesalahan saat mengekspor data ulasan ke CSV.',
+        icon: 'error',
+        confirmButtonColor: '#0F766E'
+      });
+    } finally {
+      setExportingUlasan(false);
     }
   };
 
@@ -1658,6 +1704,21 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   >
                     <RefreshCw className="w-4 h-4" />
                     <span>Reset Filter</span>
+                  </button>
+                </div>
+              )}
+
+              {activeTabReport === 'ulasan' && (
+                <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleExportUlasan}
+                    disabled={exportingUlasan || loadingUlasan}
+                    className="bg-white border-2 border-teal-600 text-teal-700 hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 justify-center w-full sm:w-auto cursor-pointer"
+                    title="Ekspor data ulasan peserta sesuai filter aktif ke berkas CSV"
+                  >
+                    <Download className="w-4 h-4" aria-hidden="true" />
+                    <span>{exportingUlasan ? 'Mengekspor...' : 'Ekspor CSV'}</span>
                   </button>
                 </div>
               )}

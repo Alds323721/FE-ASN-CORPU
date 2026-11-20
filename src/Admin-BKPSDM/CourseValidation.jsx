@@ -6,7 +6,7 @@ import { logout } from '../utils/auth';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, CheckCircle, ClipboardList, 
-  ChevronLeft, FileWarning, Clock, Layers
+  ChevronLeft, FileWarning, Clock, Layers, HelpCircle
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -17,6 +17,7 @@ const AdminSidebar = ({ activeMenu = 'course-validation', onNavigate, onLogout, 
     { id: 'category-management', label: 'Kategori Kursus', icon: Layers },
     { id: 'course-validation', label: 'Validasi Kursus', icon: ShieldCheck },
     { id: 'monitoring-reports', label: 'Monitoring & Laporan', icon: BarChart3 },
+    { id: 'faq-management', label: 'Kelola FAQ', icon: HelpCircle },
   ];
 
   return (

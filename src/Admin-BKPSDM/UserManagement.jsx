@@ -51,6 +51,7 @@ const AdminSidebar = ({ activeMenu = 'user-management', onNavigate, onLogout, is
     { id: 'category-management', label: 'Kategori Kursus', icon: Layers },
     { id: 'course-validation', label: 'Validasi Kursus', icon: ShieldCheck },
     { id: 'monitoring-reports', label: 'Monitoring & Laporan', icon: BarChart3 },
+    { id: 'faq-management', label: 'Kelola FAQ', icon: HelpCircle },
   ];
 
   return (

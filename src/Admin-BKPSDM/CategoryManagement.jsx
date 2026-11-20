@@ -7,7 +7,7 @@ import { logout } from '../utils/auth';
 import { 
   Users, LayoutDashboard, ShieldCheck, BarChart3, LogOut, Bell, Settings,
   Search, ChevronRight, Menu, X, Plus, Layers, Edit, Trash2, 
-  BookOpen, FolderCheck, AlertCircle, RefreshCw
+  BookOpen, FolderCheck, AlertCircle, RefreshCw, HelpCircle
 } from 'lucide-react';
 
 const Toast = Swal.mixin({
@@ -30,6 +30,7 @@ const AdminSidebar = ({ activeMenu = 'category-management', onNavigate, onLogout
     { id: 'category-management', label: 'Kategori Kursus', icon: Layers },
     { id: 'course-validation', label: 'Validasi Kursus', icon: ShieldCheck },
     { id: 'monitoring-reports', label: 'Monitoring & Laporan', icon: BarChart3 },
+    { id: 'faq-management', label: 'Kelola FAQ', icon: HelpCircle },
   ];
 
   return (

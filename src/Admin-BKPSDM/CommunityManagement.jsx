@@ -22,7 +22,7 @@ import {
   Search, Menu, X, Plus, CheckCircle, ClipboardList, 
   Edit, Trash2, Upload, Image as ImageIcon, Layers,
   Check, Clock, Eye, AlertCircle, Award, UserCheck, CheckCircle2, AlertTriangle,
-  FileText, FileSpreadsheet, ChevronLeft, ChevronRight
+  FileText, FileSpreadsheet, ChevronLeft, ChevronRight, HelpCircle
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, onLogout, isOpen, setIsOpen }) => {
@@ -33,6 +33,7 @@ const AdminSidebar = ({ activeMenu = 'community-management', onNavigate, onLogou
     { id: 'category-management', label: 'Kategori Kursus', icon: Layers },
     { id: 'course-validation', label: 'Validasi Kursus', icon: ShieldCheck },
     { id: 'monitoring-reports', label: 'Monitoring & Laporan', icon: BarChart3 },
+    { id: 'faq-management', label: 'Kelola FAQ', icon: HelpCircle },
   ];
 
   return (
