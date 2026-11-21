@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import logoImg from '../assets/logo-removebg-preview 1.png';
 import asnCorpuLogo from '../assets/ASN-CORPU.png';
+import logoLanRi from '../assets/logo-lan-ri.webp';
 import { useLanguage } from '../context/LanguageContext';
 
 export const FacebookIcon = ({ className = 'w-4 h-4' }) => (
@@ -40,8 +41,9 @@ export default function Footer({ onNavigate, onFooterLinkClick, className = '' }
         {/* Kolom 1: Profil & Brand */}
         <div className="md:col-span-5 pr-4 md:pr-8">
           <div className="flex items-center gap-2.5 sm:gap-3 mb-6">
-            <img src={logoImg} alt="Logo BKPSDM" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
-            <img src={asnCorpuLogo} alt="Logo ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
+            <img src={logoLanRi} alt="Logo LAN RI" className="w-7 sm:w-8 h-7 sm:h-8 object-contain shrink-0" />
+            <img src={logoImg} alt="Logo Pemkab Buleleng" className="w-8 sm:w-9 h-8 sm:h-9 object-contain shrink-0" />
+            <img src={asnCorpuLogo} alt="Logo Buleleng ASN Corpu" className="w-8 sm:w-9 h-8 sm:h-9 object-contain shrink-0" />
             <span className="font-semibold text-xl text-[#1D315F]">Buleleng ASN Corpu</span>
           </div>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-6 font-medium">

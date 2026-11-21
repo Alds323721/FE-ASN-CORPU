@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import './index.css'
-import PortalPage from './pages/PortalPage'
 import LandingPage from './pages/LandingPage'
 import UserDashboard from './pages/UserDashboard'
 import CourseCatalog from './pages/CourseCatalog'
@@ -88,22 +87,19 @@ function App() {
     if (checkNewTabTimeout()) {
       clearAuth();
       sessionStorage.setItem('session_timeout_alert', 'true');
-      window.history.replaceState({ route: 'portal' }, '', '/');
-      return 'portal';
+      window.history.replaceState({ route: 'lms' }, '', '/');
+      return 'lms';
     }
 
-    // Root portal '/'
-    if (path === '/' || path === '') {
-      return 'portal';
+    // Root '/' atau '/LMS' sebagai Landing Page utama
+    if (path === '/' || path === '' || path.toLowerCase() === '/lms' || path.toLowerCase() === '/lms/') {
+      return 'lms';
     }
 
-    // Jika belum login dan mengakses rute selain portal atau /LMS, arahkan ke portal
+    // Jika belum login dan mengakses rute selain / atau /LMS, arahkan ke Landing Page
     if (!isAuthenticated()) {
-      if (path.toLowerCase() === '/lms' || path.toLowerCase() === '/lms/') {
-        return 'lms';
-      }
-      window.history.replaceState({ route: 'portal' }, '', '/');
-      return 'portal';
+      window.history.replaceState({ route: 'lms' }, '', '/');
+      return 'lms';
     }
 
     const activeRole = getActiveRole();
@@ -477,30 +473,15 @@ function App() {
       return <PublicCertificateVerification initialCode={initialCode} onNavigate={handleNavigate} />;
     }
 
-    // Rute Portal Utama (Agregator Sistem BKPSDM)
-    if (currentRoute === 'portal') {
-      return (
-        <PortalPage
-          onNavigateLMS={() => {
-            if (isAuthenticated()) {
-              const activeRole = getActiveRole();
-              const userRoles = getUserRoles();
-              let target = 'dashboard';
-              if (activeRole === 'root' && userRoles.includes('root')) target = 'admin-system';
-              else if (activeRole === 'admin_bkpsdm' && userRoles.includes('admin_bkpsdm')) target = 'admin';
-              else if (activeRole === 'admin_komunitas' && userRoles.includes('admin_komunitas')) target = 'admin-komunitas';
-              handleNavigate(target);
-            } else {
-              handleNavigate('lms');
-            }
-          }}
-          onNavigate={handleNavigate}
-        />
-      );
+    // Rute Landing Page Utama (/ atau /LMS)
+    if (currentRoute === 'portal' || currentRoute === 'lms' || currentRoute === 'landing') {
+      if (!isAuthenticated()) {
+        return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
+      }
     }
 
-    // Jika tidak terautentikasi dan mencoba render selain portal atau lms, arahkan ke LandingPage LMS
-    if (!isAuthenticated() && currentRoute !== 'lms' && currentRoute !== 'landing') {
+    // Jika tidak terautentikasi dan mencoba render rute lain, arahkan ke LandingPage
+    if (!isAuthenticated()) {
       return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
     }
 
@@ -652,16 +633,7 @@ function App() {
       return <HelpCenter onNavigate={handleNavigate} />
     }
 
-    if (currentRoute === 'lms' || currentRoute === 'landing') {
-      return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
-    }
-
-    return (
-      <PortalPage
-        onNavigateLMS={() => handleNavigate(isAuthenticated() ? 'dashboard' : 'lms')}
-        onNavigate={handleNavigate}
-      />
-    );
+    return <LandingPage onLogin={handleLoginSuccess} onNavigate={handleNavigate} />;
   };
 
   return (
