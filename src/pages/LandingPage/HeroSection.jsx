@@ -73,15 +73,15 @@ export default function HeroSection({ onAuthClick }) {
       <div className="absolute top-1/4 right-[30%] w-[500px] h-[500px] bg-cyan-300/20 rounded-full blur-3xl pointer-events-none z-0 animate-glow-bloom [animation-delay:200ms]" />
       <div className="absolute top-1/2 right-10 w-[420px] h-[420px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none z-0 animate-glow-bloom [animation-delay:350ms]" />
 
-      {/* MOBILE-ONLY TOP-RIGHT BLUE ARCH & SLOGAN (Persis Gambar Referensi) */}
+      {/* MOBILE-ONLY TOP-RIGHT BLUE ARCH & SLOGAN (Persis Gambar Referensi - Diperbesar Sedikit & Proporsional) */}
       <div className="lg:hidden absolute top-0 right-0 z-10 pointer-events-none overflow-hidden select-none">
-        <div className="relative w-40 xs:w-48 sm:w-60 h-34 xs:h-42 sm:h-52 bg-gradient-to-bl from-[#052C65] via-[#032451] to-[#021A3D] rounded-bl-[110px] xs:rounded-bl-[140px] sm:rounded-bl-[170px] border-b-[6px] xs:border-b-8 sm:border-b-10 border-l-[6px] xs:border-l-8 sm:border-l-10 border-[#F1B904] shadow-xl flex items-center justify-center p-3 xs:p-4 pt-2 pr-2">
+        <div className="relative w-40 xs:w-48 sm:w-60 h-30 xs:h-38 sm:h-48 bg-gradient-to-bl from-[#052C65] via-[#032451] to-[#021A3D] rounded-bl-[95px] xs:rounded-bl-[130px] sm:rounded-bl-[165px] border-b-[5px] xs:border-b-[6.5px] sm:border-b-8 border-l-[5px] xs:border-l-[6.5px] sm:border-l-8 border-[#F1B904] shadow-xl flex items-center justify-center p-2.5 xs:p-3 sm:p-4 pt-1.5 pr-1.5">
           {/* Subtle inner radial glow */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-36 h-36 bg-blue-400/20 rounded-full blur-2xl pointer-events-none" />
           <img
             src={sloganWhiteImg}
             alt="ASN Kompeten Buleleng Paten"
-            className="w-26 xs:w-32 sm:w-42 h-auto object-contain drop-shadow-md -rotate-3 translate-x-1 -translate-y-1"
+            className="w-28 xs:w-35 sm:w-44 h-auto object-contain drop-shadow-md -rotate-3 translate-x-1 -translate-y-0.5"
           />
         </div>
       </div>
@@ -92,26 +92,25 @@ export default function HeroSection({ onAuthClick }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center min-h-0 lg:min-h-[640px] xl:min-h-[700px] pt-2 sm:pt-4 lg:pt-3 pb-4 lg:pb-8">
 
           {/* Kolom Kiri: Teks Sambutan, Judul Besar, dan 2 Tombol Bulat Beranimasi */}
-          <div className="lg:col-span-6 space-y-4 sm:space-y-6 text-left z-20 pt-2 sm:pt-4 lg:pt-0 pr-0 lg:pr-6 xl:pr-8">
+          <div className="lg:col-span-6 space-y-3.5 sm:space-y-6 text-left z-20 pt-1 sm:pt-4 lg:pt-0 pr-2 sm:pr-4 lg:pr-6 xl:pr-8">
 
             {/* Teks "Selamat Datang di" asli dengan font Courgette (Sejajar dengan Judul di Bawahnya) */}
             <div key={`welcome-${heroReentryKey}`} className="block animate-entrance-slide-right [animation-delay:100ms] text-left">
-              <span className="font-courgette text-[#1D315F] text-xl xs:text-2xl sm:text-3xl md:text-4xl lg:text-[2.35rem] xl:text-[2.85rem] 2xl:text-[3.1rem] leading-tight select-none drop-shadow-xs block font-normal tracking-normal -mb-1 sm:-mb-2">
+              <span className="font-courgette text-[#1D315F] text-[1.35rem] xs:text-[1.65rem] sm:text-3xl md:text-4xl lg:text-[2.35rem] xl:text-[2.85rem] 2xl:text-[3.1rem] leading-tight select-none drop-shadow-xs block font-normal tracking-normal -mb-1 sm:-mb-2">
                 Selamat Datang di
               </span>
             </div>
 
-            {/* Judul Besar: BULELENG ASN CORPU (Mobile) / CORPORATE UNIVERSITY (Desktop) */}
-            <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-[2.85rem] xl:text-[3.65rem] 2xl:text-6xl font-black tracking-tight leading-[1.1] sm:leading-[1.08] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[220px] xs:max-w-[280px] sm:max-w-none">
+            {/* Judul Besar: BULELENG ASN CORPORATE UNIVERSITY (Mobile & Desktop) */}
+            <h1 className="text-[1.4rem] xs:text-[1.75rem] sm:text-4xl md:text-5xl lg:text-[2.85rem] xl:text-[3.65rem] 2xl:text-6xl font-black tracking-tight leading-[1.14] sm:leading-[1.08] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[290px] xs:max-w-[350px] sm:max-w-none">
               <span className="text-[#D97706]">BULELENG</span>{' '}
               <span>ASN</span>
               <br />
-              <span className="lg:hidden text-[#1D315F]">CORPU</span>
-              <span className="hidden lg:inline text-[#1D315F]">CORPORATE UNIVERSITY</span>
+              <span className="text-[#1D315F]">CORPORATE UNIVERSITY</span>
             </h1>
 
-            {/* Sub-judul Sesuai Gambar Banner */}
-            <p className="text-gray-600 text-xs sm:text-base md:text-lg lg:text-lg leading-relaxed max-w-xl lg:max-w-lg xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
+            {/* Sub-judul Sesuai Gambar Banner - Responsif & Berjarak Aman dari List Kuning Arch Pojok Kanan Atas */}
+            <p className="text-gray-600 text-[13px] xs:text-[14.5px] sm:text-base md:text-lg lg:text-lg leading-relaxed max-w-[290px] xs:max-w-[360px] sm:max-w-lg lg:max-w-lg xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
               Sistem Pembelajaran Pengembangan Kompetensi secara Terintegrasi bagi Aparatur Sipil Negara di Lingkungan Pemerintah Kabupaten Buleleng
             </p>
 

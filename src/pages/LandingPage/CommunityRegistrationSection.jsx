@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Users, UserCheck, Award, Briefcase, Upload, Image as ImageIcon,
   CheckCircle2, AlertCircle, X, Loader2, HelpCircle, ChevronDown,
-  Search, Check, RefreshCw
+  Search, Check, RefreshCw, Sparkles, Building2, ShieldCheck
 } from 'lucide-react';
 import api from '../../api/axios';
 import Swal from 'sweetalert2';
+import hiasanBalinese from '../../assets/Hiasan.png';
 
 // Daftar cadangan nama master JF (sesuai database master JF BKPSDM) jika backend dalam mode luring
 const FALLBACK_MASTER_NAMES = [
@@ -585,87 +586,98 @@ export default function CommunityRegistrationSection() {
   );
 
   return (
-    <section id="form-register-komunitas" className="py-14 md:py-20 bg-gradient-to-b from-[#EFF5F3] to-[#E6F0ED] relative overflow-hidden">
-      {/* Decorative Blur Circles */}
-      <div className="absolute top-10 left-10 w-72 h-72 bg-teal-200/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none" />
+    <section id="form-register-komunitas" className="py-16 sm:py-24 bg-gradient-to-b from-[#EFF5F8] via-[#F4F9FB] to-white relative overflow-hidden select-none">
+      {/* Authentic Balinese Decorative Watermark Accent */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl opacity-[0.045] pointer-events-none select-none">
+        <img src={hiasanBalinese} alt="" className="w-full h-auto object-contain" />
+      </div>
+
+      {/* Modern Digital Dot Grid Texture */}
+      <div className="absolute inset-0 bg-[radial-gradient(#1D315F_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.035] pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)] z-0" />
+
+      {/* Atmospheric Soft Aurora Ambient Glows */}
+      <div className="absolute -top-10 left-1/4 w-96 h-96 bg-teal-300/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 -right-10 w-96 h-96 bg-blue-400/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 left-10 w-96 h-96 bg-amber-300/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
 
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1D315F] leading-tight mb-3">
-            Formulir Pendaftaran Komunitas
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1D315F] tracking-tight leading-tight mb-3">
+            Formulir Pendaftaran <span className="text-[#006A63]">Komunitas Belajar</span>
           </h2>
-          <p className="text-gray-600 text-xs sm:text-sm md:text-base leading-relaxed">
-            Daftarkan komunitas belajar instansi atau rumpun jabatan Anda. Setiap permohonan akan diverifikasi oleh
-            <span className="font-semibold text-[#1D315F]"> Admin BKPSDM</span> sebelum aktif di portal peserta.
+          <p className="text-gray-600 text-xs sm:text-sm md:text-[15px] leading-relaxed font-medium">
+            Daftarkan komunitas belajar instansi atau rumpun jabatan Anda untuk mewadahi inovasi dan pengembangan kompetensi. Setiap permohonan akan diverifikasi oleh
+            <span className="font-bold text-[#1D315F]"> Tim Admin BKPSDM</span> sebelum aktif di portal peserta.
           </p>
         </div>
 
         {/* Main Card Form */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-[#006A63] via-[#3FCDC1] to-[#1D315F]" />
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-xl shadow-slate-900/5 border border-slate-200/80 overflow-hidden transition-all">
+          <div className="h-2.5 bg-gradient-to-r from-[#006A63] via-[#0284C7] to-[#1D315F]" />
 
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 md:p-10 space-y-8">
+          <form onSubmit={handleSubmit} className="p-6 sm:p-8 md:p-10 space-y-9">
 
             {/* Bagian 1: Identitas Komunitas */}
             <div>
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-[#006A63]" />
-                  <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">1. Informasi Dasar Komunitas</h3>
+              <div className="flex items-center justify-between pb-3.5 mb-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1D315F] to-[#2563EB] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    1
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">Informasi Dasar Komunitas</h3>
+                    <p className="text-xs text-gray-500 font-normal">Identitas, master jabatan fungsional, dan kapasitas anggota</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={fetchAvailableNames}
-                  className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1 font-semibold transition-colors cursor-pointer"
-                  title="Muat ulang daftar nama tersedia"
+                  className="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white hover:bg-amber-300 text-[#1D315F] hover:text-[#1D315F] border border-slate-200 hover:border-amber-300 font-bold text-xs shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer active:scale-95"
+                  title="Muat ulang daftar nama tersedia dari server"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoadingNames ? 'animate-spin' : ''}`} />
-                  <span>Refresh Nama</span>
+                  <span className="hidden sm:inline">Refresh Nama</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
                 {/* Nama Komunitas (Searchable Dropdown dari Excel JF) */}
                 <div className="md:col-span-2 relative" ref={dropdownRef}>
-                  <label className="block text-xs sm:text-sm font-bold text-[#1D315F] mb-1.5 flex justify-between items-center">
-                    <span>Nama Komunitas (Master Jabatan Fungsional) <span className="text-red-500">*</span></span>
-                    <span className="text-[11px] font-normal text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-                      Tersedia: {availableNames.length} Komunitas
-                    </span>
+                  <label className="block text-xs sm:text-sm font-bold text-[#1D315F] mb-1.5">
+                    Nama Komunitas (Master Jabatan Fungsional) <span className="text-rose-500">*</span>
                   </label>
 
                   {/* Trigger Box Dropdown */}
                   <div
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className={`w-full px-4 py-2.5 rounded-lg border text-sm flex items-center justify-between cursor-pointer transition-colors bg-gray-50/50 hover:bg-white ${errors.nama_komunitas
-                        ? 'border-red-400 bg-red-50/40'
+                    className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between cursor-pointer transition-all bg-slate-50/70 hover:bg-white ${errors.nama_komunitas
+                        ? 'border-rose-400 bg-rose-50/40 ring-1 ring-rose-200'
                         : isDropdownOpen
-                          ? 'border-[#006A63] ring-1 ring-[#006A63] bg-white'
-                          : 'border-gray-200'
+                          ? 'border-[#006A63] ring-2 ring-[#006A63]/20 bg-white shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300'
                       }`}
                   >
                     <span className={formData.nama_komunitas ? 'font-bold text-[#1D315F]' : 'text-gray-400'}>
                       {formData.nama_komunitas || (isLoadingNames ? 'Memuat daftar komunitas...' : '-- Pilih Nama Komunitas JF --')}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#006A63]' : ''}`} />
                   </div>
 
                   {errors.nama_komunitas && (
-                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-rose-500 mt-1.5 flex items-center gap-1 font-medium">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.nama_komunitas}
                     </p>
                   )}
 
                   {/* Dropdown Menu Popup with Search */}
                   {isDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fadeIn">
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150">
 
                       {/* Search box inside dropdown */}
-                      <div className="p-3 border-b border-gray-100 bg-gray-50">
+                      <div className="p-3 border-b border-slate-100 bg-slate-50/80">
                         <div className="relative">
                           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                           <input
@@ -673,14 +685,14 @@ export default function CommunityRegistrationSection() {
                             value={nameFilterSearch}
                             onChange={(e) => setNameFilterSearch(e.target.value)}
                             placeholder="Ketik untuk mencari nama komunitas..."
-                            className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm bg-white rounded-lg border border-gray-300 focus:outline-none focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63]"
+                            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white rounded-lg border border-slate-200 focus:outline-none focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20 transition-all"
                             autoFocus
                           />
                         </div>
                       </div>
 
                       {/* Options List */}
-                      <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
+                      <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
                         {filteredNames.length > 0 ? (
                           filteredNames.map((item) => {
                             const isSelected = formData.nama_komunitas === item.nama_komunitas;
@@ -694,7 +706,7 @@ export default function CommunityRegistrationSection() {
                                   }`}
                               >
                                 <span>{item.nama_komunitas}</span>
-                                {isSelected && <Check className="w-4 h-4 text-[#006A63] shrink-0" />}
+                                {isSelected && <Check className="w-4 h-4 text-[#006A63] shrink-0 stroke-[2.5]" />}
                               </div>
                             );
                           })
@@ -705,7 +717,7 @@ export default function CommunityRegistrationSection() {
                         )}
                       </div>
 
-                      <div className="p-2.5 bg-gray-50 border-t border-gray-100 text-[11px] text-gray-500 text-center">
+                      <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-[11px] text-gray-500 text-center">
                         Nama yang sedang menunggu verifikasi atau sudah aktif disembunyikan otomatis.
                       </div>
                     </div>
@@ -715,13 +727,13 @@ export default function CommunityRegistrationSection() {
                 {/* Rumpun Jabatan (Terkunci ke JF saat nama dipilih) */}
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-[#1D315F] mb-1.5">
-                    Rumpun Jabatan Komunitas <span className="text-red-500">*</span>
+                    Rumpun Jabatan Komunitas <span className="text-rose-500">*</span>
                   </label>
                   <select
                     name="rumpun_jabatan"
                     value={formData.rumpun_jabatan}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-gray-50/50 text-sm text-gray-800 focus:outline-none focus:bg-white focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63] transition-colors cursor-pointer"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-gray-800 focus:outline-none focus:bg-white focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20 transition-all cursor-pointer"
                   >
                     <option value="JF">JF (Jabatan Fungsional)</option>
                     <option value="JP">JP (Jabatan Pelaksana)</option>
@@ -735,7 +747,7 @@ export default function CommunityRegistrationSection() {
                 {/* Jumlah Anggota Awal */}
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-[#1D315F] mb-1.5">
-                    Jumlah Anggota Saat Ini <span className="text-red-500">*</span>
+                    Jumlah Anggota Saat Ini <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -744,13 +756,13 @@ export default function CommunityRegistrationSection() {
                     value={formData.jumlah_anggota}
                     onChange={handleInputChange}
                     placeholder="Contoh: 25"
-                    className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 focus:outline-none transition-colors ${errors.jumlah_anggota
-                        ? 'border-red-400 bg-red-50/40 focus:ring-1 focus:ring-red-400'
-                        : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63]'
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-gray-800 focus:outline-none transition-all ${errors.jumlah_anggota
+                        ? 'border-rose-400 bg-rose-50/40 ring-1 ring-rose-200'
+                        : 'border-slate-200 bg-slate-50/70 focus:bg-white focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20'
                       }`}
                   />
                   {errors.jumlah_anggota ? (
-                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-rose-500 mt-1.5 flex items-center gap-1 font-medium">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.jumlah_anggota}
                     </p>
                   ) : (
@@ -769,7 +781,7 @@ export default function CommunityRegistrationSection() {
                     value={formData.deskripsi}
                     onChange={handleInputChange}
                     placeholder="Jelaskan fokus pembelajaran, tujuan, dan ruang lingkup kegiatan komunitas ini..."
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-gray-50/50 text-sm text-gray-800 focus:outline-none focus:bg-white focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63] transition-colors resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-sm text-gray-800 focus:outline-none focus:bg-white focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20 transition-all resize-none"
                   />
                 </div>
               </div>
@@ -777,78 +789,73 @@ export default function CommunityRegistrationSection() {
 
             {/* Bagian 2: Pengurus (Ketua & Admin Komunitas dengan Auto-Fill Dua Arah) */}
             <div>
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-[#006A63]" />
-                  <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">2. Pengurus Komunitas</h3>
+              <div className="flex items-center gap-3 pb-3.5 mb-6 border-b border-slate-100">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#006A63] to-[#0D9488] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  2
                 </div>
-                <button
-                  type="button"
-                  onClick={handleQuickAutoFill}
-                  className="text-[11px] text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1 rounded-full font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
-                  title="Klik untuk auto-fill contoh NIP & Nama Pegawai aktif yang terverifikasi"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-teal-700" />
-                  <span>Auto-fill NIP & Nama Pegawai aktif</span>
-                </button>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">Pengurus Komunitas (Verifikasi Pegawai)</h3>
+                  <p className="text-xs text-gray-500 font-normal">Ketua dan Admin wajib merupakan pegawai resmi ASN Pemkab Buleleng</p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
                 {/* Ketua Komunitas Box */}
-                <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-200/80 space-y-4 relative" ref={ketuaRef}>
+                <div className="p-5 bg-gradient-to-br from-slate-50/90 via-white to-blue-50/30 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4 relative" ref={ketuaRef}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-[#006A63]">
-                      <Award className="w-4 h-4" />
+                    <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-[#1D315F] bg-blue-50 border border-blue-200/70 px-2.5 py-1 rounded-lg">
+                      <Award className="w-3.5 h-3.5 text-blue-600" />
                       <span>Ketua Komunitas</span>
                     </div>
                     {ketuaVerified ? (
-                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
-                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi di DB
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-emerald-200 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Terverifikasi di DB
                       </span>
                     ) : formData.nip_ketua.length === 18 && !isLookingUpKetua ? (
-                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-200">
-                        <AlertCircle className="w-3 h-3 text-red-600" /> Tidak Ditemukan di DB
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-rose-200">
+                        <AlertCircle className="w-3 h-3 text-rose-600" /> Tidak Ditemukan di DB
                       </span>
                     ) : null}
                   </div>
 
                   {/* NIP Ketua */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>NIP Ketua (18 Digit) <span className="text-red-500">*</span></span>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                      <span>NIP Ketua (18 Digit) <span className="text-rose-500">*</span></span>
                       {isLookingUpKetua && (
-                        <span className="text-[10px] text-teal-700 flex items-center gap-1">
+                        <span className="text-[10px] text-teal-700 font-normal flex items-center gap-1">
                           <Loader2 className="w-3 h-3 animate-spin" /> Mencari data...
                         </span>
                       )}
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="nip_ketua"
-                        maxLength="18"
-                        value={formData.nip_ketua}
-                        onChange={(e) => handleNipKetuaChange(e.target.value)}
-                        placeholder="198001012005011001"
-                        className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${errors.nip_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
-                          }`}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      name="nip_ketua"
+                      maxLength="18"
+                      value={formData.nip_ketua}
+                      onChange={(e) => handleNipKetuaChange(e.target.value)}
+                      placeholder="198001012005011001"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-white focus:outline-none transition-all font-mono ${errors.nip_ketua
+                          ? 'border-rose-400 ring-1 ring-rose-200'
+                          : 'border-slate-200 focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20'
+                        }`}
+                    />
                     <div className="flex justify-between items-center mt-1 text-[11px]">
                       {errors.nip_ketua ? (
-                        <span className="text-red-500">{errors.nip_ketua}</span>
+                        <span className="text-rose-500 font-medium">{errors.nip_ketua}</span>
                       ) : (
-                        <span className="text-gray-400">Masukkan 18 digit untuk auto-fill nama</span>
+                        <span className="text-gray-400">Masukkan 18 digit untuk auto-fill</span>
                       )}
-                      <span className="text-gray-400">{formData.nip_ketua.length}/18</span>
+                      <span className="text-gray-400 font-mono">{formData.nip_ketua.length}/18</span>
                     </div>
                   </div>
 
                   {/* Nama Ketua dengan Search Suggestions */}
                   <div className="relative">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Nama Lengkap & Gelar <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                      Nama Lengkap & Gelar <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -856,21 +863,23 @@ export default function CommunityRegistrationSection() {
                       value={formData.nama_ketua}
                       onChange={handleInputChange}
                       placeholder="Ketik nama untuk mencari..."
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${errors.nama_ketua ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-white focus:outline-none transition-all ${errors.nama_ketua
+                          ? 'border-rose-400 ring-1 ring-rose-200'
+                          : 'border-slate-200 focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20'
                         }`}
                     />
                     {errors.nama_ketua && (
-                      <p className="text-[11px] text-red-500 mt-1">{errors.nama_ketua}</p>
+                      <p className="text-[11px] text-rose-500 mt-1 font-medium">{errors.nama_ketua}</p>
                     )}
 
                     {/* Autocomplete Suggestion Dropdown */}
                     {showKetuaSuggestions && ketuaSuggestions.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-48 overflow-y-auto divide-y divide-gray-100">
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-48 overflow-y-auto divide-y divide-slate-100 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150">
                         {ketuaSuggestions.map((item, idx) => (
                           <div
                             key={idx}
                             onClick={() => selectKetuaSuggestion(item)}
-                            className="p-2.5 text-xs hover:bg-teal-50 cursor-pointer transition-colors"
+                            className="p-2.5 text-xs hover:bg-teal-50/70 cursor-pointer transition-colors"
                           >
                             <p className="font-bold text-gray-800">{item.nama_lengkap}</p>
                             <p className="text-[11px] text-gray-500 font-mono">NIP: {item.nip} {item.jabatan ? `• ${item.jabatan}` : ''}</p>
@@ -880,37 +889,42 @@ export default function CommunityRegistrationSection() {
                     )}
 
                     {ketuaVerified && (
-                      <p className="text-[11px] text-teal-700 mt-1 line-clamp-1">
-                        {ketuaVerified.jabatan ? `${ketuaVerified.jabatan} - ` : ''}{ketuaVerified.unit_kerja || ''}
-                      </p>
+                      <div className="mt-2 p-2 bg-blue-50/60 rounded-lg border border-blue-100 flex items-start gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="text-[11px] text-blue-900 leading-tight min-w-0">
+                          <p className="font-bold truncate">{ketuaVerified.jabatan || 'Aparatur Sipil Negara'}</p>
+                          <p className="text-blue-700/80 truncate text-[10px]">{ketuaVerified.unit_kerja || 'Pemerintah Kabupaten Buleleng'}</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Admin Komunitas Box */}
-                <div className="p-4 bg-teal-50/50 rounded-xl border border-teal-100 space-y-4 relative" ref={adminRef}>
+                <div className="p-5 bg-gradient-to-br from-teal-50/50 via-white to-emerald-50/30 rounded-2xl border border-teal-200/80 shadow-2xs hover:shadow-xs transition-all space-y-4 relative" ref={adminRef}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-[#006A63]">
-                      <UserCheck className="w-4 h-4" />
+                    <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-[#006A63] bg-teal-50 border border-teal-200/70 px-2.5 py-1 rounded-lg">
+                      <UserCheck className="w-3.5 h-3.5 text-[#006A63]" />
                       <span>Admin Komunitas</span>
                     </div>
                     {adminVerified ? (
-                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-200">
-                        <CheckCircle2 className="w-3 h-3 text-green-600" /> Terverifikasi di DB
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-emerald-200 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Terverifikasi di DB
                       </span>
                     ) : formData.nip_admin.length === 18 && !isLookingUpAdmin ? (
-                      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-200">
-                        <AlertCircle className="w-3 h-3 text-red-600" /> Tidak Ditemukan di DB
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-rose-200">
+                        <AlertCircle className="w-3 h-3 text-rose-600" /> Tidak Ditemukan di DB
                       </span>
                     ) : null}
                   </div>
 
                   {/* NIP Admin */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>NIP Admin (18 Digit) <span className="text-red-500">*</span></span>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                      <span>NIP Admin (18 Digit) <span className="text-rose-500">*</span></span>
                       {isLookingUpAdmin && (
-                        <span className="text-[10px] text-teal-700 flex items-center gap-1">
+                        <span className="text-[10px] text-teal-700 font-normal flex items-center gap-1">
                           <Loader2 className="w-3 h-3 animate-spin" /> Mencari data...
                         </span>
                       )}
@@ -922,23 +936,25 @@ export default function CommunityRegistrationSection() {
                       value={formData.nip_admin}
                       onChange={(e) => handleNipAdminChange(e.target.value)}
                       placeholder="199205152015021002"
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors font-mono ${errors.nip_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-white focus:outline-none transition-all font-mono ${errors.nip_admin
+                          ? 'border-rose-400 ring-1 ring-rose-200'
+                          : 'border-slate-200 focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20'
                         }`}
                     />
                     <div className="flex justify-between items-center mt-1 text-[11px]">
                       {errors.nip_admin ? (
-                        <span className="text-red-500">{errors.nip_admin}</span>
+                        <span className="text-rose-500 font-medium">{errors.nip_admin}</span>
                       ) : (
-                        <span className="text-gray-400">Masukkan 18 digit untuk auto-fill nama</span>
+                        <span className="text-gray-400">Masukkan 18 digit untuk auto-fill</span>
                       )}
-                      <span className="text-gray-400">{formData.nip_admin.length}/18</span>
+                      <span className="text-gray-400 font-mono">{formData.nip_admin.length}/18</span>
                     </div>
                   </div>
 
                   {/* Nama Admin dengan Search Suggestions */}
                   <div className="relative">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Nama Lengkap Admin <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                      Nama Lengkap Admin <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -946,21 +962,23 @@ export default function CommunityRegistrationSection() {
                       value={formData.nama_admin}
                       onChange={handleInputChange}
                       placeholder="Ketik nama untuk mencari..."
-                      className={`w-full px-3.5 py-2 rounded-lg border text-sm text-gray-800 bg-white focus:outline-none transition-colors ${errors.nama_admin ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#006A63]'
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 bg-white focus:outline-none transition-all ${errors.nama_admin
+                          ? 'border-rose-400 ring-1 ring-rose-200'
+                          : 'border-slate-200 focus:border-[#006A63] focus:ring-2 focus:ring-[#006A63]/20'
                         }`}
                     />
                     {errors.nama_admin && (
-                      <p className="text-[11px] text-red-500 mt-1">{errors.nama_admin}</p>
+                      <p className="text-[11px] text-rose-500 mt-1 font-medium">{errors.nama_admin}</p>
                     )}
 
                     {/* Autocomplete Suggestion Dropdown */}
                     {showAdminSuggestions && adminSuggestions.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-48 overflow-y-auto divide-y divide-gray-100">
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-48 overflow-y-auto divide-y divide-slate-100 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150">
                         {adminSuggestions.map((item, idx) => (
                           <div
                             key={idx}
                             onClick={() => selectAdminSuggestion(item)}
-                            className="p-2.5 text-xs hover:bg-teal-50 cursor-pointer transition-colors"
+                            className="p-2.5 text-xs hover:bg-teal-50/70 cursor-pointer transition-colors"
                           >
                             <p className="font-bold text-gray-800">{item.nama_lengkap}</p>
                             <p className="text-[11px] text-gray-500 font-mono">NIP: {item.nip} {item.jabatan ? `• ${item.jabatan}` : ''}</p>
@@ -970,9 +988,13 @@ export default function CommunityRegistrationSection() {
                     )}
 
                     {adminVerified && (
-                      <p className="text-[11px] text-teal-700 mt-1 line-clamp-1">
-                        {adminVerified.jabatan ? `${adminVerified.jabatan} - ` : ''}{adminVerified.unit_kerja || ''}
-                      </p>
+                      <div className="mt-2 p-2 bg-emerald-50/60 rounded-lg border border-emerald-100 flex items-start gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="text-[11px] text-emerald-900 leading-tight min-w-0">
+                          <p className="font-bold truncate">{adminVerified.jabatan || 'Aparatur Sipil Negara'}</p>
+                          <p className="text-emerald-700/80 truncate text-[10px]">{adminVerified.unit_kerja || 'Pemerintah Kabupaten Buleleng'}</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -982,30 +1004,35 @@ export default function CommunityRegistrationSection() {
 
             {/* Bagian 3: Foto Thumbnail Sampul (Maks 2MB) */}
             <div>
-              <div className="flex items-center gap-2 pb-3 mb-5 border-b border-gray-100">
-                <Upload className="w-5 h-5 text-[#006A63]" />
-                <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">3. Foto Thumbnail Komunitas (Maks. 2MB)</h3>
+              <div className="flex items-center gap-3 pb-3.5 mb-6 border-b border-slate-100">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D97706] to-[#F59E0B] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#1D315F]">Foto Thumbnail Komunitas</h3>
+                  <p className="text-xs text-gray-500 font-normal">Identitas visual komunitas yang akan tayang pada katalog publik (Maks. 2MB)</p>
+                </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl border border-dashed border-gray-300 bg-gray-50/60">
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-5 sm:p-6 rounded-2xl border-2 border-dashed border-teal-200/90 hover:border-[#006A63] bg-teal-50/20 hover:bg-teal-50/40 transition-all duration-300">
                 {/* Image Preview Box */}
-                <div className="relative w-40 h-28 sm:w-44 sm:h-32 rounded-lg overflow-hidden bg-white border border-gray-200 shrink-0 flex items-center justify-center shadow-sm">
+                <div className="relative w-44 h-28 sm:w-52 sm:h-32 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center shadow-md">
                   {thumbnailPreview ? (
                     <>
                       <img src={thumbnailPreview} alt="Preview Thumbnail" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={handleRemoveThumbnail}
-                        className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-sm cursor-pointer"
+                        className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors shadow-md cursor-pointer active:scale-95"
                         title="Hapus Gambar"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
                     </>
                   ) : (
-                    <div className="text-center p-3 text-gray-400">
-                      <ImageIcon className="w-8 h-8 mx-auto mb-1 stroke-1" />
-                      <span className="text-[11px]">Belum ada thumbnail</span>
+                    <div className="text-center p-3 text-slate-400">
+                      <ImageIcon className="w-8 h-8 mx-auto mb-1 stroke-1 text-slate-300" />
+                      <span className="text-[11px] font-medium">Belum ada thumbnail</span>
                     </div>
                   )}
                 </div>
@@ -1013,9 +1040,9 @@ export default function CommunityRegistrationSection() {
                 {/* Upload Controls */}
                 <div className="flex-1 w-full text-center sm:text-left">
                   <label className="inline-block cursor-pointer">
-                    <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-[#006A63] text-[#006A63] hover:bg-[#006A63] hover:text-white rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm">
+                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#006A63] hover:bg-[#00544f] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-teal-900/15 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer">
                       <Upload className="w-4 h-4" />
-                      Pilih Foto Thumbnail
+                      <span>Pilih Foto Thumbnail</span>
                     </span>
                     <input
                       type="file"
@@ -1026,15 +1053,15 @@ export default function CommunityRegistrationSection() {
                     />
                   </label>
 
-                  <div className="mt-2 text-xs text-gray-500 space-y-0.5">
-                    <p className="font-semibold text-gray-700">Persyaratan Gambar:</p>
+                  <div className="mt-2.5 text-xs text-gray-500 space-y-0.5 font-medium">
+                    <p className="font-bold text-[#1D315F]">Persyaratan Gambar:</p>
                     <p>• Format: JPG, JPEG, PNG, atau WEBP</p>
                     <p>• Ukuran maksimal: <span className="font-bold text-[#006A63]">2 MB (2048 KB)</span></p>
-                    <p>• Disarankan rasio 16:9 atau 4:3 untuk hasil optimal di halaman katalog.</p>
+                    <p>• Disarankan rasio landscape (16:9 atau 4:3) untuk hasil optimal di halaman katalog.</p>
                   </div>
 
                   {errors.thumbnail && (
-                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1 justify-center sm:justify-start">
+                    <p className="text-xs text-rose-500 mt-2 flex items-center gap-1 justify-center sm:justify-start font-medium">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.thumbnail}
                     </p>
                   )}
@@ -1043,28 +1070,32 @@ export default function CommunityRegistrationSection() {
             </div>
 
             {/* Note & Action Submit */}
-            <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <HelpCircle className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>Pendaftaran akan diperiksa oleh Admin BKPSDM sebelum dipublikasikan.</span>
+            <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-5">
+              <div className="flex items-start gap-2.5 text-xs text-gray-500 max-w-md">
+                <div className="w-5 h-5 rounded-full bg-teal-100/70 text-[#006A63] flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+                <span className="leading-snug">
+                  Setiap permohonan pendaftaran akan diverifikasi dan disetujui oleh <strong className="text-[#1D315F]">Admin BKPSDM</strong> sebelum dipublikasikan ke portal peserta.
+                </span>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${isSubmitting
-                    ? 'bg-gray-400 cursor-not-allowed shadow-none'
-                    : 'bg-[#006A63] hover:bg-[#00524d] hover:shadow-teal-900/20 hover:-translate-y-0.5 active:translate-y-0'
+                className={`w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 ${isSubmitting
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none'
+                    : 'bg-white hover:bg-amber-300 text-[#1D315F] hover:text-[#1D315F] border border-slate-200 hover:border-amber-300 shadow-xs hover:shadow-md'
                   }`}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4.5 h-4.5 animate-spin" />
                     <span>Memproses Pendaftaran...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.5]" />
                     <span>Daftarkan Komunitas Sekarang</span>
                   </>
                 )}
