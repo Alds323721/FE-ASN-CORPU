@@ -92,7 +92,7 @@ export default function HeroSection({ onAuthClick }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center min-h-0 lg:min-h-[640px] xl:min-h-[700px] pt-2 sm:pt-4 lg:pt-3 pb-4 lg:pb-8">
 
           {/* Kolom Kiri: Teks Sambutan, Judul Besar, dan 2 Tombol Bulat Beranimasi */}
-          <div className="lg:col-span-6 space-y-3.5 sm:space-y-6 text-left z-20 pt-1 sm:pt-4 lg:pt-0 pr-2 sm:pr-4 lg:pr-6 xl:pr-8">
+          <div className="lg:col-span-6 space-y-3 sm:space-y-6 text-left z-20 pt-1 sm:pt-4 lg:pt-0 pr-3 sm:pr-4 lg:pr-6 xl:pr-8">
 
             {/* Teks "Selamat Datang di" asli dengan font Courgette (Sejajar dengan Judul di Bawahnya) */}
             <div key={`welcome-${heroReentryKey}`} className="block animate-entrance-slide-right [animation-delay:100ms] text-left">
@@ -102,15 +102,16 @@ export default function HeroSection({ onAuthClick }) {
             </div>
 
             {/* Judul Besar: BULELENG ASN CORPORATE UNIVERSITY (Mobile & Desktop) */}
-            <h1 className="text-[1.4rem] xs:text-[1.75rem] sm:text-4xl md:text-5xl lg:text-[2.85rem] xl:text-[3.65rem] 2xl:text-6xl font-black tracking-tight leading-[1.14] sm:leading-[1.08] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[290px] xs:max-w-[350px] sm:max-w-none">
+            <h1 className="text-[1.35rem] sm:text-4xl md:text-5xl lg:text-[2.85rem] xl:text-[3.65rem] 2xl:text-6xl font-black tracking-tight leading-[1.14] sm:leading-[1.08] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[260px] sm:max-w-md lg:max-w-none">
               <span className="text-[#D97706]">BULELENG</span>{' '}
               <span>ASN</span>
               <br />
-              <span className="text-[#1D315F]">CORPORATE UNIVERSITY</span>
+              <span className="text-[#1D315F] block md:inline">CORPORATE</span>{' '}
+              <span className="text-[#1D315F] block md:inline">UNIVERSITY</span>
             </h1>
 
             {/* Sub-judul Sesuai Gambar Banner - Responsif & Berjarak Aman dari List Kuning Arch Pojok Kanan Atas */}
-            <p className="text-gray-600 text-[13px] xs:text-[14.5px] sm:text-base md:text-lg lg:text-lg leading-relaxed max-w-[290px] xs:max-w-[360px] sm:max-w-lg lg:max-w-lg xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
+            <p className="text-gray-600 text-[13px] sm:text-base md:text-lg lg:text-lg leading-relaxed max-w-[260px] sm:max-w-lg lg:max-w-lg xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
               Sistem Pembelajaran Pengembangan Kompetensi secara Terintegrasi bagi Aparatur Sipil Negara di Lingkungan Pemerintah Kabupaten Buleleng
             </p>
 
