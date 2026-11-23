@@ -73,15 +73,15 @@ export default function HeroSection({ onAuthClick }) {
       <div className="absolute top-1/4 right-[30%] w-[500px] h-[500px] bg-cyan-300/20 rounded-full blur-3xl pointer-events-none z-0 animate-glow-bloom [animation-delay:200ms]" />
       <div className="absolute top-1/2 right-10 w-[420px] h-[420px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none z-0 animate-glow-bloom [animation-delay:350ms]" />
 
-      {/* MOBILE-ONLY TOP-RIGHT BLUE ARCH & SLOGAN (Persis Gambar Referensi - Diperbesar Sedikit & Proporsional) */}
+      {/* MOBILE-ONLY TOP-RIGHT BLUE ARCH & SLOGAN (Diperbesar Proporsional & Diposisikan Pas di Tengah Arch) */}
       <div className="lg:hidden absolute top-0 right-0 z-10 pointer-events-none overflow-hidden select-none">
-        <div className="relative w-40 xs:w-48 sm:w-60 h-30 xs:h-38 sm:h-48 bg-gradient-to-bl from-[#052C65] via-[#032451] to-[#021A3D] rounded-bl-[95px] xs:rounded-bl-[130px] sm:rounded-bl-[165px] border-b-[5px] xs:border-b-[6.5px] sm:border-b-8 border-l-[5px] xs:border-l-[6.5px] sm:border-l-8 border-[#F1B904] shadow-xl flex items-center justify-center p-2.5 xs:p-3 sm:p-4 pt-1.5 pr-1.5">
+        <div className="relative w-[164px] xs:w-[176px] sm:w-[230px] h-[132px] xs:h-[140px] sm:h-[180px] bg-gradient-to-bl from-[#052C65] via-[#032451] to-[#021A3D] rounded-bl-[95px] xs:rounded-bl-[105px] sm:rounded-bl-[145px] border-b-[5.5px] sm:border-b-8 border-l-[5.5px] sm:border-l-8 border-[#F1B904] shadow-xl flex items-center justify-center">
           {/* Subtle inner radial glow */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-blue-400/20 rounded-full blur-2xl pointer-events-none" />
           <img
             src={sloganWhiteImg}
             alt="ASN Kompeten Buleleng Paten"
-            className="w-28 xs:w-35 sm:w-44 h-auto object-contain drop-shadow-md -rotate-3 translate-x-1 -translate-y-0.5"
+            className="w-[124px] xs:w-[134px] sm:w-[178px] h-auto object-contain drop-shadow-md -rotate-2 translate-x-2 -translate-y-2.5 sm:translate-x-3 sm:-translate-y-3.5"
           />
         </div>
       </div>
@@ -92,38 +92,37 @@ export default function HeroSection({ onAuthClick }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center min-h-0 lg:min-h-[640px] xl:min-h-[700px] pt-2 sm:pt-4 lg:pt-3 pb-4 lg:pb-8">
 
           {/* Kolom Kiri: Teks Sambutan, Judul Besar, dan 2 Tombol Bulat Beranimasi */}
-          <div className="lg:col-span-6 space-y-3 sm:space-y-6 text-left z-20 pt-1 sm:pt-4 lg:pt-0 pr-3 sm:pr-4 lg:pr-6 xl:pr-8">
+          <div className="lg:col-span-6 space-y-3 sm:space-y-6 text-left z-20 pt-1 sm:pt-4 lg:pt-0 pr-3 sm:pr-4 lg:pr-8 xl:pr-10">
 
             {/* Teks "Selamat Datang di" asli dengan font Courgette (Sejajar dengan Judul di Bawahnya) */}
             <div key={`welcome-${heroReentryKey}`} className="block animate-entrance-slide-right [animation-delay:100ms] text-left">
-              <span className="font-courgette text-[#1D315F] text-[1.35rem] xs:text-[1.65rem] sm:text-3xl md:text-4xl lg:text-[2.35rem] xl:text-[2.85rem] 2xl:text-[3.1rem] leading-tight select-none drop-shadow-xs block font-normal tracking-normal -mb-1 sm:-mb-2">
+              <span className="font-courgette text-[#1D315F] text-[1.08rem] sm:text-xl md:text-2xl lg:text-[1.75rem] xl:text-[2.15rem] 2xl:text-[2.5rem] leading-tight select-none drop-shadow-xs block font-normal tracking-normal -mb-1 sm:-mb-2">
                 Selamat Datang di
               </span>
             </div>
 
             {/* Judul Besar: BULELENG ASN CORPORATE UNIVERSITY (Mobile & Desktop) */}
-            <h1 className="text-[1.35rem] sm:text-4xl md:text-5xl lg:text-[2.85rem] xl:text-[3.65rem] 2xl:text-6xl font-black tracking-tight leading-[1.14] sm:leading-[1.08] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[260px] sm:max-w-md lg:max-w-none">
+            <h1 className="text-[1.02rem] sm:text-2xl md:text-3xl lg:text-[2.15rem] xl:text-[2.65rem] 2xl:text-[3.25rem] font-black tracking-tight leading-[1.18] sm:leading-[1.1] text-[#1D315F] animate-entrance-slide-up [animation-delay:220ms] max-w-[240px] xs:max-w-[270px] sm:max-w-[350px] md:max-w-[420px] lg:max-w-none">
               <span className="text-[#D97706]">BULELENG</span>{' '}
               <span>ASN</span>
               <br />
-              <span className="text-[#1D315F] block md:inline">CORPORATE</span>{' '}
-              <span className="text-[#1D315F] block md:inline">UNIVERSITY</span>
+              <span className="text-[#1D315F] whitespace-nowrap">CORPORATE UNIVERSITY</span>
             </h1>
 
             {/* Sub-judul Sesuai Gambar Banner - Responsif & Berjarak Aman dari List Kuning Arch Pojok Kanan Atas */}
-            <p className="text-gray-600 text-[13px] sm:text-base md:text-lg lg:text-lg leading-relaxed max-w-[260px] sm:max-w-lg lg:max-w-lg xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
+            <p className="text-gray-600 text-xs sm:text-sm md:text-base lg:text-[15px] xl:text-base leading-relaxed max-w-[240px] xs:max-w-[270px] sm:max-w-[340px] md:max-w-[420px] lg:max-w-md xl:max-w-xl font-medium animate-entrance-slide-up [animation-delay:340ms]">
               Sistem Pembelajaran Pengembangan Kompetensi secara Terintegrasi bagi Aparatur Sipil Negara di Lingkungan Pemerintah Kabupaten Buleleng
             </p>
 
-            {/* MOBILE ONLY: 2 Tombol Bulat di Kolom Kiri (Konsep Warna Baru Sesuai Gambar Referensi) */}
-            <div key={`buttons-mobile-${heroReentryKey}`} className="block lg:hidden pt-4 pb-3 sm:pt-6 sm:pb-5">
-              <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-8">
+            {/* 2 Tombol Bulat Beranimasi (HCDP & IDP + LMS) di Kolom Kiri, Tepat di Atas 6 Feature Cards */}
+            <div key={`buttons-hero-${heroReentryKey}`} className="block pt-3 pb-2 sm:pt-4 sm:pb-3 w-full">
+              <div className="flex items-center justify-start gap-4 sm:gap-6 lg:gap-7">
 
                 {/* TOMBOL BULAT 1: HCDP & IDP (BIRU) */}
                 <div className="relative group shrink-0 flex flex-col items-center animate-entrance-pop [animation-delay:460ms]">
                   <div className="animate-float flex flex-col items-center">
                     {/* Pill Badge PERENCANAAN & PENGEMBANGAN (Biru) */}
-                    <div className="z-30 mb-2.5 sm:mb-3 px-2.5 sm:px-3 py-0.5 rounded-full bg-[#1D315F] text-white text-[7px] sm:text-[8px] font-black tracking-normal uppercase shadow-md border border-white/30 select-none whitespace-nowrap">
+                    <div className="z-30 mb-2 sm:mb-2.5 px-2.5 sm:px-3 py-0.5 rounded-full bg-[#1D315F] text-white text-[7px] sm:text-[7.5px] lg:text-[8px] font-black tracking-normal uppercase shadow-md border border-white/30 select-none whitespace-nowrap">
                       PERENCANAAN & PENGEMBANGAN
                     </div>
 
@@ -152,16 +151,16 @@ export default function HeroSection({ onAuthClick }) {
                         <button
                           type="button"
                           onClick={handleIdpClick}
-                          className="relative flex flex-col items-center justify-center w-28 h-28 sm:w-34 sm:h-34 rounded-full bg-gradient-to-b from-white via-[#F8FAFC] to-[#EFF6FF] border-2 border-blue-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-2 overflow-hidden z-10"
+                          className="relative flex flex-col items-center justify-center w-22 h-22 sm:w-26 sm:h-26 lg:w-24 lg:h-24 xl:w-26 xl:h-26 rounded-full bg-gradient-to-b from-white via-[#F8FAFC] to-[#EFF6FF] border-2 border-blue-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-2 overflow-hidden z-10"
                           title="Akses Sistem HCDP & IDP (https://idp.makarti.id/)"
                         >
                           {/* Lingkaran Konsentris Halus Mengelilingi Ikon */}
-                          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-full border border-blue-300/60 bg-blue-50/60 flex items-center justify-center mb-1 group-hover:bg-blue-100/70 transition-colors">
-                            <Target className="w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 text-blue-600 stroke-[2.2]" />
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 lg:w-10 lg:h-10 xl:w-11 xl:h-11 rounded-full border border-blue-300/60 bg-blue-50/60 flex items-center justify-center mb-1 group-hover:bg-blue-100/70 transition-colors">
+                            <Target className="w-5 h-5 sm:w-6 sm:h-6 lg:w-5 lg:h-5 xl:w-5.5 xl:h-5.5 text-blue-600 stroke-[2.2]" />
                           </div>
 
                           {/* Judul Tombol */}
-                          <span className="text-[11px] sm:text-sm font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
+                          <span className="text-[10px] sm:text-xs lg:text-[11px] xl:text-xs font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
                             HCDP & IDP
                           </span>
                         </button>
@@ -174,7 +173,7 @@ export default function HeroSection({ onAuthClick }) {
                 <div className="relative group shrink-0 flex flex-col items-center animate-entrance-pop [animation-delay:560ms]">
                   <div className="animate-float-delayed flex flex-col items-center">
                     {/* Pill Badge SI-BIJAK PATEN (Hijau) */}
-                    <div className="z-30 mb-2.5 sm:mb-3 px-3 py-0.5 rounded-full bg-[#006A63] text-white text-[8px] sm:text-[9.5px] font-black tracking-wider uppercase shadow-md border border-white/30 select-none">
+                    <div className="z-30 mb-2 sm:mb-2.5 px-3 py-0.5 rounded-full bg-[#006A63] text-white text-[7.5px] sm:text-[8.5px] lg:text-[8.5px] xl:text-[9px] font-black tracking-wider uppercase shadow-md border border-white/30 select-none">
                       SI-BIJAK PATEN
                     </div>
 
@@ -203,16 +202,16 @@ export default function HeroSection({ onAuthClick }) {
                         <button
                           type="button"
                           onClick={handleLmsClick}
-                          className="relative flex flex-col items-center justify-center w-28 h-28 sm:w-34 sm:h-34 rounded-full bg-gradient-to-b from-white via-[#F0FDF4] to-[#E6F8EF] border-2 border-emerald-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-2 overflow-hidden z-10"
+                          className="relative flex flex-col items-center justify-center w-22 h-22 sm:w-26 sm:h-26 lg:w-24 lg:h-24 xl:w-26 xl:h-26 rounded-full bg-gradient-to-b from-white via-[#F0FDF4] to-[#E6F8EF] border-2 border-emerald-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-2 overflow-hidden z-10"
                           title="Masuk ke LMS BKPSDM"
                         >
                           {/* Lingkaran Konsentris Halus Mengelilingi Ikon */}
-                          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-full border border-emerald-300/60 bg-emerald-50/60 flex items-center justify-center mb-1 group-hover:bg-emerald-100/70 transition-colors">
-                            <MonitorPlay className="w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 text-emerald-700 stroke-[2.2]" />
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 lg:w-10 lg:h-10 xl:w-11 xl:h-11 rounded-full border border-emerald-300/60 bg-emerald-50/60 flex items-center justify-center mb-1 group-hover:bg-emerald-100/70 transition-colors">
+                            <MonitorPlay className="w-5 h-5 sm:w-6 sm:h-6 lg:w-5 lg:h-5 xl:w-5.5 xl:h-5.5 text-emerald-700 stroke-[2.2]" />
                           </div>
 
                           {/* Judul Tombol */}
-                          <span className="text-xs sm:text-base font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
+                          <span className="text-[11px] sm:text-xs lg:text-xs xl:text-sm font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
                             LMS
                           </span>
                         </button>
@@ -348,7 +347,7 @@ export default function HeroSection({ onAuthClick }) {
               />
             </div>
 
-            {/* Foto Tim 4 ASN Buleleng Transparan Cutout + 2 Tombol Bulat Tepat di Posisi Lingkaran Gambar Referensi */}
+            {/* Foto Tim 4 ASN Buleleng Transparan Cutout */}
             <div className="relative z-10 w-full flex justify-end items-end mt-auto -mr-3 sm:-mr-5 lg:-mr-7 xl:-mr-9 -mb-1 sm:-mb-2 lg:-mb-[8px] xl:-mb-[11px] animate-entrance-team [animation-delay:500ms]">
               <div className="relative w-full lg:w-[104%] xl:w-[108%] 2xl:w-[110%]">
                 <img
@@ -356,113 +355,6 @@ export default function HeroSection({ onAuthClick }) {
                   alt="Aparatur Sipil Negara Kabupaten Buleleng"
                   className="w-full h-auto object-contain object-right-bottom drop-shadow-2xl pointer-events-none"
                 />
-
-                {/* TOMBOL BULAT 1: HCDP & IDP (DESKTOP - BIRU) - Tepat di Lingkaran Biru */}
-                <div
-                  key={`buttons-desktop-idp-${heroReentryKey}`}
-                  className="absolute z-30 -translate-x-1/2 -translate-y-1/2 animate-entrance-pop [animation-delay:460ms]"
-                  style={{ left: '43.4%', top: '20.4%' }}
-                >
-                  <div className="animate-float flex flex-col items-center">
-                    {/* Pill Badge PERENCANAAN & PENGEMBANGAN (Biru) - Berjarak rapi dari tombol */}
-                    <div className="z-30 mb-2.5 xl:mb-3 px-2.5 xl:px-3 py-0.5 rounded-full bg-[#1D315F] text-white text-[6px] lg:text-[6.5px] xl:text-[7.5px] font-black tracking-normal uppercase shadow-md border border-white/30 select-none whitespace-nowrap">
-                      PERENCANAAN & PENGEMBANGAN
-                    </div>
-
-                    <div className="relative">
-                      {/* Outer Orbiting Light Halo (Cahaya Biru Melingkar) */}
-                      <div
-                        className="absolute -inset-2 xl:-inset-2.5 rounded-full blur-md opacity-85 group-hover:opacity-100 pointer-events-none animate-orbit-light transition-opacity duration-300"
-                        style={{
-                          background: 'conic-gradient(from 0deg, transparent 0%, transparent 40%, rgba(37,99,235,0.25) 60%, rgba(96,165,250,0.85) 85%, #60A5FA 95%, #FFFFFF 100%)'
-                        }}
-                      />
-                      {/* Soft Ambient Core Glow */}
-                      <div className="absolute -inset-1 rounded-full bg-blue-500/20 blur-sm pointer-events-none" />
-
-                      {/* Rotating Ring Container */}
-                      <div className="relative p-[2.5px] xl:p-[3px] rounded-full overflow-hidden shadow-[0_0_20px_rgba(37,99,235,0.4),0_8px_20px_rgba(37,99,235,0.25)] group-hover:scale-105 transition-transform duration-300">
-                        <div
-                          className="absolute inset-[-100%] animate-orbit-light pointer-events-none"
-                          style={{
-                            background: 'conic-gradient(from 0deg, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.2) 45%, rgba(59,130,246,0.5) 70%, #3B82F6 85%, #93C5FD 95%, #FFFFFF 100%)'
-                          }}
-                        />
-
-                        {/* Tombol Bulat Putih Bersih HCDP & IDP */}
-                        <button
-                          type="button"
-                          onClick={handleIdpClick}
-                          className="relative flex flex-col items-center justify-center w-20 h-20 lg:w-22 lg:h-22 xl:w-26 xl:h-26 rounded-full bg-gradient-to-b from-white via-[#F8FAFC] to-[#EFF6FF] border-2 border-blue-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-1 xl:p-1.5 overflow-hidden z-10"
-                          title="Akses Sistem HCDP & IDP (https://idp.makarti.id/)"
-                        >
-                          {/* Lingkaran Konsentris Halus Mengelilingi Ikon */}
-                          <div className="w-8 h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 rounded-full border border-blue-300/60 bg-blue-50/60 flex items-center justify-center mb-0.5 xl:mb-1 group-hover:bg-blue-100/70 transition-colors">
-                            <Target className="w-4 h-4 lg:w-4.5 lg:h-4.5 xl:w-5 xl:h-5 text-blue-600 stroke-[2.2]" />
-                          </div>
-
-                          <span className="text-[9px] lg:text-[10px] xl:text-[11px] font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
-                            HCDP & IDP
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TOMBOL BULAT 2: LMS (DESKTOP - HIJAU) - Tepat di Lingkaran Hijau */}
-                <div
-                  key={`buttons-desktop-lms-${heroReentryKey}`}
-                  className="absolute z-30 -translate-x-1/2 -translate-y-1/2 animate-entrance-pop [animation-delay:560ms]"
-                  style={{ left: '68.6%', top: '24.2%' }}
-                >
-                  <div className="animate-float-delayed flex flex-col items-center">
-                    {/* Pill Badge SI-BIJAK PATEN (Hijau) - Berjarak rapi dari tombol */}
-                    <div className="z-30 mb-2.5 xl:mb-3 px-2.5 xl:px-3 py-0.5 rounded-full bg-[#006A63] text-white text-[7px] lg:text-[7.5px] xl:text-[8.5px] font-black tracking-wider uppercase shadow-md border border-white/30 select-none">
-                      SI-BIJAK PATEN
-                    </div>
-
-                    <div className="relative">
-                      {/* Outer Orbiting Light Halo (Cahaya Hijau Melingkar) */}
-                      <div
-                        className="absolute -inset-2 xl:-inset-2.5 rounded-full blur-md opacity-85 group-hover:opacity-100 pointer-events-none animate-orbit-light-reverse transition-opacity duration-300"
-                        style={{
-                          background: 'conic-gradient(from 180deg, transparent 0%, transparent 40%, rgba(5,150,105,0.25) 60%, rgba(52,211,153,0.85) 85%, #34D399 95%, #FFFFFF 100%)'
-                        }}
-                      />
-                      {/* Soft Ambient Core Glow */}
-                      <div className="absolute -inset-1 rounded-full bg-emerald-500/20 blur-sm pointer-events-none" />
-
-                      {/* Rotating Ring Container */}
-                      <div className="relative p-[2.5px] xl:p-[3px] rounded-full overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.4),0_8px_20px_rgba(16,185,129,0.25)] group-hover:scale-105 transition-transform duration-300">
-                        <div
-                          className="absolute inset-[-100%] animate-orbit-light-reverse pointer-events-none"
-                          style={{
-                            background: 'conic-gradient(from 180deg, rgba(5,150,105,0.15) 0%, rgba(5,150,105,0.2) 45%, rgba(16,185,129,0.5) 70%, #10B981 85%, #6EE7B7 95%, #FFFFFF 100%)'
-                          }}
-                        />
-
-                        {/* Tombol Bulat Putih Bersih LMS */}
-                        <button
-                          type="button"
-                          onClick={handleLmsClick}
-                          className="relative flex flex-col items-center justify-center w-20 h-20 lg:w-22 lg:h-22 xl:w-26 xl:h-26 rounded-full bg-gradient-to-b from-white via-[#F0FDF4] to-[#E6F8EF] border-2 border-emerald-200/90 text-[#1D315F] cursor-pointer active:scale-95 transition-all duration-200 text-center p-1 xl:p-1.5 overflow-hidden z-10"
-                          title="Masuk ke LMS BKPSDM"
-                        >
-                          {/* Lingkaran Konsentris Halus Mengelilingi Ikon */}
-                          <div className="w-8 h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 rounded-full border border-emerald-300/60 bg-emerald-50/60 flex items-center justify-center mb-0.5 xl:mb-1 group-hover:bg-emerald-100/70 transition-colors">
-                            <MonitorPlay className="w-4 h-4 lg:w-4.5 lg:h-4.5 xl:w-5 xl:h-5 text-emerald-700 stroke-[2.2]" />
-                          </div>
-
-                          <span className="text-[10px] lg:text-[11px] xl:text-xs font-black text-[#1D315F] tracking-wider uppercase leading-none drop-shadow-2xs">
-                            LMS
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
 
