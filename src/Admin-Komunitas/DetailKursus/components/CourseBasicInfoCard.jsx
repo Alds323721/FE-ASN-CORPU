@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, AlertCircle, Upload, ChevronDown, Lock, Globe, KeyRound, Copy, Check, Info } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Upload, ChevronDown, Lock, Globe, KeyRound, Copy, Check, Info, ShieldCheck } from 'lucide-react';
 
 const CourseBasicInfoCard = ({
   course,
@@ -269,6 +269,39 @@ const CourseBasicInfoCard = ({
                     type="checkbox"
                     checked={Boolean(course.butuh_persetujuan)}
                     onChange={(e) => setCourse({ ...course, butuh_persetujuan: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Pengaturan Sertifikat Ber-TTE (BSrE & 2 Halaman) */}
+          <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4 sm:p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${(course.memerlukan_tte ?? course.requires_tte) ? 'bg-teal-700 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                  <ShieldCheck className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Sertifikat Ber-TTE Resmi B-Sign (2 Halaman & Lampiran JP)</h4>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                    Jika diaktifkan, sertifikat kelulusan kursus ini akan memiliki masa tunggu (cooldown) 3 hari untuk penandatanganan elektronik resmi B-Sign BSrE dan memuat rincian materi & JP pada Halaman 2.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-bold ${(course.memerlukan_tte ?? course.requires_tte) ? 'bg-teal-100 text-teal-900 border border-teal-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                      {(course.memerlukan_tte ?? course.requires_tte) ? 'Mode: Wajib TTE (2 Halaman)' : 'Mode: Sertifikat Reguler (1 Halaman)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {!isReadOnly && (
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(course.memerlukan_tte ?? course.requires_tte)}
+                    onChange={(e) => setCourse({ ...course, memerlukan_tte: e.target.checked })}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>

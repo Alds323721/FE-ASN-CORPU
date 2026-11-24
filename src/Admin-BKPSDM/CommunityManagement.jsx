@@ -393,7 +393,8 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
       rumpun_jabatan: 'JF',
       jumlah_anggota: '10',
       deskripsi: '',
-      status: 'aktif'
+      status: 'aktif',
+      memerlukan_tte: false
     });
     setThumbnailFile(null);
     setThumbnailPreview('');
@@ -401,7 +402,10 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
   };
 
   const handleOpenEditModal = (community) => {
-    setSelectedCommunity({ ...community });
+    setSelectedCommunity({
+      ...community,
+      memerlukan_tte: !!community.memerlukan_tte
+    });
     setEditThumbnailFile(null);
     setEditThumbnailPreview(community.thumbnail_url || '');
     setShowEditModal(true);
@@ -508,6 +512,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
       data.append('jumlah_anggota', formData.jumlah_anggota || 0);
       data.append('deskripsi', formData.deskripsi || '');
       data.append('status', formData.status);
+      data.append('memerlukan_tte', formData.memerlukan_tte ? '1' : '0');
       if (thumbnailFile) {
         data.append('thumbnail', thumbnailFile);
       }
@@ -545,6 +550,7 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
       data.append('jumlah_anggota', selectedCommunity.jumlah_anggota || 0);
       data.append('deskripsi', selectedCommunity.deskripsi || '');
       data.append('status', selectedCommunity.status);
+      data.append('memerlukan_tte', selectedCommunity.memerlukan_tte ? '1' : '0');
       if (editThumbnailFile) {
         data.append('thumbnail', editThumbnailFile);
       }
@@ -884,14 +890,19 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                         {/* Rumpun & Anggota */}
                         <td className="px-6 py-4">
                           <div className="space-y-1">
-                            <div>
+                            <div className="flex flex-wrap items-center gap-1">
                               {community.rumpun_jabatan === 'UMUM' ? (
                                 <span className="text-[11px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full border border-teal-300">
-                                  UMUM (Semua Rumpun)
+                                  UMUM
                                 </span>
                               ) : (
                                 <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
                                   {community.rumpun_jabatan}
+                                </span>
+                              )}
+                              {community.memerlukan_tte && (
+                                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Pelatihan di komunitas ini wajib sertifikat ber-TTE B-Sign BSrE">
+                                  TTE BSrE
                                 </span>
                               )}
                             </div>
@@ -1307,6 +1318,24 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                     </select>
                   </div>
 
+                  {/* Switch Wajib TTE & 2 Halaman */}
+                  <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.memerlukan_tte}
+                        onChange={(e) => setFormData({ ...formData, memerlukan_tte: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-gray-800">Default Sertifikat Ber-TTE (2 Halaman & Lampiran JP)</span>
+                        <p className="text-gray-600 mt-0.5 leading-relaxed">
+                          Jika diaktifkan, pelatihan pada komunitas ini akan otomatis memerlukan sertifikat ber-TTE B-Sign BSrE, memiliki Lampiran JP, dan masa tunggu (cooldown) 3 hari.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
                   <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
                     <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">Batal</button>
                     <button type="submit" className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 text-sm font-semibold">Simpan</button>
@@ -1483,6 +1512,24 @@ const CommunityManagement = ({ onNavigate, onLogout }) => {
                     {selectedCommunity.nama_komunitas === 'Komunitas Umum' && (
                       <p className="text-[11px] text-amber-600 mt-1">Status Komunitas Umum utama harus selalu aktif.</p>
                     )}
+                  </div>
+
+                  {/* Switch Wajib TTE & 2 Halaman */}
+                  <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedCommunity.memerlukan_tte}
+                        onChange={(e) => setSelectedCommunity({ ...selectedCommunity, memerlukan_tte: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-gray-800">Default Sertifikat Ber-TTE (2 Halaman & Lampiran JP)</span>
+                        <p className="text-gray-600 mt-0.5 leading-relaxed">
+                          Jika diaktifkan, pelatihan pada komunitas ini akan otomatis memerlukan sertifikat ber-TTE B-Sign BSrE, memiliki Lampiran JP, dan masa tunggu (cooldown) 3 hari.
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
                   <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../api/axios';
 import Swal from 'sweetalert2';
 import JSZip from 'jszip';
@@ -250,9 +250,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
   const [selectedKomunitas, setSelectedKomunitas] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // State Ekspor Sertifikat Khusus Kursus KPK
+  // State Ekspor Sertifikat Khusus Kursus Ber-TTE (KPK, Perbendaharaan, BLUD)
   const [isExportKpkModalOpen, setIsExportKpkModalOpen] = useState(false);
   const [kpkCoursesList, setKpkCoursesList] = useState([]);
+  const [selectedExportKomunitas, setSelectedExportKomunitas] = useState('all');
   const [selectedKpkCourse, setSelectedKpkCourse] = useState('all');
   const [exportKpkFormat, setExportKpkFormat] = useState('nip'); // 'nip' | 'nip_sign'
   const [exportKpkScope, setExportKpkScope] = useState('pending_tte'); // 'pending_tte' | 'all'
@@ -388,6 +389,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         certificateUrl: user.sertifikat?.download_url,
         statusTte: user.sertifikat?.status_tte || 'draft_ready',
         isKpk: !!user.is_kpk,
+        isTte: !!(user.is_tte || user.is_kpk),
+        isPerbendaharaanBlud: !!user.is_perbendaharaan_blud,
         ulasan: user.ulasan || null
       })));
 
@@ -751,7 +754,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
       }
 
       if (!filename) {
-        if (report?.isKpk && report?.nip && report.nip !== '-') {
+        if ((report?.isKpk || report?.isTte) && report?.nip && report.nip !== '-') {
           filename = `${report.nip}.pdf`;
         } else {
           const cleanName = (report?.name || 'Peserta').replace(/\s+/g, '_');
@@ -783,7 +786,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     if (!certId) return;
 
     let initialFilename = '';
-    if (report?.isKpk && report?.nip && report.nip !== '-') {
+    if ((report?.isKpk || report?.isTte) && report?.nip && report.nip !== '-') {
       initialFilename = `${report.nip}.pdf`;
     } else {
       const cleanName = (report?.name || 'Peserta').replace(/\s+/g, '_');
@@ -875,18 +878,47 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     }
   };
 
-  // Helper kalkulasi status kuota TTE dan pembagian batch ekspor KPK
-  const selectedKpkCourseData = selectedKpkCourse === 'all'
-    ? {
-        total_lulus: kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0),
-        total_pending_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0),
-        total_signed_tte: kpkCoursesList.reduce((acc, c) => acc + (c.total_signed_tte || 0), 0),
+  // Helper daftar komunitas unik yang memiliki kursus ber-TTE
+  const exportKomunitasOptions = useMemo(() => {
+    const map = new Map();
+    kpkCoursesList.forEach((c) => {
+      const kId = c.komunitas_id || c.nama_komunitas;
+      if (kId && !map.has(kId)) {
+        map.set(kId, {
+          komunitas_id: c.komunitas_id,
+          nama_komunitas: c.nama_komunitas,
+        });
       }
-    : kpkCoursesList.find((c) => String(c.pembelajaran_id) === String(selectedKpkCourse)) || {
+    });
+    return Array.from(map.values());
+  }, [kpkCoursesList]);
+
+  // Daftar kursus yang disaring berdasarkan pilihan Komunitas di modal ekspor
+  const filteredExportCoursesList = useMemo(() => {
+    if (!selectedExportKomunitas || selectedExportKomunitas === 'all') {
+      return kpkCoursesList;
+    }
+    return kpkCoursesList.filter((c) => 
+      String(c.komunitas_id) === String(selectedExportKomunitas) || 
+      String(c.nama_komunitas) === String(selectedExportKomunitas)
+    );
+  }, [kpkCoursesList, selectedExportKomunitas]);
+
+  // Helper kalkulasi status kuota TTE dan pembagian batch ekspor TTE
+  const selectedKpkCourseData = useMemo(() => {
+    if (selectedKpkCourse !== 'all') {
+      return filteredExportCoursesList.find((c) => String(c.pembelajaran_id) === String(selectedKpkCourse)) || {
         total_lulus: 0,
         total_pending_tte: 0,
         total_signed_tte: 0,
       };
+    }
+    return {
+      total_lulus: filteredExportCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0),
+      total_pending_tte: filteredExportCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0),
+      total_signed_tte: filteredExportCoursesList.reduce((acc, c) => acc + (c.total_signed_tte || 0), 0),
+    };
+  }, [selectedKpkCourse, filteredExportCoursesList]);
 
   const isKpkPendingEmpty = (selectedKpkCourseData.total_pending_tte || 0) === 0;
 
@@ -917,6 +949,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     setExportKpkScope('pending_tte');
     setExportKpkBatchMode('batch');
     setExportKpkBatchNumber(1);
+    setSelectedExportKomunitas(selectedKomunitas || 'all');
+    setSelectedKpkCourse('all');
     fetchKpkCourses();
   };
 
@@ -930,6 +964,9 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
         batch_size: EXPORT_KPK_BATCH_SIZE,
         batch_number: isBatchMode ? safeBatchNumber : 'all',
       };
+      if (selectedExportKomunitas && selectedExportKomunitas !== 'all') {
+        params.komunitas_id = selectedExportKomunitas;
+      }
       if (selectedKpkCourse && selectedKpkCourse !== 'all') {
         params.pembelajaran_id = selectedKpkCourse;
       }
@@ -1063,7 +1100,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
     try {
       setLoadingImportCourses(true);
       const res = await api.get('/admin-bkpsdm/laporan/sertifikat/courses-for-import');
-      const list = (res.data?.data || []).filter((c) => c.is_kpk !== false);
+      const list = (res.data?.data || []).filter((c) => c.is_tte !== false);
       setCoursesForImport(list);
       if (list.length > 0) {
         const matched = preferredCourseId ? list.find(c => String(c.pembelajaran_id) === String(preferredCourseId)) : null;
@@ -1736,10 +1773,10 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <button
                     onClick={handleOpenExportKpkModal}
                     className="bg-teal-700 text-white hover:bg-teal-800 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0 justify-center shadow-sm flex-1 sm:flex-initial"
-                    title="Ekspor seluruh berkas sertifikat khusus kursus KPK dalam arsip ZIP berbasis NIP"
+                    title="Ekspor seluruh berkas sertifikat khusus kursus ber-TTE (KPK, Perbendaharaan, BLUD) dalam arsip ZIP berbasis NIP"
                   >
                     <FileArchive className="w-4 h-4 text-teal-200" />
-                    Export Sertifikat KPK (.ZIP)
+                    Ekspor Sertifikat Ber-TTE (.ZIP)
                   </button>
                   <button
                     onClick={handleOpenImportModal}
@@ -2407,8 +2444,8 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <FileArchive className="w-5 h-5 text-white" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 id="export-kpk-modal-title" className="text-base font-bold text-gray-900">Ekspor Sertifikat Kursus KPK</h3>
-                  <p className="text-xs text-gray-600">Unduh seluruh berkas PDF dalam format NIP (.ZIP)</p>
+                  <h3 id="export-kpk-modal-title" className="text-base font-bold text-gray-900">Ekspor Sertifikat Kursus Ber-TTE</h3>
+                  <p className="text-xs text-gray-600">Unduh seluruh berkas PDF dalam format NIP (.ZIP) untuk B-Sign BSrE</p>
                 </div>
               </div>
               <button
@@ -2424,15 +2461,39 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
 
             {/* Modal Body */}
             <div className="p-5 space-y-4 overflow-y-auto flex-1">
-              {/* Pilihan Pelatihan KPK */}
+              {/* Filter Komunitas Ber-TTE */}
+              <div>
+                <label htmlFor="export-komunitas-select" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Komunitas Ber-TTE (KPK, Perbendaharaan, BLUD)
+                </label>
+                <select
+                  id="export-komunitas-select"
+                  value={selectedExportKomunitas}
+                  onChange={(e) => {
+                    setSelectedExportKomunitas(e.target.value);
+                    setSelectedKpkCourse('all');
+                    setExportKpkBatchNumber(1);
+                  }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                >
+                  <option value="all">Semua Komunitas Ber-TTE</option>
+                  {exportKomunitasOptions.map((k) => (
+                    <option key={k.komunitas_id || k.nama_komunitas} value={k.komunitas_id || k.nama_komunitas}>
+                      {k.nama_komunitas}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pilihan Pelatihan Ber-TTE */}
               <div>
                 <label htmlFor="export-kpk-course-select" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Pilih Kursus KPK
+                  Pilih Kursus Target
                 </label>
                 {loadingKpkCourses ? (
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 flex items-center gap-2">
                     <div className="w-3.5 h-3.5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Memuat daftar pelatihan KPK...</span>
+                    <span>Memuat daftar pelatihan ber-TTE...</span>
                   </div>
                 ) : (
                   <select
@@ -2445,11 +2506,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
                   >
                     <option value="all">
-                      Semua Kursus KPK ({kpkCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0)} Belum TTE / {kpkCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0)} Total Lulus)
+                      Semua Kursus ({filteredExportCoursesList.reduce((acc, c) => acc + (c.total_pending_tte || 0), 0)} Belum TTE / {filteredExportCoursesList.reduce((acc, c) => acc + (c.total_lulus || 0), 0)} Total Lulus)
                     </option>
-                    {kpkCoursesList.map((course) => (
+                    {filteredExportCoursesList.map((course) => (
                       <option key={course.pembelajaran_id} value={course.pembelajaran_id}>
-                        {course.judul_pembelajaran} ({course.total_pending_tte || 0} Belum TTE, {course.total_signed_tte || 0} Selesai Ber-TTE)
+                        [{course.nama_komunitas}] {course.judul_pembelajaran} ({course.total_pending_tte || 0} Belum TTE, {course.total_signed_tte || 0} Selesai Ber-TTE)
                       </option>
                     ))}
                   </select>
@@ -2693,7 +2754,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   <div>
                     <p className="font-bold text-emerald-900">Seluruh Sertifikat Telah Ber-TTE Resmi</p>
                     <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
-                      Semua peserta lulus pada kursus KPK yang dipilih ({selectedKpkCourseData.total_signed_tte} peserta) telah memiliki sertifikat resmi ber-TTE B-Sign. Tidak ada berkas baru yang perlu diajukan kembali ke B-Sign.
+                      Semua peserta lulus pada kursus ber-TTE yang dipilih ({selectedKpkCourseData.total_signed_tte} peserta) telah memiliki sertifikat resmi ber-TTE B-Sign. Tidak ada berkas baru yang perlu diajukan kembali ke B-Sign.
                     </p>
                   </div>
                 </div>
@@ -2798,7 +2859,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Pilih Pelatihan Target (Khusus KPK) <span className="text-rose-500">*</span>
+                    Pilih Pelatihan Target (Ber-TTE) <span className="text-rose-500">*</span>
                   </label>
                   {loadingParticipants && (
                     <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
@@ -2810,11 +2871,11 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                 {loadingImportCourses ? (
                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-500">
                     <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                    Memuat daftar pelatihan KPK...
+                    Memuat daftar pelatihan ber-TTE...
                   </div>
                 ) : coursesForImport.length === 0 ? (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                    Belum ada pelatihan KPK yang memiliki data kelulusan peserta.
+                    Belum ada pelatihan ber-TTE yang memiliki data kelulusan peserta.
                   </div>
                 ) : (
                   <select
@@ -2825,7 +2886,7 @@ const MonitoringReports = ({ onNavigate, onLogout }) => {
                   >
                     {coursesForImport.map((c) => (
                       <option key={c.pembelajaran_id} value={c.pembelajaran_id}>
-                        {c.judul_pembelajaran} ({c.total_lulus} Peserta Lulus) [KPK]
+                        [{c.nama_komunitas || (c.is_kpk ? 'KPK' : 'TTE')}] {c.judul_pembelajaran} ({c.total_lulus} Peserta Lulus)
                       </option>
                     ))}
                   </select>

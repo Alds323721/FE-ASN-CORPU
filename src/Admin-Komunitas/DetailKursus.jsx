@@ -338,6 +338,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         data.append('capaian_pembelajaran', course.capaian_pembelajaran || '');
         data.append('nilai_kelulusan', passingGrade);
         data.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
+        data.append('memerlukan_tte', (course.memerlukan_tte ?? course.requires_tte) ? 1 : 0);
         data.append('wajib_kode_akses', course.wajib_kode_akses ? 1 : 0);
         data.append('kode_akses', course.kode_akses ? String(course.kode_akses).trim() : '');
         data.append('komunitas_id', course.komunitas_id);
@@ -358,6 +359,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           capaian_pembelajaran: course.capaian_pembelajaran || '',
           nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
+          memerlukan_tte: (course.memerlukan_tte ?? course.requires_tte) ? 1 : 0,
           wajib_kode_akses: course.wajib_kode_akses ? 1 : 0,
           kode_akses: course.kode_akses ? String(course.kode_akses).trim() : '',
           komunitas_id: course.komunitas_id
@@ -1842,6 +1844,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
         formData.append('capaian_pembelajaran', course.capaian_pembelajaran || '-');
         formData.append('nilai_kelulusan', passingGrade);
         formData.append('butuh_persetujuan', course.butuh_persetujuan ? 1 : 0);
+        formData.append('memerlukan_tte', (course.memerlukan_tte ?? course.requires_tte) ? 1 : 0);
         formData.append('wajib_kode_akses', course.wajib_kode_akses ? 1 : 0);
         formData.append('kode_akses', course.kode_akses ? String(course.kode_akses).trim() : '');
         formData.append('komunitas_id', course.komunitas_id);
@@ -1859,6 +1862,7 @@ const DetailKursus = ({ onNavigate, onLogout }) => {
           capaian_pembelajaran: course.capaian_pembelajaran || '-',
           nilai_kelulusan: passingGrade,
           butuh_persetujuan: course.butuh_persetujuan ? 1 : 0,
+          memerlukan_tte: (course.memerlukan_tte ?? course.requires_tte) ? 1 : 0,
           wajib_kode_akses: course.wajib_kode_akses ? 1 : 0,
           kode_akses: course.kode_akses ? String(course.kode_akses).trim() : '',
           komunitas_id: course.komunitas_id

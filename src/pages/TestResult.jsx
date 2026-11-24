@@ -130,8 +130,10 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
     if (isCooldownActive) {
       Swal.fire({
         icon: 'info',
-        title: 'Masa Tunggu Sertifikat KPK',
-        text: sertifikat?.cooldown_message || sertifikat?.message || 'Sertifikat khusus kursus KPK baru dapat diunduh setelah proses TTE B-Sign BSrE selesai.',
+        title: sertifikat?.is_kpk ? 'Masa Tunggu Sertifikat KPK' : 'Masa Tunggu TTE Sertifikat',
+        text: sertifikat?.cooldown_message || sertifikat?.message || (sertifikat?.is_kpk
+          ? 'Sertifikat khusus kursus KPK baru dapat diunduh setelah proses TTE B-Sign BSrE selesai.'
+          : 'Sertifikat pelatihan ini baru dapat diunduh setelah proses TTE B-Sign BSrE selesai.'),
         confirmButtonColor: '#006A63'
       });
       return;
@@ -189,7 +191,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
 
       Swal.fire({
         icon: error.response?.status === 403 ? 'info' : 'error',
-        title: error.response?.status === 403 ? 'Masa Tunggu Sertifikat KPK' : 'Gagal Mengunduh Sertifikat',
+        title: error.response?.status === 403 ? (sertifikat?.is_kpk ? 'Masa Tunggu Sertifikat KPK' : 'Masa Tunggu TTE Sertifikat') : 'Gagal Mengunduh Sertifikat',
         text: serverMessage,
         confirmButtonColor: '#006A63'
       });
@@ -229,7 +231,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
             <span>Program Kolaborasi Resmi KPK RI</span>
           </div>
         )}
-        {sertifikat?.is_kpk && isSigned && (
+        {(sertifikat?.is_kpk || sertifikat?.is_tte) && isSigned && (
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-sm">
             <ShieldCheck className="w-4 h-4 text-emerald-600" aria-hidden="true" />
             <span>Telah Ditandatangani Secara Elektronik (TTE BSrE BSSN)</span>
@@ -270,7 +272,9 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
             <span>Sedang Proses Penandatanganan Elektronik (TTE B-Sign BSrE)</span>
           </div>
           <p className="text-xs text-amber-800 leading-relaxed">
-            Sertifikat untuk kursus KPK memerlukan tanda tangan digital resmi dari pimpinan melalui aplikasi B-Sign BSrE.
+            {sertifikat?.is_kpk
+              ? 'Sertifikat untuk kursus KPK memerlukan tanda tangan digital resmi dari pimpinan melalui aplikasi B-Sign BSrE.'
+              : 'Sertifikat untuk pelatihan ini memerlukan tanda tangan digital resmi dari pimpinan melalui aplikasi B-Sign BSrE.'}
             {sertifikat?.tersedia_pada_formatted ? (
               <> Estimasi dapat diunduh: <b>{cooldownInfo.label}</b> (Mulai <b>{sertifikat.tersedia_pada_formatted} WITA</b>).</>
             ) : null}
@@ -285,7 +289,7 @@ const CertificatePreview = ({ sertifikat, sudahMengisiKuesioner }) => {
           className={`flex-1 px-6 py-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-2 ${
             !sudahMengisiKuesioner || isCooldownActive
               ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed'
-              : sertifikat?.is_kpk && isSigned
+              : (sertifikat?.is_kpk || sertifikat?.is_tte) && isSigned
               ? 'bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer shadow-sm'
               : 'bg-[#006A63] text-white hover:bg-[#00534D] cursor-pointer'
           }`}

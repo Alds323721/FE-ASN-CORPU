@@ -132,6 +132,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showMateriModal, setShowMateriModal] = useState(false);
+  const [courseRequiresTte, setCourseRequiresTte] = useState(false);
   const [note, setNote] = useState('');
 
   useEffect(() => {
@@ -142,6 +143,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
         const cData = response.data?.data;
         if (cData) {
           setCourse(cData);
+          setCourseRequiresTte(!!(cData.memerlukan_tte ?? cData.requires_tte));
           localStorage.setItem('reviewCourseData', JSON.stringify(cData));
         }
       } catch (error) {
@@ -155,6 +157,7 @@ const CourseReview = ({ onNavigate, onLogout }) => {
     if (data) {
       const parsedData = JSON.parse(data);
       setCourse(parsedData);
+      setCourseRequiresTte(!!(parsedData.memerlukan_tte ?? parsedData.requires_tte));
       fetchCourseDetails(parsedData.pembelajaran_id);
     } else {
       if (onNavigate) onNavigate('course-validation');
@@ -167,7 +170,8 @@ const CourseReview = ({ onNavigate, onLogout }) => {
       setIsSubmitting(true);
       const payload = {
         status_validasi: status,
-        catatan: note
+        catatan: note,
+        memerlukan_tte: courseRequiresTte,
       };
       await api.post(`/admin-bkpsdm/approval/${course.pembelajaran_id}`, payload);
       localStorage.removeItem('reviewCourseData');
@@ -314,6 +318,46 @@ const CourseReview = ({ onNavigate, onLogout }) => {
                     <BookOpen className="w-4 h-4" />
                     Lihat Detail Materi
                   </button>
+                </div>
+              </div>
+
+              {/* Konfigurasi Format Sertifikat & TTE B-Sign BSrE */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${courseRequiresTte ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-base">Format Sertifikat & TTE B-Sign BSrE</h3>
+                      <p className="text-xs text-gray-500">Tentukan apakah pelatihan ini membutuhkan penandatanganan elektronik resmi B-Sign (2 Halaman) atau sertifikat reguler (1 Halaman).</p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${courseRequiresTte ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                    {courseRequiresTte ? 'Wajib TTE (2 Halaman)' : 'Reguler (1 Halaman)'}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl border bg-gray-50/70 border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <p className="font-bold text-gray-800">
+                      {courseRequiresTte ? 'Sertifikat Kelulusan Ber-TTE (BSrE BSSN) & Lampiran JP' : 'Sertifikat Reguler Standar (1 Halaman)'}
+                    </p>
+                    <p>
+                      {courseRequiresTte
+                        ? 'Sertifikat akan memiliki masa tunggu (cooldown) 3 hari untuk proses penandatanganan elektronik di portal B-Sign BSrE, serta memuat rincian materi & JP pada Halaman 2.'
+                        : 'Sertifikat diterbitkan secara otomatis dan instan begitu peserta lulus ujian post-test (1 halaman lanskap dengan barcode verifikasi BKPSDM).'}
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={courseRequiresTte}
+                      onChange={(e) => setCourseRequiresTte(e.target.checked)}
+                      className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-gray-700">Wajib TTE BSrE</span>
+                  </label>
                 </div>
               </div>
 

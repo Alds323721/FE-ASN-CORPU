@@ -34,7 +34,8 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
     kategori: 'Pengembangan Kompetensi',
     capaian_pembelajaran: '',
     nilai_kelulusan: 70,
-    butuh_persetujuan: false
+    butuh_persetujuan: false,
+    memerlukan_tte: false
   });
   const [courseThumbnailFile, setCourseThumbnailFile] = useState(null);
   const [courseThumbnailPreview, setCourseThumbnailPreview] = useState('');
@@ -133,6 +134,7 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
       data.append('capaian_pembelajaran', formData.capaian_pembelajaran);
       data.append('nilai_kelulusan', formData.nilai_kelulusan);
       data.append('butuh_persetujuan', formData.butuh_persetujuan ? 1 : 0);
+      data.append('memerlukan_tte', formData.memerlukan_tte ? 1 : 0);
       data.append('deskripsi', '');
       if (courseThumbnailFile) {
         data.append('thumbnail', courseThumbnailFile);
@@ -453,7 +455,14 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
                 <SearchableCommunitySelect
                   komunitasList={komunitasList}
                   value={formData.komunitas_id}
-                  onChange={(komunitasId) => setFormData({ ...formData, komunitas_id: komunitasId })}
+                  onChange={(komunitasId) => {
+                    const selected = komunitasList.find(k => String(k.komunitas_id) === String(komunitasId));
+                    setFormData({
+                      ...formData,
+                      komunitas_id: komunitasId,
+                      memerlukan_tte: selected?.memerlukan_tte ? true : formData.memerlukan_tte
+                    });
+                  }}
                   placeholder="Pilih atau cari komunitas..."
                   required
                 />
@@ -584,6 +593,31 @@ const PelatihanSaya = ({ onNavigate, onLogout }) => {
                       checked={formData.butuh_persetujuan || false}
                       onChange={e => setFormData({...formData, butuh_persetujuan: e.target.checked})}
                       className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Opsi Sertifikat Ber-TTE (BSrE & 2 Halaman) */}
+              <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4 transition-all">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <label htmlFor="memerlukan_tte" className="text-sm font-bold text-gray-900 cursor-pointer flex items-center gap-2">
+                      <Award className="w-4 h-4 text-[#0F766E]" />
+                      Sertifikat Ber-TTE Resmi B-Sign (2 Halaman & Lampiran JP)
+                    </label>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Jika diaktifkan, sertifikat kelulusan kursus ini akan memiliki masa tunggu (cooldown) 3 hari untuk penandatanganan elektronik resmi B-Sign BSrE dan memuat rincian materi & JP pada Halaman 2.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                    <input 
+                      id="memerlukan_tte"
+                      type="checkbox" 
+                      checked={formData.memerlukan_tte || false}
+                      onChange={e => setFormData({ ...formData, memerlukan_tte: e.target.checked })}
+                      className="sr-only peer" 
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F766E]"></div>
                   </label>

@@ -361,7 +361,7 @@ export default function CourseOutlineSidebar({
                   ? (courseData?.sertifikat?.is_signed || courseData?.sertifikat?.status_tte === 'signed')
                     ? 'Sertifikat resmi ber-TTE (BSrE) siap diunduh'
                     : courseData?.sertifikat?.cooldown
-                    ? `Masa Tunggu TTE KPK (Tersedia ${courseData.sertifikat.tersedia_pada_formatted || ''})`
+                    ? `${courseData?.sertifikat?.is_kpk ? 'Masa Tunggu TTE KPK' : 'Masa Tunggu TTE'} (Tersedia ${courseData.sertifikat.tersedia_pada_formatted || ''})`
                     : 'Klik untuk melihat nilai akhir & unduh sertifikat'
                   : 'Terkunci: Isi Feedback Kursus terlebih dahulu'
               }
