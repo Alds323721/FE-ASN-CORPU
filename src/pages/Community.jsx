@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import api from '../api/axios';
 import logoImg from '../assets/logo-removebg-preview 1.png';
@@ -167,6 +167,10 @@ const CommunityContent = ({ onNavigate }) => {
   const [activeCategory, setActiveCategory] = useState('Semua Kategori');
   const [communities, setCommunities] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const contentTopRef = useRef(null);
+
   const [userRumpun, setUserRumpun] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}').rumpun_jabatan || '';
@@ -236,9 +240,23 @@ const CommunityContent = ({ onNavigate }) => {
   };
 
   const handleNavigateToCatalog = (komunitasId) => {
-    // Navigate ke catalog dengan mengirim ID komunitas
     localStorage.setItem('filterKomunitasId', komunitasId);
     onNavigate('catalog');
+  };
+
+  const handleCategorySelect = (val) => {
+    setActiveCategory(val);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const filteredCommunities = communities.filter((c) => {
@@ -248,6 +266,40 @@ const CommunityContent = ({ onNavigate }) => {
     const matchesSearch = !query || communityName.includes(query);
     return matchesCategory && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredCommunities.length / itemsPerPage) || 1;
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    if (contentTopRef.current) {
+      contentTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [];
+    if (currentPage <= 4) {
+      pages.push(1, 2, 3, 4, 5, '...', totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+    }
+    return pages;
+  };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCommunities = filteredCommunities.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <section className="bg-[#F9FBFC] min-h-screen">
@@ -261,7 +313,7 @@ const CommunityContent = ({ onNavigate }) => {
               {categories.map((cat) => (
                 <label
                   key={cat.value}
-                  onClick={() => setActiveCategory(cat.value)}
+                  onClick={() => handleCategorySelect(cat.value)}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${activeCategory === cat.value ? 'bg-[#006A63] border-[#006A63]' : 'bg-white border-gray-300'}`}>
@@ -275,7 +327,7 @@ const CommunityContent = ({ onNavigate }) => {
         </aside>
 
         {/* Grid */}
-        <div className="md:col-span-9">
+        <div className="md:col-span-9" ref={contentTopRef}>
           {/* User Rumpun Jabatan Banner */}
           {userRumpun && (
             <div className="mb-6 bg-teal-50/70 border border-teal-200 rounded-lg p-3.5 sm:p-4 flex items-center gap-3.5 shadow-sm">
@@ -296,7 +348,20 @@ const CommunityContent = ({ onNavigate }) => {
           {/* Top bar */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <p className="text-[14px] font-medium text-gray-500 mb-2 sm:mb-0">
-              {t('community.showing')} <span className="font-bold text-[#1D315F]">{filteredCommunities.length}</span> {t('catalog.of')} <span className="font-bold text-[#1D315F]">{communities.length}</span> {t('community.communities')}
+              {t('community.showing')}{' '}
+              <span className="font-bold text-[#1D315F]">
+                {filteredCommunities.length === 0
+                  ? 0
+                  : `${startIndex + 1} - ${Math.min(startIndex + itemsPerPage, filteredCommunities.length)}`}
+              </span>{' '}
+              {t('catalog.of')}{' '}
+              <span className="font-bold text-[#1D315F]">{filteredCommunities.length}</span>{' '}
+              {t('community.communities')}
+              {filteredCommunities.length !== communities.length && (
+                <span className="text-xs text-gray-400 ml-1.5 font-normal">
+                  (total {communities.length})
+                </span>
+              )}
             </p>
             
             {/* Search Input & Button replacing Urutkan */}
@@ -306,16 +371,17 @@ const CommunityContent = ({ onNavigate }) => {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder={t('community.searchPlaceholder')}
                   className="w-full pl-9 pr-8 py-2 bg-white border border-gray-300 rounded-l-lg text-xs sm:text-sm text-[#1D315F] placeholder-gray-400 focus:outline-none focus:border-[#006A63] focus:ring-1 focus:ring-[#006A63] transition-all shadow-sm"
                 />
                 {searchQuery && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition-colors"
+                    onClick={handleClearSearch}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                     title={t('community.clearSearch')}
+                    aria-label={t('community.clearSearch')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -334,43 +400,108 @@ const CommunityContent = ({ onNavigate }) => {
           {loading ? (
             <div className="text-center py-10 font-bold text-[#1D315F]">{t('community.loading')}</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {filteredCommunities.map((c) => (
-                <CommunityCard
-                  key={c.id}
-                  {...c}
-                  canJoin={c.can_join}
-                  isJoined={c.is_joined}
-                  onJoin={() => handleJoin(c.id, c.can_join)}
-                  onNavigate={() => handleNavigateToCatalog(c.id)}
-                />
-              ))}
-              {filteredCommunities.length === 0 && (
-                <div className="col-span-full text-center py-12 bg-white rounded-lg border border-dashed border-gray-300 p-6">
-                  <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-700 font-semibold text-base mb-1">
-                    {searchQuery.trim()
-                      ? `${t('community.noSearchResults')} "${searchQuery}"`
-                      : t('community.empty')}
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {paginatedCommunities.map((c) => (
+                  <CommunityCard
+                    key={c.id}
+                    {...c}
+                    canJoin={c.can_join}
+                    isJoined={c.is_joined}
+                    onJoin={() => handleJoin(c.id, c.can_join)}
+                    onNavigate={() => handleNavigateToCatalog(c.id)}
+                  />
+                ))}
+                {filteredCommunities.length === 0 && (
+                  <div className="col-span-full text-center py-12 bg-white rounded-lg border border-dashed border-gray-300 p-6">
+                    <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-700 font-semibold text-base mb-1">
+                      {searchQuery.trim()
+                        ? `${t('community.noSearchResults')} "${searchQuery}"`
+                        : t('community.empty')}
+                    </p>
+                    <p className="text-xs text-gray-500 mb-4">
+                      {searchQuery.trim()
+                        ? 'Coba gunakan kata kunci lain atau periksa kembali ejaan nama komunitas.'
+                        : 'Belum ada komunitas yang tersedia pada kategori ini.'}
+                    </p>
+                    {searchQuery.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleClearSearch}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#006A63] bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        {t('community.clearSearch')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-12 border-t border-gray-200">
+                  <p className="text-xs sm:text-sm text-gray-500 font-medium order-2 sm:order-1">
+                    {t('catalog.page') || 'Halaman'} <span className="font-bold text-[#1D315F]">{currentPage}</span> {t('catalog.of') || 'dari'} <span className="font-bold text-[#1D315F]">{totalPages}</span>
                   </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    {searchQuery.trim()
-                      ? 'Coba gunakan kata kunci lain atau periksa kembali ejaan nama komunitas.'
-                      : 'Belum ada komunitas yang tersedia pada kategori ini.'}
-                  </p>
-                  {searchQuery.trim() && (
+
+                  <div className="flex items-center gap-1.5 order-1 sm:order-2" role="navigation" aria-label="Navigasi Halaman Komunitas">
                     <button
                       type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#006A63] bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      aria-label="Halaman Sebelumnya"
+                      className="min-w-[38px] h-[38px] px-2.5 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-[#006A63] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#006A63] focus:ring-offset-1 text-xs sm:text-sm font-semibold shadow-sm"
                     >
-                      <X className="w-3.5 h-3.5" />
-                      {t('community.clearSearch')}
+                      <ChevronLeft className="w-4 h-4 mr-0.5" />
+                      <span className="hidden sm:inline">Sebelumnya</span>
                     </button>
-                  )}
+
+                    {getPageNumbers().map((page, index) => {
+                      if (page === '...') {
+                        return (
+                          <span
+                            key={`ellipsis-${index}`}
+                            className="w-8 h-8 flex items-center justify-center text-gray-400 font-bold select-none text-xs sm:text-sm"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      const isActive = currentPage === page;
+                      return (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => handlePageChange(page)}
+                          aria-label={`Halaman ${page}`}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`min-w-[38px] h-[38px] px-3 flex items-center justify-center rounded-lg text-xs sm:text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-[#006A63] focus:ring-offset-1 cursor-pointer ${
+                            isActive
+                              ? 'bg-[#006A63] text-white shadow-sm'
+                              : 'bg-white border border-gray-200 text-gray-700 hover:bg-teal-50/50 hover:text-[#006A63]'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      aria-label="Halaman Selanjutnya"
+                      className="min-w-[38px] h-[38px] px-2.5 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-[#006A63] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[#006A63] focus:ring-offset-1 text-xs sm:text-sm font-semibold shadow-sm"
+                    >
+                      <span className="hidden sm:inline">Selanjutnya</span>
+                      <ChevronRight className="w-4 h-4 ml-0.5" />
+                    </button>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
