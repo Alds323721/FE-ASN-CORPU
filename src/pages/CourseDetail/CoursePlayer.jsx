@@ -164,8 +164,15 @@ export default function CoursePlayer({
 
   const attachMediaToken = (url) => {
     if (!url || !mediaToken) return url;
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}media_token=${encodeURIComponent(mediaToken)}`;
+    const hashIndex = url.indexOf('#');
+    let baseUrl = url;
+    let hash = '';
+    if (hashIndex !== -1) {
+      baseUrl = url.substring(0, hashIndex);
+      hash = url.substring(hashIndex);
+    }
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}media_token=${encodeURIComponent(mediaToken)}${hash}`;
   };
 
   const triggerAutoComplete = () => {
@@ -426,6 +433,7 @@ export default function CoursePlayer({
           <div className="w-full bg-slate-950 aspect-video relative overflow-hidden flex items-center justify-center">
             {activeMateri.tautan ? (
               <iframe
+                key={`h5p-${activeMateri?.materi_id}-${mediaToken}`}
                 id="h5p-interactive-player"
                 className="w-full h-full border-0"
                 src={attachMediaToken(getDocumentUrl(activeMateri.tautan))}
@@ -443,6 +451,7 @@ export default function CoursePlayer({
           <div className="w-full bg-slate-950 aspect-video relative overflow-hidden flex items-center justify-center">
             {activeMateri.tautan ? (
               <iframe
+                key={`scorm-${activeMateri?.materi_id}-${mediaToken}`}
                 id="scorm-interactive-player"
                 className="w-full h-full border-0"
                 src={attachMediaToken(getDocumentUrl(activeMateri.tautan))}
@@ -592,6 +601,7 @@ export default function CoursePlayer({
               />
             ) : docUrl ? (
               <video
+                key={`video-${activeMateri?.materi_id}-${mediaToken}`}
                 controls
                 controlsList="nodownload"
                 className="w-full h-full object-contain"
@@ -678,7 +688,7 @@ export default function CoursePlayer({
                   )}
 
                   <iframe
-                    key={docIframeKey}
+                    key={`doc-${docIframeKey}-${mediaToken}`}
                     id="document-material-player"
                     className="w-full h-full border-0 bg-white"
                     src={attachMediaToken(previewDocUrl)}

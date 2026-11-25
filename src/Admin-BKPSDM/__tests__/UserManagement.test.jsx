@@ -270,4 +270,52 @@ describe('UserManagement role filter buttons', () => {
     expect(await screen.findByText('Server error 500')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Coba Lagi' })).toBeTruthy();
   });
+
+  it('opens Edit Pengguna modal with existing Unit Kerja and submits updated unit_kerja', async () => {
+    const testUser = {
+      ...sampleUsers[0],
+      komunitas_id: 'k-1',
+    };
+
+    mockApiGet.mockImplementation((url) => {
+      if (url === '/admin-bkpsdm/komunitas') {
+        return Promise.resolve({ data: { data: [{ komunitas_id: 'k-1', nama_komunitas: 'Komunitas TI' }] } });
+      }
+      return Promise.resolve(buildUsersResponse([testUser]));
+    });
+
+    mockApiPut.mockResolvedValue({
+      data: {
+        message: 'Pengguna berhasil diperbarui',
+        data: { ...testUser, unit_kerja: 'Dinas Sosial' },
+      },
+    });
+
+    render(<UserManagement onNavigate={vi.fn()} onLogout={vi.fn()} />);
+
+    expect(await screen.findByText('Budi Komunitas')).toBeTruthy();
+
+    const editBtn = screen.getByTitle('Edit Pengguna');
+    fireEvent.click(editBtn);
+
+    expect(await screen.findByText('Edit Pengguna')).toBeTruthy();
+
+    const unitKerjaInput = screen.getByPlaceholderText('Dinas Komunikasi dan Informatika');
+    expect(unitKerjaInput.value).toBe('BKPSDM');
+
+    fireEvent.change(unitKerjaInput, { target: { value: 'Dinas Sosial' } });
+    expect(unitKerjaInput.value).toBe('Dinas Sosial');
+
+    const updateBtn = screen.getByRole('button', { name: 'Update' });
+    fireEvent.click(updateBtn);
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/admin-bkpsdm/pengguna/u-1',
+        expect.objectContaining({
+          unit_kerja: 'Dinas Sosial',
+        })
+      );
+    });
+  });
 });

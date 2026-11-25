@@ -363,6 +363,7 @@ const UserManagement = ({ onNavigate, onLogout }) => {
         email: selectedUser.email ? selectedUser.email.trim() : null,
         jabatan: selectedUser.jabatan ? selectedUser.jabatan.trim() : null,
         rumpun_jabatan: selectedUser.rumpun_jabatan || null,
+        unit_kerja: selectedUser.unit_kerja ? selectedUser.unit_kerja.trim() : null,
         komunitas_id: currentRoles.includes('admin_komunitas') ? selectedUser.komunitas_id : null
       };
       
@@ -751,7 +752,8 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                                   roles: userRoles, 
                                   email: user.email || '', 
                                   jabatan: user.jabatan || '',
-                                  rumpun_jabatan: user.rumpun_jabatan || '' 
+                                  rumpun_jabatan: user.rumpun_jabatan || '',
+                                  unit_kerja: user.unit_kerja || ''
                                 });
                                 setShowEditModal(true);
                               }}
@@ -1109,6 +1111,17 @@ const UserManagement = ({ onNavigate, onLogout }) => {
                     <p className="text-xs text-gray-500 mt-1">
                       Menentukan kelompok rumpun peserta untuk rekomendasi materi kursus dan akses komunitas belajar.
                     </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Unit Kerja</label>
+                    <input
+                      type="text"
+                      maxLength={200}
+                      value={selectedUser.unit_kerja || ''}
+                      onChange={e => setSelectedUser({ ...selectedUser, unit_kerja: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      placeholder="Dinas Komunikasi dan Informatika"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Status Akun</label>
