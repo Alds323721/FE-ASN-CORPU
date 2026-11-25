@@ -68,6 +68,8 @@ export default function CoursePlayer({
   const [isDocLoading, setIsDocLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isContentCompleted, setIsContentCompleted] = useState(Boolean(activeMateri?.is_read));
+  const [mediaToken, setMediaToken] = useState('');
+  const [isInitializingMedia, setIsInitializingMedia] = useState(false);
   const [elapsedInteractiveSeconds, setElapsedInteractiveSeconds] = useState(() => {
     try {
       const cId =
@@ -118,6 +120,53 @@ export default function CoursePlayer({
       setElapsedInteractiveSeconds(0);
     }
   }, [activeMateri?.materi_id, activeMateri?.is_read, isInteractiveMateri, targetSeconds, timerStorageKey]);
+
+  // Inisialisasi sesi media pembelajaran terproteksi (cookie + token scoped)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initMediaSession = async () => {
+      const tautan = String(activeMateri?.tautan || '').trim();
+      const needsSecureSession =
+        tautan.includes('/api/media/') ||
+        tautan.includes('/storage/scorm/') ||
+        tautan.includes('/storage/h5p/') ||
+        tautan.includes('/storage/materi_');
+
+      if (!needsSecureSession || !effectiveCourseId || !activeMateri?.materi_id) {
+        setMediaToken('');
+        return;
+      }
+
+      setIsInitializingMedia(true);
+      try {
+        const response = await api.post(
+          `/courses/${effectiveCourseId}/materi/${activeMateri.materi_id}/session`
+        );
+        if (!isCancelled && response.data?.media_token) {
+          setMediaToken(response.data.media_token);
+        }
+      } catch (err) {
+        console.warn('Gagal inisialisasi sesi media pembelajaran terproteksi:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsInitializingMedia(false);
+        }
+      }
+    };
+
+    initMediaSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeMateri?.materi_id, activeMateri?.tautan, effectiveCourseId]);
+
+  const attachMediaToken = (url) => {
+    if (!url || !mediaToken) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}media_token=${encodeURIComponent(mediaToken)}`;
+  };
 
   const triggerAutoComplete = () => {
     setIsContentCompleted(true);
@@ -286,6 +335,7 @@ export default function CoursePlayer({
     const isLocalStorageFile =
       rawPath.startsWith('/storage/') ||
       rawPath.startsWith('storage/') ||
+      rawPath.startsWith('/api/media/') ||
       !rawPath.startsWith('http');
 
     const extMatch = rawPath.match(/\.([a-zA-Z0-9]{2,5})(\?.*)?$/);
@@ -378,7 +428,7 @@ export default function CoursePlayer({
               <iframe
                 id="h5p-interactive-player"
                 className="w-full h-full border-0"
-                src={getDocumentUrl(activeMateri.tautan)}
+                src={attachMediaToken(getDocumentUrl(activeMateri.tautan))}
                 title={activeMateri.judul || 'Video Interaktif H5P'}
                 allow="autoplay; fullscreen; geolocation; microphone; camera; midi; encrypted-media"
               />
@@ -395,7 +445,7 @@ export default function CoursePlayer({
               <iframe
                 id="scorm-interactive-player"
                 className="w-full h-full border-0"
-                src={getDocumentUrl(activeMateri.tautan)}
+                src={attachMediaToken(getDocumentUrl(activeMateri.tautan))}
                 title={activeMateri.judul || 'Materi SCORM Interaktif'}
                 allow="autoplay; fullscreen; geolocation; microphone; camera; midi; encrypted-media"
               />
@@ -545,7 +595,7 @@ export default function CoursePlayer({
                 controls
                 controlsList="nodownload"
                 className="w-full h-full object-contain"
-                src={docUrl}
+                src={attachMediaToken(docUrl)}
                 onTimeUpdate={(e) => {
                   const video = e.currentTarget;
                   if (!video.seeking && video.currentTime > maxTimeWatchedRef.current) {
@@ -605,7 +655,7 @@ export default function CoursePlayer({
                     </button>
 
                     <a
-                      href={docUrl}
+                      href={attachMediaToken(docUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Buka Materi di Tab Baru"
@@ -631,7 +681,7 @@ export default function CoursePlayer({
                     key={docIframeKey}
                     id="document-material-player"
                     className="w-full h-full border-0 bg-white"
-                    src={previewDocUrl}
+                    src={attachMediaToken(previewDocUrl)}
                     title={activeMateri.judul || 'Pratinjau Dokumen Materi'}
                     allow="fullscreen"
                     onLoad={() => setIsDocLoading(false)}
